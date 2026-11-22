@@ -19,9 +19,11 @@ if [[ ! -f .env ]]; then
 fi
 
 echo "=== radar-imoveis deploy ref=${REF} ==="
+before="$(git rev-parse HEAD)"
 git fetch origin "$REF"
 git checkout "$REF"
 git pull --ff-only origin "$REF"
+after="$(git rev-parse HEAD)"
 
 # Garante Traefik dinâmico (idempotente)
 if [[ -d /opt/traefik/dynamic ]]; then
@@ -31,11 +33,39 @@ else
   echo "WARN: /opt/traefik/dynamic não encontrado — configure o proxy manualmente"
 fi
 
-echo "=== docker compose build ==="
-docker compose build web
+# Rebuild só quando muda o que entra na imagem Next.js.
+# tools/ .github/ deploy/ docs → skip (igual espírito do imoveis: deploy leve).
+# Force: RADAR_IMOVEIS_FORCE_BUILD=1
+need_build=1
+if [[ "${RADAR_IMOVEIS_FORCE_BUILD:-}" == "1" ]]; then
+  echo "=== force build (RADAR_IMOVEIS_FORCE_BUILD=1) ==="
+elif [[ "$before" == "$after" ]]; then
+  need_build=0
+  echo "=== skip build (HEAD já em ${after:0:7}) ==="
+else
+  changed="$(git diff --name-only "$before" "$after" || true)"
+  if [[ -z "$changed" ]]; then
+    need_build=0
+    echo "=== skip build (sem arquivos no diff) ==="
+  elif ! echo "$changed" | grep -qvE '^(tools/|\.github/|deploy/|.*\.md$|\.gitignore$)'; then
+    need_build=0
+    echo "=== skip build (só tools/ci/docs/deploy) ==="
+    echo "$changed" | sed 's/^/  - /'
+  else
+    echo "=== app mudou — rebuild ==="
+    echo "$changed" | sed 's/^/  - /'
+  fi
+fi
 
-echo "=== docker compose up ==="
-docker compose up -d web
+if [[ "$need_build" == "1" ]]; then
+  echo "=== docker compose build ==="
+  docker compose build web
+  echo "=== docker compose up ==="
+  docker compose up -d web
+else
+  # Garante container no ar sem rebuild (~segundos).
+  docker compose up -d web >/dev/null
+fi
 
 echo "=== healthcheck ==="
 ok=0
