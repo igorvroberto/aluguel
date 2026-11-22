@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import {
-  LINHA_VERMELHA,
   LINHA_VERMELHA_COLOR,
-} from "../../data/linhaVermelha";
+  METRO_STATIONS,
+} from "../../data/linhasMetro";
 import {
   BUS_CORRIDORS,
   DESTINATION,
@@ -21,6 +21,8 @@ import type { MapLayersState } from "@/components/MapLayersPanel";
 import { gradeBucket } from "@/lib/elevation";
 import { gradeColor } from "@/lib/format";
 import {
+  buildLinhaLaranjaLineGeoJSON,
+  buildLinhaLaranjaStationsGeoJSON,
   buildLinhaVermelhaLineGeoJSON,
   buildLinhaVermelhaStationsGeoJSON,
   buildStationRadiusGeoJSON,
@@ -49,7 +51,9 @@ const BUS_LINES_SOURCE = "bus-lines-dedicated";
 const HOVER_SOURCE = "hover-point";
 const L3_LINE_SOURCE = "linha-vermelha-line";
 const L3_STATIONS_SOURCE = "linha-vermelha-stations";
-const L3_RADIUS_SOURCE = "linha-vermelha-radii";
+const L6_LINE_SOURCE = "linha-laranja-line";
+const L6_STATIONS_SOURCE = "linha-laranja-stations";
+const METRO_RADIUS_SOURCE = "metro-station-radii";
 
 function buildSegmentFeatures(analysis: RouteAnalysis) {
   const features: GeoJSON.Feature[] = [];
@@ -382,26 +386,86 @@ export function MapView({
         });
       }
 
-      if (!map.getSource(L3_RADIUS_SOURCE)) {
-        map.addSource(L3_RADIUS_SOURCE, {
+      if (!map.getSource(L6_LINE_SOURCE)) {
+        map.addSource(L6_LINE_SOURCE, {
+          type: "geojson",
+          data: buildLinhaLaranjaLineGeoJSON(),
+        });
+        map.addLayer({
+          id: "l6-line",
+          type: "line",
+          source: L6_LINE_SOURCE,
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+            visibility: "visible",
+          },
+          paint: {
+            "line-color": "#FF6B00",
+            "line-width": 3.5,
+            "line-opacity": 0.92,
+          },
+        });
+      }
+
+      if (!map.getSource(L6_STATIONS_SOURCE)) {
+        map.addSource(L6_STATIONS_SOURCE, {
+          type: "geojson",
+          data: buildLinhaLaranjaStationsGeoJSON(),
+        });
+        map.addLayer({
+          id: "l6-stations",
+          type: "circle",
+          source: L6_STATIONS_SOURCE,
+          layout: { visibility: "visible" },
+          paint: {
+            "circle-radius": 6.5,
+            "circle-color": "#FF6B00",
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#ffffff",
+          },
+        });
+        map.addLayer({
+          id: "l6-station-labels",
+          type: "symbol",
+          source: L6_STATIONS_SOURCE,
+          layout: {
+            visibility: "visible",
+            "text-field": ["get", "name"],
+            "text-size": 10,
+            "text-offset": [0, 1.15],
+            "text-anchor": "top",
+            "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+            "text-optional": true,
+          },
+          paint: {
+            "text-color": "#9a3412",
+            "text-halo-color": "#ffffff",
+            "text-halo-width": 1.4,
+          },
+        });
+      }
+
+      if (!map.getSource(METRO_RADIUS_SOURCE)) {
+        map.addSource(METRO_RADIUS_SOURCE, {
           type: "geojson",
           data: { type: "FeatureCollection", features: [] },
         });
         map.addLayer({
-          id: "l3-radius-fill",
+          id: "metro-radius-fill",
           type: "fill",
-          source: L3_RADIUS_SOURCE,
+          source: METRO_RADIUS_SOURCE,
           paint: {
-            "fill-color": LINHA_VERMELHA_COLOR,
+            "fill-color": ["get", "color"],
             "fill-opacity": 0.12,
           },
         });
         map.addLayer({
-          id: "l3-radius-outline",
+          id: "metro-radius-outline",
           type: "line",
-          source: L3_RADIUS_SOURCE,
+          source: METRO_RADIUS_SOURCE,
           paint: {
-            "line-color": LINHA_VERMELHA_COLOR,
+            "line-color": ["get", "color"],
             "line-width": 1.5,
             "line-opacity": 0.55,
           },
@@ -534,8 +598,17 @@ export function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.getSource(L3_RADIUS_SOURCE)) return;
-    const source = map.getSource(L3_RADIUS_SOURCE) as mapboxgl.GeoJSONSource;
+    if (!map || !map.getLayer("l6-line")) return;
+    const visibility = layers.showLinhaLaranja ? "visible" : "none";
+    map.setLayoutProperty("l6-line", "visibility", visibility);
+    map.setLayoutProperty("l6-stations", "visibility", visibility);
+    map.setLayoutProperty("l6-station-labels", "visibility", visibility);
+  }, [layers.showLinhaLaranja, terrainReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.getSource(METRO_RADIUS_SOURCE)) return;
+    const source = map.getSource(METRO_RADIUS_SOURCE) as mapboxgl.GeoJSONSource;
     source.setData(
       buildStationRadiusGeoJSON(stationIds, stationRadiusMeters)
     );
@@ -546,7 +619,7 @@ export function MapView({
     const map = mapRef.current;
     if (!map || stationIds.length === 0) return;
 
-    const selected = LINHA_VERMELHA.filter((s) => stationIds.includes(s.id));
+    const selected = METRO_STATIONS.filter((s) => stationIds.includes(s.id));
     if (selected.length === 0) return;
 
     const bounds = new mapboxgl.LngLatBounds();

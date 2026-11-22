@@ -38,9 +38,9 @@ export const TRANSIT_STATIONS = [
     id: "perdizes-l6",
     name: "Perdizes",
     line: "Linha 6-Laranja",
-    color: "#FF6600",
-    lng: -46.6752,
-    lat: -23.5348,
+    color: "#FF6B00",
+    lng: -46.6738,
+    lat: -23.5385,
   },
   {
     id: "clinicas",

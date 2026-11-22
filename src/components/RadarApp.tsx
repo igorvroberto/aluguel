@@ -13,7 +13,7 @@ import {
 } from "@/components/MapLayersPanel";
 import { MapView } from "@/components/MapView";
 import { RoutePanel } from "@/components/RoutePanel";
-import { DEFAULT_STATION_RADIUS_METERS } from "../../data/linhaVermelha";
+import { DEFAULT_STATION_RADIUS_METERS } from "../../data/linhasMetro";
 import { BUS_LINES } from "@/lib/bus-lines";
 import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
 import { analyzeRoute } from "@/lib/elevation";
@@ -40,6 +40,7 @@ function initialMapLayers(): MapLayersState {
     showBusLines: true,
     enabledLines: Object.fromEntries(BUS_LINES.map((l) => [l.id, true])),
     showLinhaVermelha: true,
+    showLinhaLaranja: true,
     showTransit: false,
   };
 }
@@ -243,7 +244,7 @@ export function RadarApp() {
     apartments.find((a) => a.id === selectedId) ?? null;
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#eef3f4]">
+    <div className="flex min-h-screen flex-col bg-[#eef3f4]">
       <Header
         visibleCount={visible.length}
         onAdd={() => setModalOpen(true)}
@@ -251,8 +252,8 @@ export function RadarApp() {
         onExportJson={handleExportJson}
       />
 
-      <div className="flex min-h-0 flex-1">
-        <aside className="flex w-[420px] shrink-0 flex-col border-r border-slate-200 bg-white/90 shadow-[4px_0_24px_rgba(15,61,62,0.04)]">
+      <div className="flex flex-1 flex-col lg:flex-row">
+        <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white/90 shadow-[4px_0_24px_rgba(15,61,62,0.04)] lg:w-[420px] lg:border-b-0 lg:border-r">
           <FilterPanel
             filters={filters}
             onChange={setFilters}
@@ -275,7 +276,7 @@ export function RadarApp() {
             </p>
           </div>
 
-          <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
+          <div ref={listRef} className="lg:max-h-[70vh] lg:overflow-y-auto">
             {!hydrated ? (
               <p className="p-4 text-sm text-slate-500">Carregando imóveis…</p>
             ) : visible.length === 0 ? (
@@ -306,7 +307,7 @@ export function RadarApp() {
             stationIds={filters.stationIds}
             stationRadiusMeters={filters.stationRadiusMeters}
           />
-          <div className="min-h-0 basis-[70%] grow-[7] border-b border-slate-200">
+          <div className="h-[55vh] min-h-[360px] border-b border-slate-200 lg:h-[70vh]">
             <MapView
               token={MAPBOX_TOKEN}
               apartments={visible}
@@ -321,7 +322,7 @@ export function RadarApp() {
               onSelectApartment={handleSelect}
             />
           </div>
-          <div className="min-h-[200px] basis-[30%] grow-[3]">
+          <div className="min-h-[240px]">
             <RoutePanel
               apartment={selectedApartment}
               analysis={selectedAnalysis}
