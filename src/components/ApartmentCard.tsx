@@ -4,7 +4,6 @@ import { useState } from "react";
 import {
   ExternalLink,
   Footprints,
-  Link2,
   MapPinned,
   Mountain,
   Shield,
@@ -35,7 +34,6 @@ interface ApartmentCardProps {
   selected: boolean;
   analyzing: boolean;
   onSelect: () => void;
-  onUpdateListingUrl?: (id: string, url: string) => void;
   onUpdateStatus?: (id: string, status: ApartmentStatus) => void;
   onUpdateComments?: (id: string, comments: string) => void;
 }
@@ -53,12 +51,9 @@ export function ApartmentCard({
   selected,
   analyzing,
   onSelect,
-  onUpdateListingUrl,
   onUpdateStatus,
   onUpdateComments,
 }: ApartmentCardProps) {
-  const [editingUrl, setEditingUrl] = useState(false);
-  const [urlDraft, setUrlDraft] = useState(apartment.externalUrl || "");
   const [commentsDraft, setCommentsDraft] = useState(apartment.comments || "");
 
   const total = monthlyPackage(
@@ -67,7 +62,6 @@ export function ApartmentCard({
     apartment.iptu
   );
   const listingHref = resolveListingUrl(apartment);
-  const hasListingLink = Boolean(listingHref);
   const nearestMetro = nearestMetroStation(apartment);
   const status = apartment.status || "Candidato";
 
@@ -238,7 +232,7 @@ export function ApartmentCard({
           <MapPinned className="h-3.5 w-3.5" aria-hidden />
           Traçar Rota / Mapa
         </button>
-        {hasListingLink ? (
+        {listingHref ? (
           <a
             href={listingHref}
             target="_blank"
@@ -250,63 +244,8 @@ export function ApartmentCard({
             Abrir Anúncio
             <ExternalLink className="h-3 w-3" aria-hidden />
           </a>
-        ) : (
-          <span
-            className="inline-flex items-center gap-1 rounded-md border border-dashed border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-400"
-            title="Sem link de anúncio real"
-          >
-            Sem anúncio
-          </span>
-        )}
-        {onUpdateListingUrl && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setUrlDraft(apartment.externalUrl || "");
-              setEditingUrl((v) => !v);
-            }}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100"
-          >
-            <Link2 className="h-3 w-3" aria-hidden />
-            Link
-          </button>
-        )}
+        ) : null}
       </div>
-
-      {editingUrl && onUpdateListingUrl && (
-        <div
-          className="mt-2 space-y-1.5"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          <input
-            value={urlDraft}
-            onChange={(e) => setUrlDraft(e.target.value)}
-            placeholder="https://www.quintoandar.com.br/imovel/…"
-            className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-teal-600"
-          />
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="rounded-md bg-teal-700 px-2 py-1 text-xs font-semibold text-white"
-              onClick={() => {
-                onUpdateListingUrl(apartment.id, urlDraft.trim());
-                setEditingUrl(false);
-              }}
-            >
-              Salvar link
-            </button>
-            <button
-              type="button"
-              className="rounded-md px-2 py-1 text-xs text-slate-500"
-              onClick={() => setEditingUrl(false)}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
     </article>
   );
 }
