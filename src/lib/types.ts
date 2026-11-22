@@ -45,6 +45,11 @@ export interface ElevationPoint {
   lng: number;
   lat: number;
   grade: number;
+  /**
+   * Índice do trecho Caminhe (0, 1, …). Arestas entre índices diferentes
+   * não são metrô — não desenhar no mapa nem interpolar elevação no vão.
+   */
+  walkSegmentIndex?: number;
 }
 
 /** Um trecho a pé (ida ou volta). Altimetria só deste caminhar. */

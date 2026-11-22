@@ -15,6 +15,14 @@ export interface TransitStep {
   coordinates?: [number, number][];
 }
 
+/** Um trecho contínuo a pé (Caminhe) — nunca inclui metrô/ônibus. */
+export interface WalkPathSegment {
+  label: string;
+  coordinates: [number, number][];
+  distanceMeters: number;
+  durationMinutes: number;
+}
+
 export interface TransitRouteResult {
   source: "google" | "fallback" | "walk-preferred";
   totalDurationMinutes: number;
@@ -25,9 +33,10 @@ export interface TransitRouteResult {
   preferDirectWalk?: boolean;
   directWalkMinutes?: number;
   /**
-   * Concatenação só dos trechos WALK/Caminhe do Google (ou fallback hub).
-   * Usado no gráfico de elevação — exclui metrô/ônibus e o a pé porta-a-porta.
+   * Trechos WALK/Caminhe separados (para elevação sem interpolar o vão do metrô).
    */
+  walkSegments: WalkPathSegment[];
+  /** Flatten só para compat — preferir walkSegments no gráfico. */
   walkCoordinates: [number, number][];
   walkDistanceMeters: number;
 }
@@ -85,23 +94,40 @@ function formatWalkTo(place: string, minutes: number): string {
   return `Caminhe ${minutes} min até ${place}`;
 }
 
-function concatWalkCoordinates(
-  steps: TransitStep[]
-): { walkCoordinates: [number, number][]; walkDistanceMeters: number } {
+function extractWalkPaths(steps: TransitStep[]): {
+  walkSegments: WalkPathSegment[];
+  walkCoordinates: [number, number][];
+  walkDistanceMeters: number;
+} {
+  const walkSegments: WalkPathSegment[] = [];
   const walkCoordinates: [number, number][] = [];
   let walkDistanceMeters = 0;
+
   for (const step of steps) {
     if (step.mode !== "WALK") continue;
-    if (step.distanceMeters) walkDistanceMeters += step.distanceMeters;
     const coords = step.coordinates;
-    if (!coords?.length) continue;
+    if (!coords || coords.length < 2) continue;
+    const distanceMeters =
+      step.distanceMeters ??
+      Math.round(
+        haversineMeters(coords[0][1], coords[0][0], coords[coords.length - 1][1], coords[coords.length - 1][0]) *
+          WALK_DETOUR
+      );
+    walkDistanceMeters += distanceMeters;
+    walkSegments.push({
+      label: step.instruction,
+      coordinates: coords,
+      distanceMeters,
+      durationMinutes: step.durationMinutes,
+    });
     for (const c of coords) {
       const prev = walkCoordinates[walkCoordinates.length - 1];
       if (prev && prev[0] === c[0] && prev[1] === c[1]) continue;
       walkCoordinates.push(c);
     }
   }
-  return { walkCoordinates, walkDistanceMeters };
+
+  return { walkSegments, walkCoordinates, walkDistanceMeters };
 }
 
 type Hub = {
@@ -302,8 +328,8 @@ export async function buildFallbackTransitRoute(
     coordinates: walkFromCoords,
   });
 
-  const { walkCoordinates, walkDistanceMeters } =
-    concatWalkCoordinates(walkSteps);
+  const { walkSegments, walkCoordinates, walkDistanceMeters } =
+    extractWalkPaths(walkSteps);
 
   if (directWalkMin + 2 < transitTotal) {
     return {
@@ -320,7 +346,8 @@ export async function buildFallbackTransitRoute(
       summary: `A pé direto (${directWalkMin} min) é melhor que TRANSIT (${transitTotal} min)`,
       preferDirectWalk: true,
       directWalkMinutes: directWalkMin,
-      // Elevação continua só nos trechos Caminhe do multimodal, não no a pé total
+      // Elevação só nos trechos Caminhe do multimodal (walkSegments), não no a pé total
+      walkSegments,
       walkCoordinates,
       walkDistanceMeters,
     };
@@ -336,6 +363,7 @@ export async function buildFallbackTransitRoute(
     summary: walkSteps.map((s) => s.instruction).join(" → "),
     preferDirectWalk: false,
     directWalkMinutes: directWalkMin,
+    walkSegments,
     walkCoordinates,
     walkDistanceMeters,
   };
@@ -491,7 +519,8 @@ export async function fetchGoogleTransitRoute(
     };
   });
 
-  const { walkCoordinates, walkDistanceMeters } = concatWalkCoordinates(steps);
+  const { walkSegments, walkCoordinates, walkDistanceMeters } =
+    extractWalkPaths(steps);
 
   const totalSeconds = parseDurationSeconds(data.routes[0].duration);
   const totalDurationMinutes =
@@ -519,6 +548,7 @@ export async function fetchGoogleTransitRoute(
       summary: `A pé direto (${directWalkMin} min) é melhor que TRANSIT (${totalDurationMinutes} min)`,
       preferDirectWalk: true,
       directWalkMinutes: directWalkMin,
+      walkSegments,
       walkCoordinates,
       walkDistanceMeters,
     };
@@ -532,6 +562,7 @@ export async function fetchGoogleTransitRoute(
     summary: steps.map((s) => s.instruction).join(" → "),
     preferDirectWalk: false,
     directWalkMinutes: directWalkMin,
+    walkSegments,
     walkCoordinates,
     walkDistanceMeters,
   };
