@@ -21,10 +21,7 @@ import {
   monthlyPackage,
   topographyBadgeClass,
 } from "@/lib/format";
-import {
-  isGenericOrEmptyListingUrl,
-  resolveListingUrl,
-} from "@/lib/listing-url";
+import { resolveListingUrl } from "@/lib/listing-url";
 import {
   APARTMENT_STATUSES,
   type Apartment,
@@ -70,7 +67,7 @@ export function ApartmentCard({
     apartment.iptu
   );
   const listingHref = resolveListingUrl(apartment);
-  const usingFallback = isGenericOrEmptyListingUrl(apartment.externalUrl);
+  const hasListingLink = Boolean(listingHref);
   const nearestMetro = nearestMetroStation(apartment);
   const status = apartment.status || "Candidato";
 
@@ -241,21 +238,26 @@ export function ApartmentCard({
           <MapPinned className="h-3.5 w-3.5" aria-hidden />
           Traçar Rota / Mapa
         </button>
-        <a
-          href={listingHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-          title={
-            usingFallback
-              ? "Busca no QuintoAndar (sem link específico)"
-              : "Abrir anúncio"
-          }
-        >
-          Abrir Anúncio
-          <ExternalLink className="h-3 w-3" aria-hidden />
-        </a>
+        {hasListingLink ? (
+          <a
+            href={listingHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+            title="Abrir anúncio"
+          >
+            Abrir Anúncio
+            <ExternalLink className="h-3 w-3" aria-hidden />
+          </a>
+        ) : (
+          <span
+            className="inline-flex items-center gap-1 rounded-md border border-dashed border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-400"
+            title="Sem link de anúncio real"
+          >
+            Sem anúncio
+          </span>
+        )}
         {onUpdateListingUrl && (
           <button
             type="button"

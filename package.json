@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "scrape": "xvfb-run -a tsx scripts/scrape-now.ts"
+    "scrape": "xvfb-run -a tsx scripts/scrape-now.ts",
+    "fix-seed-urls": "tsx scripts/fix-seed-urls.ts"
   },
   "dependencies": {
     "@turf/turf": "^7.4.0",

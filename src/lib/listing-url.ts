@@ -59,5 +59,6 @@ export function resolveListingUrl(apartment: Apartment): string {
   if (!isGenericOrEmptyListingUrl(apartment.externalUrl)) {
     return apartment.externalUrl;
   }
-  return buildQuintoAndarSearchUrl(apartment);
+  // Sem anúncio real: não inventa busca genérica da região.
+  return "";
 }
