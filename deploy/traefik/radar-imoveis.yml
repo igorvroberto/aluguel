@@ -1,0 +1,19 @@
+# Roteado pelo Traefik em host network → 127.0.0.1:18090.
+# Não usa redes chatwoot_* / web. Copiar para:
+#   /opt/traefik/dynamic/radar-imoveis.yml
+http:
+  routers:
+    radar-imoveis:
+      rule: Host(`radar.liganer.com.br`)
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - liganer-compress@file
+      service: radar-imoveis
+  services:
+    radar-imoveis:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:18090
