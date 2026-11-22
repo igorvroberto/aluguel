@@ -6,9 +6,17 @@ node_modules
 .env
 .env.local
 .env*.local
+.env.example
+.env.local.example
 npm-debug.log*
 .DS_Store
 /opt
 coverage
 .cursor
 tmp
+# Não entram na imagem — evita invalidar cache do COPY em mudanças de CI/deploy
+tools
+.github
+deploy
+docker-compose.yml
+Dockerfile
