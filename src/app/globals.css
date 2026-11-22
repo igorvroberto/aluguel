@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #eef3f4;
+  --foreground: #0f172a;
+  --brand: #145c5e;
+  --brand-deep: #0f3d3e;
+  --accent: #f0b429;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  color: var(--foreground);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(20, 92, 94, 0.12), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, rgba(240, 180, 41, 0.1), transparent 50%),
+    var(--background);
+  font-family: var(--font-sora), system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-fraunces), Georgia, serif;
+}
+
+/* Mapbox custom markers */
+.perdizes-dest-marker .dest-pin {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: #f0b429;
+  border: 3px solid #0f172a;
+  box-shadow: 0 0 0 6px rgba(240, 180, 41, 0.28);
+  animation: pulse-dest 2.4s ease-in-out infinite;
+}
+
+.perdizes-apt-marker {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #145c5e;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.35);
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.perdizes-apt-marker:hover,
+.perdizes-apt-marker.is-selected {
+  transform: scale(1.35);
+  background: #0f3d3e;
+  box-shadow: 0 0 0 4px rgba(20, 92, 94, 0.25), 0 2px 8px rgba(15, 23, 42, 0.35);
+}
+
+@keyframes pulse-dest {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px rgba(240, 180, 41, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(240, 180, 41, 0.08);
+  }
+}
+
+/* Keep mapbox canvas crisp inside flex layouts */
+.mapboxgl-map {
+  font: inherit;
+}
+
+.mapboxgl-ctrl-attrib a {
+  color: #334155;
+}
