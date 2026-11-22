@@ -164,12 +164,25 @@ export async function fetchWalkingRoute(
   };
 }
 
-function legFromRoute(
+/** Monta perfil de elevação a partir de uma geometria a pé (ex.: trechos Caminhe). */
+export function legFromCoordinates(
   map: MapboxMap,
   coordinates: [number, number][],
   distanceMeters: number,
   durationSeconds: number
 ): WalkLegAnalysis {
+  if (coordinates.length < 2) {
+    return {
+      distanceMeters: 0,
+      durationMinutes: 0,
+      elevationGain: 0,
+      maxGrade: 0,
+      topography: "Plano",
+      coordinates: [],
+      elevationProfile: [],
+      segmentGrades: [],
+    };
+  }
   const sampled = resampleRoute(coordinates);
   const elevations = extractElevations(map, sampled);
   const { profile, elevationGain, maxGrade, segmentGrades } = buildProfile(
@@ -189,9 +202,8 @@ function legFromRoute(
 }
 
 /**
- * Análise a pé ida (imóvel→destino) e volta (destino→imóvel).
- * Rota e altimetria vêm só do Mapbox Directions `walking` + terrain do mapa —
- * transporte público não entra no perfil de elevação.
+ * Análise a pé ida/volta porta-a-porta (Mapbox walking) — usada em cards/mapa.
+ * O gráfico de Elevação no painel usa só trechos Caminhe do Google (transit).
  */
 export async function analyzeRoute(
   map: MapboxMap,
@@ -205,13 +217,13 @@ export async function analyzeRoute(
     fetchWalkingRoute(token, DESTINATION.lng, DESTINATION.lat, lng, lat),
   ]);
 
-  const ida = legFromRoute(
+  const ida = legFromCoordinates(
     map,
     outbound.coordinates,
     outbound.distanceMeters,
     outbound.durationSeconds
   );
-  const volta = legFromRoute(
+  const volta = legFromCoordinates(
     map,
     inbound.coordinates,
     inbound.distanceMeters,

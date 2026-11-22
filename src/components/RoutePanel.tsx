@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Bus, Footprints, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import type { Map as MapboxMap } from "mapbox-gl";
+import { Bus, Loader2, Mountain } from "lucide-react";
 import { ElevationChart } from "@/components/ElevationChart";
+import { legFromCoordinates } from "@/lib/elevation";
 import type { TransitRouteResult } from "@/lib/transit";
 import type {
   Apartment,
@@ -14,20 +16,31 @@ import type {
 interface RoutePanelProps {
   apartment: Apartment | null;
   analysis: RouteAnalysis | null;
+  map: MapboxMap | null;
   hoverDistance: number | null;
   onHoverDistance: (distance: number | null) => void;
-  /** Qual perna a pé desenhar no mapa (ida/volta) — sync ao focar o gráfico. */
   walkDirection: TripDirection;
   onWalkDirectionChange: (dir: TripDirection) => void;
+  /** Geometria só dos trechos Caminhe — para desenhar no mapa. */
+  onElevationLegChange?: (leg: WalkLegAnalysis | null) => void;
 }
 
-function WalkLegSummary({ leg, label }: { leg: WalkLegAnalysis; label: string }) {
+function WalkLegSummary({
+  leg,
+  label,
+}: {
+  leg: WalkLegAnalysis;
+  label: string;
+}) {
   return (
     <div className="rounded-md border border-slate-100 bg-white px-3 py-2 text-xs text-slate-600">
       <p className="font-semibold text-slate-800">{label}</p>
       <p>
         {Math.round(leg.distanceMeters)} m · {leg.durationMinutes} min · subida +
         {Math.round(leg.elevationGain)} m · {leg.topography}
+      </p>
+      <p className="mt-0.5 text-[10px] text-slate-400">
+        Só trechos “Caminhe” (sem metrô/ônibus)
       </p>
     </div>
   );
@@ -65,8 +78,8 @@ function TransitLegBlock({
         </p>
       ) : (
         <p className="text-[11px] text-slate-500">
-          Caminhada no trajeto: {route.walkDurationMinutes} min (sem perfil de
-          elevação — altimetria só no trajeto a pé do Maps)
+          Caminhada no trajeto: {route.walkDurationMinutes} min · elevação no
+          botão Elevação (só “Caminhe”)
         </p>
       )}
 
@@ -104,14 +117,33 @@ function TransitLegBlock({
   );
 }
 
+function buildWalkElevationLeg(
+  map: MapboxMap | null,
+  route: TransitRouteResult | null
+): WalkLegAnalysis | null {
+  if (!map || !route?.walkCoordinates || route.walkCoordinates.length < 2) {
+    return null;
+  }
+  const durationSeconds = Math.max(60, route.walkDurationMinutes * 60);
+  return legFromCoordinates(
+    map,
+    route.walkCoordinates,
+    route.walkDistanceMeters || 0,
+    durationSeconds
+  );
+}
+
 export function RoutePanel({
   apartment,
   analysis,
+  map,
   hoverDistance,
   onHoverDistance,
   walkDirection,
   onWalkDirectionChange,
+  onElevationLegChange,
 }: RoutePanelProps) {
+  const [mode, setMode] = useState<"elevation" | "transit">("elevation");
   const [transitIda, setTransitIda] = useState<TransitRouteResult | null>(null);
   const [transitVolta, setTransitVolta] = useState<TransitRouteResult | null>(
     null
@@ -121,11 +153,13 @@ export function RoutePanel({
   const [transitError, setTransitError] = useState<string | null>(null);
 
   useEffect(() => {
+    setMode("elevation");
     setTransitIda(null);
     setTransitVolta(null);
     setTransitWarning(null);
     setTransitError(null);
     onWalkDirectionChange("ida");
+    onElevationLegChange?.(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apartment?.id]);
 
@@ -196,129 +230,198 @@ export function RoutePanel({
     };
   }, [apartment, walkIdaMin, walkVoltaMin]);
 
+  const elevIda = useMemo(
+    () => buildWalkElevationLeg(map, transitIda),
+    [map, transitIda]
+  );
+  const elevVolta = useMemo(
+    () => buildWalkElevationLeg(map, transitVolta),
+    [map, transitVolta]
+  );
+
+  useEffect(() => {
+    if (mode !== "elevation") {
+      onElevationLegChange?.(null);
+      return;
+    }
+    const leg = walkDirection === "ida" ? elevIda : elevVolta;
+    onElevationLegChange?.(leg);
+  }, [mode, walkDirection, elevIda, elevVolta, onElevationLegChange]);
+
   if (!apartment) {
     return (
       <div className="flex h-full items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100/80 px-6 text-center">
         <p className="max-w-sm text-sm text-slate-500">
-          Selecione um imóvel para comparar ida e volta — a pé (com elevação do
-          Maps) e transporte público — até a Faculdade Santa Marcelina.
+          Selecione um imóvel para ver elevação (só trechos Caminhe do Google) e
+          transporte público — ida e volta.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto bg-gradient-to-b from-white to-slate-50">
-      {/* —— A pé: rota Mapbox walking + elevação só deste trajeto —— */}
-      <section className="border-b border-slate-200">
-        <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2">
-          <Footprints className="h-3.5 w-3.5 text-teal-700" aria-hidden />
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-teal-800">
-            A pé (Maps)
-          </h2>
-          <p className="text-[10px] text-slate-400">
-            Elevação só do trajeto a pé · mapa:{" "}
-            <span className="font-semibold">{walkDirection}</span>
-          </p>
+    <div className="flex h-full flex-col bg-gradient-to-b from-white to-slate-50">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-2">
+        <div className="flex rounded-md border border-slate-200 p-0.5">
+          <button
+            type="button"
+            onClick={() => setMode("elevation")}
+            className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition ${
+              mode === "elevation"
+                ? "bg-teal-700 text-white"
+                : "text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <Mountain className="h-3.5 w-3.5" aria-hidden />
+            Elevação
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("transit")}
+            className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition ${
+              mode === "transit"
+                ? "bg-blue-600 text-white"
+                : "text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <Bus className="h-3.5 w-3.5" aria-hidden />
+            Transporte Público
+          </button>
         </div>
+        <p className="text-[10px] text-slate-400">
+          Ida e volta na mesma vista
+          {mode === "elevation" ? (
+            <>
+              {" "}
+              · mapa: <span className="font-semibold">{walkDirection}</span>
+            </>
+          ) : null}
+        </p>
+      </div>
 
-        {analysis ? (
-          <>
+      {mode === "elevation" ? (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {loadingTransit && !elevIda && !elevVolta ? (
+            <div className="flex h-[160px] items-center justify-center gap-2 px-6 text-sm text-slate-500">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              Calculando trechos Caminhe (Google) para elevação…
+            </div>
+          ) : null}
+
+          {transitError && (
+            <p className="m-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+              {transitError}
+            </p>
+          )}
+
+          {transitWarning && (
+            <p className="mx-3 mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              {transitWarning}
+            </p>
+          )}
+
+          <p className="border-b border-slate-100 px-4 py-2 text-[11px] text-slate-500">
+            Elevação só dos trechos <strong>Caminhe</strong> do Google Maps
+            (TRANSIT) — metrô/ônibus e o a pé porta-a-porta total ficam de fora.
+          </p>
+
+          {(elevIda || elevVolta) && (
             <div className="grid grid-cols-1 gap-2 border-b border-slate-100 px-4 py-2 sm:grid-cols-2">
-              <WalkLegSummary
-                leg={analysis.ida}
-                label="Ida (imóvel → faculdade)"
-              />
-              <WalkLegSummary
-                leg={analysis.volta}
-                label="Volta (faculdade → imóvel)"
-              />
+              {elevIda ? (
+                <WalkLegSummary
+                  leg={elevIda}
+                  label="Ida — só Caminhe"
+                />
+              ) : (
+                <p className="text-xs text-slate-400">Ida: sem trecho a pé</p>
+              )}
+              {elevVolta ? (
+                <WalkLegSummary
+                  leg={elevVolta}
+                  label="Volta — só Caminhe"
+                />
+              ) : (
+                <p className="text-xs text-slate-400">Volta: sem trecho a pé</p>
+              )}
             </div>
+          )}
 
-            <div
-              className="border-b border-slate-100"
-              onMouseEnter={() => onWalkDirectionChange("ida")}
-            >
-              <ElevationChart
-                leg={analysis.ida}
-                hoverDistance={walkDirection === "ida" ? hoverDistance : null}
-                onHoverDistance={(d) => {
-                  onWalkDirectionChange("ida");
-                  onHoverDistance(d);
-                }}
-                title="Elevação a pé — Ida"
-                emptyMessage="Perfil a pé (ida) indisponível."
-              />
-            </div>
-
-            <div onMouseEnter={() => onWalkDirectionChange("volta")}>
-              <ElevationChart
-                leg={analysis.volta}
-                hoverDistance={
-                  walkDirection === "volta" ? hoverDistance : null
-                }
-                onHoverDistance={(d) => {
-                  onWalkDirectionChange("volta");
-                  onHoverDistance(d);
-                }}
-                title="Elevação a pé — Volta"
-                emptyMessage="Perfil a pé (volta) indisponível."
-              />
-            </div>
-          </>
-        ) : (
-          <div className="flex h-[160px] items-center justify-center px-6 text-center text-sm text-slate-500">
-            Calculando trajeto a pé no Maps e perfil de elevação…
+          <div
+            className="border-b border-slate-100"
+            onMouseEnter={() => onWalkDirectionChange("ida")}
+          >
+            <ElevationChart
+              leg={elevIda}
+              hoverDistance={walkDirection === "ida" ? hoverDistance : null}
+              onHoverDistance={(d) => {
+                onWalkDirectionChange("ida");
+                onHoverDistance(d);
+              }}
+              title="Elevação — Ida (Caminhe)"
+              emptyMessage={
+                map
+                  ? "Sem trechos Caminhe na ida (ou mapa ainda carregando o terreno)."
+                  : "Aguarde o mapa carregar para calcular a elevação."
+              }
+            />
           </div>
-        )}
-      </section>
 
-      {/* —— Transporte: tempos/passos, sem altimetria —— */}
-      <section className="px-4 py-3">
-        <div className="mb-3 flex items-center gap-2">
-          <Bus className="h-3.5 w-3.5 text-blue-600" aria-hidden />
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-blue-800">
-            Transporte público
-          </h2>
-          <p className="text-[10px] text-slate-400">
-            Sem perfil de elevação
-          </p>
-        </div>
-
-        {loadingTransit && (
-          <p className="mb-3 inline-flex items-center gap-2 text-sm text-slate-500">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            Calculando transporte público (ida e volta)…
-          </p>
-        )}
-
-        {transitError && (
-          <p className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
-            {transitError}
-          </p>
-        )}
-
-        {transitWarning && (
-          <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            {transitWarning}
-          </p>
-        )}
-
-        <div className="space-y-4">
-          {transitIda && (
-            <TransitLegBlock
-              label="Ida (imóvel → faculdade)"
-              route={transitIda}
+          <div onMouseEnter={() => onWalkDirectionChange("volta")}>
+            <ElevationChart
+              leg={elevVolta}
+              hoverDistance={
+                walkDirection === "volta" ? hoverDistance : null
+              }
+              onHoverDistance={(d) => {
+                onWalkDirectionChange("volta");
+                onHoverDistance(d);
+              }}
+              title="Elevação — Volta (Caminhe)"
+              emptyMessage={
+                map
+                  ? "Sem trechos Caminhe na volta (ou mapa ainda carregando o terreno)."
+                  : "Aguarde o mapa carregar para calcular a elevação."
+              }
             />
-          )}
-          {transitVolta && (
-            <TransitLegBlock
-              label="Volta (faculdade → imóvel)"
-              route={transitVolta}
-            />
-          )}
+          </div>
         </div>
-      </section>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+          {loadingTransit && (
+            <p className="mb-3 inline-flex items-center gap-2 text-sm text-slate-500">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              Calculando transporte público (ida e volta)…
+            </p>
+          )}
+
+          {transitError && (
+            <p className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+              {transitError}
+            </p>
+          )}
+
+          {transitWarning && (
+            <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              {transitWarning}
+            </p>
+          )}
+
+          <div className="space-y-4">
+            {transitIda && (
+              <TransitLegBlock
+                label="Ida (imóvel → faculdade)"
+                route={transitIda}
+              />
+            )}
+            {transitVolta && (
+              <TransitLegBlock
+                label="Volta (faculdade → imóvel)"
+                route={transitVolta}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

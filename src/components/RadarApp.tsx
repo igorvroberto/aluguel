@@ -28,6 +28,7 @@ import {
   type FiltersState,
   type RouteAnalysis,
   type TripDirection,
+  type WalkLegAnalysis,
 } from "@/lib/types";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -71,6 +72,8 @@ export function RadarApp() {
   const [mapInstance, setMapInstance] = useState<MapboxMap | null>(null);
   const [mapLayers, setMapLayers] = useState<MapLayersState>(initialMapLayers);
   const [walkDirection, setWalkDirection] = useState<TripDirection>("ida");
+  /** Trechos Caminhe (Google) — sobrescreve a rota do mapa no modo Elevação. */
+  const [elevationLeg, setElevationLeg] = useState<WalkLegAnalysis | null>(null);
   const [filters, setFilters] = useState<FiltersState>({
     maxPackage: DEFAULT_MAX_PACKAGE,
     rooms: [1, 2, 3],
@@ -147,10 +150,23 @@ export function RadarApp() {
   const selectedFullAnalysis = selectedId
     ? analyses[selectedId] ?? null
     : null;
-  const selectedAnalysis = displayAnalysis(
-    selectedFullAnalysis,
-    walkDirection
-  );
+  const selectedAnalysis = useMemo(() => {
+    if (elevationLeg && selectedId) {
+      return {
+        apartmentId: selectedId,
+        ida: elevationLeg,
+        volta: elevationLeg,
+        distanceMeters: elevationLeg.distanceMeters,
+        elevationGain: elevationLeg.elevationGain,
+        maxGrade: elevationLeg.maxGrade,
+        topography: elevationLeg.topography,
+        coordinates: elevationLeg.coordinates,
+        elevationProfile: elevationLeg.elevationProfile,
+        segmentGrades: elevationLeg.segmentGrades,
+      } satisfies RouteAnalysis;
+    }
+    return displayAnalysis(selectedFullAnalysis, walkDirection);
+  }, [elevationLeg, selectedId, selectedFullAnalysis, walkDirection]);
 
   const runAnalysis = useCallback(
     async (apartment: Apartment, map: MapboxMap) => {
@@ -193,12 +209,17 @@ export function RadarApp() {
       setSelectedId(id);
       setHoverDistance(null);
       setWalkDirection("ida");
+      setElevationLeg(null);
       const apt = apartments.find((a) => a.id === id);
       if (!apt || !mapInstance || !MAPBOX_TOKEN) return;
       void runAnalysis(apt, mapInstance);
     },
     [apartments, mapInstance, runAnalysis]
   );
+
+  const handleElevationLegChange = useCallback((leg: WalkLegAnalysis | null) => {
+    setElevationLeg(leg);
+  }, []);
 
   /** Seleciona, analisa e rola até o mapa (não até o painel a pé/transit). */
   const handleTraceRoute = useCallback(
@@ -338,10 +359,12 @@ export function RadarApp() {
         <RoutePanel
           apartment={selectedApartment}
           analysis={selectedFullAnalysis}
+          map={mapInstance}
           hoverDistance={hoverDistance}
           onHoverDistance={setHoverDistance}
           walkDirection={walkDirection}
           onWalkDirectionChange={setWalkDirection}
+          onElevationLegChange={handleElevationLegChange}
         />
       </div>
     </section>

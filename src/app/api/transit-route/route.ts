@@ -22,7 +22,8 @@ export async function POST(req: NextRequest) {
     const direction: TripDirection =
       body.direction === "volta" ? "volta" : "ida";
     const directWalkMinutes =
-      body.directWalkMinutes != null && Number.isFinite(Number(body.directWalkMinutes))
+      body.directWalkMinutes != null &&
+      Number.isFinite(Number(body.directWalkMinutes))
         ? Number(body.directWalkMinutes)
         : undefined;
 
@@ -34,6 +35,8 @@ export async function POST(req: NextRequest) {
     }
 
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    const mapboxToken =
+      process.env.NEXT_PUBLIC_MAPBOX_TOKEN || process.env.MAPBOX_TOKEN;
 
     if (apiKey) {
       try {
@@ -50,39 +53,41 @@ export async function POST(req: NextRequest) {
           direction,
           message: route.preferDirectWalk
             ? "A pé direto é mais rápido que transporte público neste trajeto."
-            : "Trajeto via Google Routes API (TRANSIT).",
+            : "Trajeto via Google Routes API (TRANSIT). Elevação usa só trechos Caminhe.",
         });
       } catch (err) {
         console.warn("Google TRANSIT fallback:", err);
-        const route = buildFallbackTransitRoute(
+        const route = await buildFallbackTransitRoute(
           lat,
           lng,
           direction,
-          directWalkMinutes
+          directWalkMinutes,
+          mapboxToken
         );
         return NextResponse.json({
           ok: true,
           route,
           direction,
           warning:
-            "Estimativa local — Google Routes indisponível. Comparação usa tempo a pé real quando disponível.",
+            "Estimativa local — Google Routes indisponível. Elevação só nos trechos a pé até/da estação.",
           source: "local-fallback",
         });
       }
     }
 
-    const route = buildFallbackTransitRoute(
+    const route = await buildFallbackTransitRoute(
       lat,
       lng,
       direction,
-      directWalkMinutes
+      directWalkMinutes,
+      mapboxToken
     );
     return NextResponse.json({
       ok: true,
       route,
       direction,
       warning:
-        "Estimativa local. Transporte só é sugerido se for mais rápido que a pé (tempo Mapbox quando houver).",
+        "Estimativa local. Elevação só nos trechos a pé (Caminhe) — sem metrô/ônibus.",
       source: "local",
     });
   } catch (err) {
