@@ -80,7 +80,10 @@ export interface RouteAnalysis {
 }
 
 export interface FiltersState {
-  maxPackage: number;
+  /** Pacote mensal mínimo (null = sem mínimo). */
+  minPackage: number | null;
+  /** Pacote mensal máximo (null = sem máximo). */
+  maxPackage: number | null;
   rooms: Array<1 | 2 | 3>;
   sortBy: SortOption;
   stationIds: string[];

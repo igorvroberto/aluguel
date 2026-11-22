@@ -174,41 +174,77 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
   return (
     <div className="space-y-4 border-b border-slate-200 bg-white/80 p-4 backdrop-blur">
       <div>
-        <div className="mb-2 flex items-center justify-between text-sm">
-          <label htmlFor="max-package" className="font-medium text-slate-700">
-            Pacote mensal máx.
+        <p className="mb-2 text-sm font-medium text-slate-700">
+          Pacote mensal
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block text-[11px] text-slate-500">
+            De
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={100}
+              placeholder="sem mín."
+              value={filters.minPackage ?? ""}
+              onChange={(e) => {
+                const raw = e.target.value.trim();
+                onChange({
+                  ...filters,
+                  minPackage:
+                    raw === "" || !Number.isFinite(Number(raw))
+                      ? null
+                      : Math.max(0, Math.round(Number(raw))),
+                });
+              }}
+              className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm tabular-nums text-slate-800 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+            />
           </label>
-          <span className="tabular-nums font-semibold text-teal-800">
-            {formatBRL(filters.maxPackage)}
-          </span>
+          <label className="block text-[11px] text-slate-500">
+            Até
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={100}
+              placeholder="sem máx."
+              value={filters.maxPackage ?? ""}
+              onChange={(e) => {
+                const raw = e.target.value.trim();
+                onChange({
+                  ...filters,
+                  maxPackage:
+                    raw === "" || !Number.isFinite(Number(raw))
+                      ? null
+                      : Math.max(0, Math.round(Number(raw))),
+                });
+              }}
+              className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm tabular-nums text-slate-800 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+            />
+          </label>
         </div>
-        <input
-          id="max-package"
-          type="range"
-          min={1500}
-          max={8000}
-          step={100}
-          value={filters.maxPackage}
-          onChange={(e) =>
-            onChange({ ...filters, maxPackage: Number(e.target.value) })
-          }
-          className="w-full accent-teal-700"
-        />
-        <div className="mt-1 flex justify-between text-[11px] text-slate-400">
-          <span>{formatBRL(1500)}</span>
+        <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+          <span>
+            {filters.minPackage != null || filters.maxPackage != null
+              ? `${filters.minPackage != null ? formatBRL(filters.minPackage) : "—"} → ${filters.maxPackage != null ? formatBRL(filters.maxPackage) : "—"}`
+              : "sem filtro de valor"}
+          </span>
           <button
             type="button"
-            className="text-teal-700 hover:underline"
+            className="shrink-0 text-teal-700 hover:underline"
             onClick={() =>
-              onChange({ ...filters, maxPackage: DEFAULT_MAX_PACKAGE })
+              onChange({
+                ...filters,
+                minPackage: null,
+                maxPackage: DEFAULT_MAX_PACKAGE,
+              })
             }
           >
-            padrão {formatBRL(DEFAULT_MAX_PACKAGE)}
+            padrão até {formatBRL(DEFAULT_MAX_PACKAGE)}
           </button>
-          <span>{formatBRL(8000)}</span>
         </div>
         <p className="mt-1 text-[11px] text-slate-500">
-          aluguel + condomínio + IPTU
+          aluguel + condomínio + IPTU · De e Até são independentes
         </p>
       </div>
 

@@ -75,6 +75,7 @@ export function RadarApp() {
   /** Trechos Caminhe (Google) — sobrescreve a rota do mapa no modo Elevação. */
   const [elevationLeg, setElevationLeg] = useState<WalkLegAnalysis | null>(null);
   const [filters, setFilters] = useState<FiltersState>({
+    minPackage: null,
     maxPackage: DEFAULT_MAX_PACKAGE,
     rooms: [1, 2, 3],
     sortBy: "pacote",

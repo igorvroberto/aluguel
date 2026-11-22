@@ -35,7 +35,9 @@ export function getVisibleApartments(
   const roomSet = new Set(filters.rooms);
 
   const list = apartments.filter((apt) => {
-    if (packageValue(apt) > filters.maxPackage) return false;
+    const pkg = packageValue(apt);
+    if (filters.minPackage != null && pkg < filters.minPackage) return false;
+    if (filters.maxPackage != null && pkg > filters.maxPackage) return false;
 
     const roomKey = (apt.rooms >= 3 ? 3 : apt.rooms) as 1 | 2 | 3;
     if (roomSet.size > 0 && !roomSet.has(roomKey)) return false;
