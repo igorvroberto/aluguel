@@ -1,6 +1,10 @@
+import { BUS_STOPS } from "../../data/busStops";
 import { METRO_STATIONS } from "../../data/linhasMetro";
-import { BUS_LINES } from "./bus-lines";
 import { DESTINATION } from "./constants";
+import {
+  fetchNearbyTransitPlaces,
+  type PlaceTransitHub,
+} from "./googlePlaces";
 import { decodeGooglePolyline } from "./polyline";
 
 export type TransitStepMode = "WALK" | "BUS" | "SUBWAY" | "TRANSIT";
@@ -29,6 +33,8 @@ export interface TransitRouteResult {
   walkDurationMinutes: number;
   steps: TransitStep[];
   summary: string;
+  /** Rótulo curto estilo Maps: "Ônibus 175P-10 · 22 min" */
+  optionLabel?: string;
   /** Se true, a pé direto é mais rápido que metrô/ônibus + caminhadas. */
   preferDirectWalk?: boolean;
   directWalkMinutes?: number;
@@ -136,33 +142,78 @@ type Hub = {
   lat: number;
   lng: number;
   lineLabel: string;
+  /** Códigos SPTrans / labels para preferir mesma linha na ida/volta */
+  lineCodes: string[];
 };
 
-function allHubs(): Hub[] {
+function staticHubs(): Hub[] {
   const metro: Hub[] = METRO_STATIONS.map((s) => ({
     kind: "station" as const,
     name: s.name,
     lat: s.lat,
     lng: s.lng,
     lineLabel: `${s.lineCode} ${s.name}`,
+    lineCodes: [s.lineCode],
   }));
 
-  const buses: Hub[] = BUS_LINES.flatMap((line) => {
-    const pts = [
-      line.coordinates[0],
-      line.coordinates[Math.floor(line.coordinates.length / 2)],
-      line.coordinates[line.coordinates.length - 1],
-    ];
-    return pts.map((c, i) => ({
-      kind: "bus" as const,
-      name: `Ponto ${line.code}${i === 1 ? " (meio)" : ""}`,
-      lat: c[1],
-      lng: c[0],
-      lineLabel: `${line.code} (${line.name})`,
-    }));
-  });
+  // Paradas reais (Google/Moovit), NÃO vértices do traçado aproximado
+  const buses: Hub[] = BUS_STOPS.map((stop) => ({
+    kind: "bus" as const,
+    name: stop.name,
+    lat: stop.lat,
+    lng: stop.lng,
+    lineLabel: stop.lines.join(" / "),
+    lineCodes: stop.lines,
+  }));
 
   return [...metro, ...buses];
+}
+
+function placeToHub(place: PlaceTransitHub): Hub {
+  const types = place.kinds.map((t) => t.toLowerCase());
+  const isStation =
+    types.some((t) => t.includes("subway") || t.includes("light_rail")) ||
+    /metr[oô]|estação/i.test(place.name);
+  return {
+    kind: isStation ? "station" : "bus",
+    name: place.name,
+    lat: place.lat,
+    lng: place.lng,
+    lineLabel: place.name,
+    lineCodes: [],
+  };
+}
+
+function mergeHubs(base: Hub[], extra: Hub[]): Hub[] {
+  const out = [...base];
+  for (const h of extra) {
+    const dup = out.some(
+      (x) =>
+        Math.abs(x.lat - h.lat) < 1e-4 && Math.abs(x.lng - h.lng) < 1e-4
+    );
+    if (!dup) out.push(h);
+  }
+  return out;
+}
+
+async function resolveHubs(googleApiKey?: string, samples?: Array<{ lat: number; lng: number }>): Promise<Hub[]> {
+  let hubs = staticHubs();
+  if (!googleApiKey || !samples?.length) return hubs;
+
+  try {
+    const batches = await Promise.all(
+      samples.map((p) =>
+        fetchNearbyTransitPlaces(googleApiKey, p.lat, p.lng, 1000).catch(
+          () => [] as PlaceTransitHub[]
+        )
+      )
+    );
+    const fromPlaces = batches.flat().map(placeToHub);
+    hubs = mergeHubs(hubs, fromPlaces);
+  } catch (err) {
+    console.warn("Não foi possível enriquecer hubs via Places:", err);
+  }
+  return hubs;
 }
 
 function nearestHub(
@@ -180,6 +231,48 @@ function nearestHub(
     }
   }
   return { hub: best, distanceM: bestD };
+}
+
+function sharesLine(a: Hub, b: Hub): boolean {
+  if (!a.lineCodes.length || !b.lineCodes.length) return false;
+  return a.lineCodes.some((c) => b.lineCodes.includes(c));
+}
+
+/**
+ * Origem: hub mais perto. Destino: prefere parada da mesma linha
+ * (trajeto Google-like), senão o hub mais perto do destino.
+ */
+function pickAccessHubs(
+  fromLat: number,
+  fromLng: number,
+  toLat: number,
+  toLng: number,
+  hubs: Hub[]
+): {
+  originHub: { hub: Hub; distanceM: number };
+  destHub: { hub: Hub; distanceM: number };
+} {
+  const originHub = nearestHub(fromLat, fromLng, hubs);
+  const sameLine = hubs.filter(
+    (h) =>
+      sharesLine(h, originHub.hub) &&
+      (h.lat !== originHub.hub.lat || h.lng !== originHub.hub.lng)
+  );
+  const destPool = sameLine.length > 0 ? sameLine : hubs;
+  let destHub = nearestHub(toLat, toLng, destPool);
+
+  // Evita “embarque = desembarque” (antes: FACULDADE como meio do traçado)
+  if (
+    destHub.hub.lat === originHub.hub.lat &&
+    destHub.hub.lng === originHub.hub.lng
+  ) {
+    const others = hubs.filter(
+      (h) => h.lat !== originHub.hub.lat || h.lng !== originHub.hub.lng
+    );
+    if (others.length) destHub = nearestHub(toLat, toLng, others);
+  }
+
+  return { originHub, destHub };
 }
 
 function rideMinutesBetween(a: Hub, b: Hub): number {
@@ -234,7 +327,8 @@ export async function buildFallbackTransitRoute(
   originLng: number,
   direction: TripDirection = "ida",
   directWalkMinutesOverride?: number,
-  mapboxToken?: string
+  mapboxToken?: string,
+  googleApiKey?: string
 ): Promise<TransitRouteResult> {
   const fromLat = direction === "ida" ? originLat : DESTINATION.lat;
   const fromLng = direction === "ida" ? originLng : DESTINATION.lng;
@@ -250,9 +344,17 @@ export async function buildFallbackTransitRoute(
     directWalkMinutesOverride
   );
 
-  const hubs = allHubs();
-  const originHub = nearestHub(fromLat, fromLng, hubs);
-  const destHub = nearestHub(toLat, toLng, hubs);
+  const hubs = await resolveHubs(googleApiKey, [
+    { lat: fromLat, lng: fromLng },
+    { lat: toLat, lng: toLng },
+  ]);
+  const { originHub, destHub } = pickAccessHubs(
+    fromLat,
+    fromLng,
+    toLat,
+    toLng,
+    hubs
+  );
 
   let walkToCoords: [number, number][];
   let walkFromCoords: [number, number][];
@@ -369,30 +471,34 @@ export async function buildFallbackTransitRoute(
   };
 }
 
-interface GoogleRoutesResponse {
-  routes?: Array<{
-    duration?: string;
-    legs?: Array<{
-      steps?: Array<{
-        staticDuration?: string;
-        distanceMeters?: number;
-        navigationInstruction?: { instructions?: string };
-        travelMode?: string;
-        polyline?: { encodedPolyline?: string };
-        transitDetails?: {
-          transitLine?: {
-            nameShort?: string;
-            name?: string;
-            vehicle?: { type?: string; name?: { text?: string } };
-          };
-          stopDetails?: {
-            arrivalStop?: { name?: string };
-            departureStop?: { name?: string };
-          };
+interface GoogleRouteRaw {
+  duration?: string;
+  description?: string;
+  routeLabels?: string[];
+  legs?: Array<{
+    steps?: Array<{
+      staticDuration?: string;
+      distanceMeters?: number;
+      navigationInstruction?: { instructions?: string };
+      travelMode?: string;
+      polyline?: { encodedPolyline?: string };
+      transitDetails?: {
+        transitLine?: {
+          nameShort?: string;
+          name?: string;
+          vehicle?: { type?: string; name?: { text?: string } };
         };
-      }>;
+        stopDetails?: {
+          arrivalStop?: { name?: string };
+          departureStop?: { name?: string };
+        };
+      };
     }>;
   }>;
+}
+
+interface GoogleRoutesResponse {
+  routes?: GoogleRouteRaw[];
   error?: { message?: string; status?: string };
 }
 
@@ -415,67 +521,29 @@ function googleModeToOurs(mode?: string, vehicleType?: string): TransitStepMode 
   return "WALK";
 }
 
-export async function fetchGoogleTransitRoute(
-  apiKey: string,
-  originLat: number,
-  originLng: number,
-  direction: TripDirection = "ida",
-  directWalkMinutesOverride?: number
-): Promise<TransitRouteResult> {
-  const from =
-    direction === "ida"
-      ? { lat: originLat, lng: originLng }
-      : { lat: DESTINATION.lat, lng: DESTINATION.lng };
-  const to =
-    direction === "ida"
-      ? { lat: DESTINATION.lat, lng: DESTINATION.lng }
-      : { lat: originLat, lng: originLng };
+function buildOptionLabel(
+  steps: TransitStep[],
+  totalDurationMinutes: number
+): string {
+  const transitBits = steps
+    .filter((s) => s.mode !== "WALK")
+    .map((s) => {
+      const kind =
+        s.mode === "BUS" ? "Ônibus" : s.mode === "SUBWAY" ? "Metrô" : "Transporte";
+      return s.lineName ? `${kind} ${s.lineName}` : kind;
+    });
+  const unique = Array.from(new Set(transitBits));
+  const modes = unique.length ? unique.join(" + ") : "Transporte";
+  return `${modes} · ${totalDurationMinutes} min`;
+}
 
-  const directWalkMin = estimateDirectWalkMinutes(
-    from.lat,
-    from.lng,
-    to.lat,
-    to.lng,
-    directWalkMinutesOverride
-  );
+function parseGoogleRouteRaw(
+  raw: GoogleRouteRaw,
+  directWalkMin: number
+): TransitRouteResult | null {
+  const stepsRaw = raw.legs?.[0]?.steps;
+  if (!stepsRaw?.length) return null;
 
-  const res = await fetch(
-    "https://routes.googleapis.com/directions/v2:computeRoutes",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask":
-          "routes.duration,routes.legs.steps.staticDuration,routes.legs.steps.distanceMeters,routes.legs.steps.navigationInstruction,routes.legs.steps.travelMode,routes.legs.steps.transitDetails,routes.legs.steps.polyline",
-      },
-      body: JSON.stringify({
-        origin: {
-          location: {
-            latLng: { latitude: from.lat, longitude: from.lng },
-          },
-        },
-        destination: {
-          location: {
-            latLng: { latitude: to.lat, longitude: to.lng },
-          },
-        },
-        travelMode: "TRANSIT",
-        languageCode: "pt-BR",
-        units: "METRIC",
-      }),
-      signal: AbortSignal.timeout(15000),
-    }
-  );
-
-  const data = (await res.json()) as GoogleRoutesResponse;
-  if (!res.ok || !data.routes?.[0]?.legs?.[0]?.steps?.length) {
-    throw new Error(
-      data.error?.message || "Google Routes não retornou trajeto TRANSIT"
-    );
-  }
-
-  const stepsRaw = data.routes[0].legs[0].steps!;
   const steps: TransitStep[] = stepsRaw.map((s) => {
     const seconds = parseDurationSeconds(s.staticDuration);
     const minutes = Math.max(1, Math.round(seconds / 60));
@@ -503,7 +571,6 @@ export async function fetchGoogleTransitRoute(
     }
 
     const encoded = s.polyline?.encodedPolyline;
-    // Geometria só para WALK — metrô/ônibus ficam de fora da elevação
     const coordinates =
       mode === "WALK" && encoded
         ? decodeGooglePolyline(encoded)
@@ -522,7 +589,7 @@ export async function fetchGoogleTransitRoute(
   const { walkSegments, walkCoordinates, walkDistanceMeters } =
     extractWalkPaths(steps);
 
-  const totalSeconds = parseDurationSeconds(data.routes[0].duration);
+  const totalSeconds = parseDurationSeconds(raw.duration);
   const totalDurationMinutes =
     totalSeconds > 0
       ? Math.max(1, Math.round(totalSeconds / 60))
@@ -532,9 +599,104 @@ export async function fetchGoogleTransitRoute(
     .filter((s) => s.mode === "WALK")
     .reduce((sum, s) => sum + s.durationMinutes, 0);
 
-  if (directWalkMin + 2 < totalDurationMinutes) {
+  const summary = steps.map((s) => s.instruction).join(" → ");
+  const optionLabel =
+    raw.description?.trim() ||
+    buildOptionLabel(steps, totalDurationMinutes);
+
+  return {
+    source: "google",
+    totalDurationMinutes,
+    walkDurationMinutes,
+    steps,
+    summary,
+    optionLabel,
+    preferDirectWalk: false,
+    directWalkMinutes: directWalkMin,
+    walkSegments,
+    walkCoordinates,
+    walkDistanceMeters,
+  };
+}
+
+/**
+ * Opções de transporte exatamente como o Google Maps (Routes API TRANSIT),
+ * com alternativas (ônibus vs metrô etc.) quando disponíveis.
+ */
+export async function fetchGoogleTransitRoutes(
+  apiKey: string,
+  originLat: number,
+  originLng: number,
+  direction: TripDirection = "ida",
+  directWalkMinutesOverride?: number
+): Promise<TransitRouteResult[]> {
+  const from =
+    direction === "ida"
+      ? { lat: originLat, lng: originLng }
+      : { lat: DESTINATION.lat, lng: DESTINATION.lng };
+  const to =
+    direction === "ida"
+      ? { lat: DESTINATION.lat, lng: DESTINATION.lng }
+      : { lat: originLat, lng: originLng };
+
+  const directWalkMin = estimateDirectWalkMinutes(
+    from.lat,
+    from.lng,
+    to.lat,
+    to.lng,
+    directWalkMinutesOverride
+  );
+
+  const res = await fetch(
+    "https://routes.googleapis.com/directions/v2:computeRoutes",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask":
+          "routes.duration,routes.description,routes.routeLabels,routes.legs.steps.staticDuration,routes.legs.steps.distanceMeters,routes.legs.steps.navigationInstruction,routes.legs.steps.travelMode,routes.legs.steps.transitDetails,routes.legs.steps.polyline",
+      },
+      body: JSON.stringify({
+        origin: {
+          location: {
+            latLng: { latitude: from.lat, longitude: from.lng },
+          },
+        },
+        destination: {
+          location: {
+            latLng: { latitude: to.lat, longitude: to.lng },
+          },
+        },
+        travelMode: "TRANSIT",
+        computeAlternativeRoutes: true,
+        languageCode: "pt-BR",
+        units: "METRIC",
+      }),
+      signal: AbortSignal.timeout(20000),
+    }
+  );
+
+  const data = (await res.json()) as GoogleRoutesResponse;
+  if (!res.ok || !data.routes?.length) {
+    throw new Error(
+      data.error?.message || "Google Routes não retornou trajeto TRANSIT"
+    );
+  }
+
+  const parsed = data.routes
+    .map((raw) => parseGoogleRouteRaw(raw, directWalkMin))
+    .filter((r): r is TransitRouteResult => r != null);
+
+  if (!parsed.length) {
+    throw new Error("Google Routes não retornou passos TRANSIT utilizáveis");
+  }
+
+  // Se a pé direto for claramente melhor que a melhor opção Google, inclui como opção
+  const bestTransitMin = Math.min(...parsed.map((r) => r.totalDurationMinutes));
+  if (directWalkMin + 2 < bestTransitMin) {
     const toLabel = direction === "ida" ? DESTINATION.name : "o imóvel";
-    return {
+    const walkOpt: TransitRouteResult = {
       source: "walk-preferred",
       totalDurationMinutes: directWalkMin,
       walkDurationMinutes: directWalkMin,
@@ -545,25 +707,35 @@ export async function fetchGoogleTransitRoute(
           durationMinutes: directWalkMin,
         },
       ],
-      summary: `A pé direto (${directWalkMin} min) é melhor que TRANSIT (${totalDurationMinutes} min)`,
+      summary: `A pé direto (${directWalkMin} min) é melhor que TRANSIT (${bestTransitMin} min)`,
+      optionLabel: `A pé direto · ${directWalkMin} min`,
       preferDirectWalk: true,
       directWalkMinutes: directWalkMin,
-      walkSegments,
-      walkCoordinates,
-      walkDistanceMeters,
+      // Mantém caminhadas do melhor trajeto Google para o gráfico Elevação
+      walkSegments: parsed[0].walkSegments,
+      walkCoordinates: parsed[0].walkCoordinates,
+      walkDistanceMeters: parsed[0].walkDistanceMeters,
     };
+    return [walkOpt, ...parsed];
   }
 
-  return {
-    source: "google",
-    totalDurationMinutes,
-    walkDurationMinutes,
-    steps,
-    summary: steps.map((s) => s.instruction).join(" → "),
-    preferDirectWalk: false,
-    directWalkMinutes: directWalkMin,
-    walkSegments,
-    walkCoordinates,
-    walkDistanceMeters,
-  };
+  return parsed;
+}
+
+/** Compat: primeira opção (recomendada pelo Google). */
+export async function fetchGoogleTransitRoute(
+  apiKey: string,
+  originLat: number,
+  originLng: number,
+  direction: TripDirection = "ida",
+  directWalkMinutesOverride?: number
+): Promise<TransitRouteResult> {
+  const routes = await fetchGoogleTransitRoutes(
+    apiKey,
+    originLat,
+    originLng,
+    direction,
+    directWalkMinutesOverride
+  );
+  return routes[0];
 }

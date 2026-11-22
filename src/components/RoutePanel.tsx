@@ -27,11 +27,18 @@ interface RoutePanelProps {
 
 function TransitLegBlock({
   label,
-  route,
+  routes,
+  selectedIndex,
+  onSelect,
 }: {
   label: string;
-  route: TransitRouteResult;
+  routes: TransitRouteResult[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
 }) {
+  const route = routes[selectedIndex] ?? routes[0];
+  if (!route) return null;
+
   return (
     <div className="space-y-2 rounded-md border border-slate-100 bg-white px-3 py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -49,6 +56,38 @@ function TransitLegBlock({
           ) : null}
         </p>
       </div>
+
+      {routes.length > 1 ? (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+            Opções do Google Maps
+          </p>
+          {routes.map((opt, idx) => {
+            const active = idx === selectedIndex;
+            return (
+              <button
+                key={`${label}-opt-${idx}-${opt.optionLabel}`}
+                type="button"
+                onClick={() => onSelect(idx)}
+                className={`rounded-md border px-3 py-2 text-left text-sm transition ${
+                  active
+                    ? "border-blue-600 bg-blue-50 text-blue-950"
+                    : "border-slate-200 bg-slate-50/60 text-slate-700 hover:border-slate-300"
+                }`}
+              >
+                <span className="font-medium">
+                  {opt.optionLabel || `Opção ${idx + 1}`}
+                </span>
+                {opt.source === "google" ? (
+                  <span className="mt-0.5 block text-[11px] text-slate-500">
+                    Google Routes
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       {route.preferDirectWalk ? (
         <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-950">
@@ -219,19 +258,24 @@ export function RoutePanel({
   onWalkDirectionChange,
   onElevationLegChange,
 }: RoutePanelProps) {
-  const [mode, setMode] = useState<"elevation" | "transit">("elevation");
-  const [transitIda, setTransitIda] = useState<TransitRouteResult | null>(null);
-  const [transitVolta, setTransitVolta] = useState<TransitRouteResult | null>(
-    null
-  );
+  const [mode, setMode] = useState<"elevation" | "transit">("transit");
+  const [idaRoutes, setIdaRoutes] = useState<TransitRouteResult[]>([]);
+  const [voltaRoutes, setVoltaRoutes] = useState<TransitRouteResult[]>([]);
+  const [idaOption, setIdaOption] = useState(0);
+  const [voltaOption, setVoltaOption] = useState(0);
   const [transitWarning, setTransitWarning] = useState<string | null>(null);
   const [loadingTransit, setLoadingTransit] = useState(false);
   const [transitError, setTransitError] = useState<string | null>(null);
 
+  const transitIda = idaRoutes[idaOption] ?? idaRoutes[0] ?? null;
+  const transitVolta = voltaRoutes[voltaOption] ?? voltaRoutes[0] ?? null;
+
   useEffect(() => {
-    setMode("elevation");
-    setTransitIda(null);
-    setTransitVolta(null);
+    setMode("transit");
+    setIdaRoutes([]);
+    setVoltaRoutes([]);
+    setIdaOption(0);
+    setVoltaOption(0);
     setTransitWarning(null);
     setTransitError(null);
     onWalkDirectionChange("ida");
@@ -267,16 +311,26 @@ export function RoutePanel({
           });
           const data = (await res.json()) as {
             ok: boolean;
+            routes?: TransitRouteResult[];
             route?: TransitRouteResult;
             warning?: string;
             error?: string;
           };
-          if (!data.ok || !data.route) {
+          if (!data.ok) {
             throw new Error(
               data.error || "Não foi possível calcular o trajeto."
             );
           }
-          return { route: data.route, warning: data.warning };
+          const list =
+            data.routes && data.routes.length > 0
+              ? data.routes
+              : data.route
+                ? [data.route]
+                : [];
+          if (!list.length) {
+            throw new Error("Google não retornou opções de trajeto.");
+          }
+          return { routes: list, warning: data.warning };
         };
 
         const [idaRes, voltaRes] = await Promise.all([
@@ -285,8 +339,10 @@ export function RoutePanel({
         ]);
 
         if (cancelled) return;
-        setTransitIda(idaRes.route);
-        setTransitVolta(voltaRes.route);
+        setIdaRoutes(idaRes.routes);
+        setVoltaRoutes(voltaRes.routes);
+        setIdaOption(0);
+        setVoltaOption(0);
         setTransitWarning(idaRes.warning || voltaRes.warning || null);
       } catch (err) {
         if (!cancelled) {
@@ -328,8 +384,8 @@ export function RoutePanel({
     return (
       <div className="flex h-full items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100/80 px-6 text-center">
         <p className="max-w-sm text-sm text-slate-500">
-          Selecione um imóvel para ver elevação (um gráfico por trecho Caminhe)
-          e transporte público — ida e volta.
+          Selecione um imóvel para ver transporte público (Google Maps) e, em
+          seguida, a elevação dos trechos Caminhe da opção escolhida.
         </p>
       </div>
     );
@@ -345,18 +401,6 @@ export function RoutePanel({
         <div className="flex rounded-md border border-slate-200 p-0.5">
           <button
             type="button"
-            onClick={() => setMode("elevation")}
-            className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition ${
-              mode === "elevation"
-                ? "bg-teal-700 text-white"
-                : "text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            <Mountain className="h-3.5 w-3.5" aria-hidden />
-            Elevação
-          </button>
-          <button
-            type="button"
             onClick={() => setMode("transit")}
             className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition ${
               mode === "transit"
@@ -367,9 +411,21 @@ export function RoutePanel({
             <Bus className="h-3.5 w-3.5" aria-hidden />
             Transporte Público
           </button>
+          <button
+            type="button"
+            onClick={() => setMode("elevation")}
+            className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition ${
+              mode === "elevation"
+                ? "bg-teal-700 text-white"
+                : "text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <Mountain className="h-3.5 w-3.5" aria-hidden />
+            Elevação
+          </button>
         </div>
         <p className="text-[10px] text-slate-400">
-          Ida e volta · um gráfico por Caminhe
+          Escolha o trajeto Google · elevação segue a opção
         </p>
       </div>
 
@@ -378,7 +434,7 @@ export function RoutePanel({
           {loadingTransit && !hasWalkSegs ? (
             <div className="flex h-[160px] items-center justify-center gap-2 px-6 text-sm text-slate-500">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Calculando trechos Caminhe para elevação…
+              Calculando trechos Caminhe da opção Google…
             </div>
           ) : null}
 
@@ -394,10 +450,34 @@ export function RoutePanel({
             </p>
           )}
 
+          {(transitIda || transitVolta) && (
+            <div className="border-b border-slate-100 px-4 py-2 text-[11px] text-slate-600">
+              <p className="font-medium text-slate-700">
+                Elevação da opção escolhida em Transporte Público
+              </p>
+              {transitIda?.optionLabel ? (
+                <p className="mt-0.5 text-slate-500">
+                  Ida: {transitIda.optionLabel}
+                </p>
+              ) : null}
+              {transitVolta?.optionLabel ? (
+                <p className="text-slate-500">
+                  Volta: {transitVolta.optionLabel}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setMode("transit")}
+                className="mt-1 text-[11px] font-semibold text-blue-700 hover:underline"
+              >
+                Trocar opção no Google Routes
+              </button>
+            </div>
+          )}
+
           <p className="border-b border-slate-100 px-4 py-2 text-[11px] text-slate-500">
-            Cada gráfico é <strong>só um trecho Caminhe</strong> (até a
-            estação, da estação ao destino, etc.). Metrô/ônibus e o a pé
-            porta-a-porta total ficam de fora.
+            Cada gráfico é <strong>só um trecho Caminhe</strong> da opção
+            Google selecionada. Metrô/ônibus ficam de fora.
           </p>
 
           <WalkSegmentCharts
@@ -446,16 +526,20 @@ export function RoutePanel({
           )}
 
           <div className="space-y-4">
-            {transitIda && (
+            {idaRoutes.length > 0 && (
               <TransitLegBlock
                 label="Ida (imóvel → faculdade)"
-                route={transitIda}
+                routes={idaRoutes}
+                selectedIndex={idaOption}
+                onSelect={setIdaOption}
               />
             )}
-            {transitVolta && (
+            {voltaRoutes.length > 0 && (
               <TransitLegBlock
                 label="Volta (faculdade → imóvel)"
-                route={transitVolta}
+                routes={voltaRoutes}
+                selectedIndex={voltaOption}
+                onSelect={setVoltaOption}
               />
             )}
           </div>

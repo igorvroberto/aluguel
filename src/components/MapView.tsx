@@ -17,6 +17,7 @@ import {
   BUS_LINE_WIDTH,
   buildBusLinesGeoJSON,
 } from "@/lib/bus-lines";
+import { buildBusStopsGeoJSON } from "../../data/busStops";
 import type { MapLayersState } from "@/components/MapLayersPanel";
 import { gradeBucket } from "@/lib/elevation";
 import { gradeColor } from "@/lib/format";
@@ -48,6 +49,7 @@ const DEM_SOURCE = "mapbox-dem";
 const ROUTE_SOURCE = "route-segments";
 const TRANSIT_SOURCE = "transit-overlay";
 const BUS_LINES_SOURCE = "bus-lines-dedicated";
+const BUS_STOPS_SOURCE = "bus-stops-real";
 const HOVER_SOURCE = "hover-point";
 const L3_LINE_SOURCE = "linha-vermelha-line";
 const L3_STATIONS_SOURCE = "linha-vermelha-stations";
@@ -267,6 +269,42 @@ export function MapView({
             map.getCanvas().style.cursor = "";
             popupRef.current?.remove();
           });
+        });
+      }
+
+      if (!map.getSource(BUS_STOPS_SOURCE)) {
+        map.addSource(BUS_STOPS_SOURCE, {
+          type: "geojson",
+          data: buildBusStopsGeoJSON(),
+        });
+        map.addLayer({
+          id: "bus-stops",
+          type: "circle",
+          source: BUS_STOPS_SOURCE,
+          paint: {
+            "circle-radius": 5,
+            "circle-color": "#1d4ed8",
+            "circle-stroke-width": 1.5,
+            "circle-stroke-color": "#ffffff",
+            "circle-opacity": 0.95,
+          },
+        });
+        map.on("mouseenter", "bus-stops", (e) => {
+          map.getCanvas().style.cursor = "pointer";
+          const feat = e.features?.[0];
+          if (!feat || !e.lngLat || !popupRef.current) return;
+          const p = feat.properties || {};
+          popupRef.current
+            .setLngLat(e.lngLat)
+            .setHTML(
+              `<strong>Parada</strong><br/>${p.name}<br/>` +
+                `<span style="opacity:.8">${p.lines || ""}</span>`
+            )
+            .addTo(map);
+        });
+        map.on("mouseleave", "bus-stops", () => {
+          map.getCanvas().style.cursor = "";
+          popupRef.current?.remove();
         });
       }
 
