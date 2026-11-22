@@ -3,12 +3,10 @@
 import { useMemo, useState } from "react";
 import { Search, TrainFront, X } from "lucide-react";
 import {
-  DEFAULT_STATION_RADIUS_METERS,
   LINHA_LARANJA_ATIVAS,
   LINHA_LARANJA_COLOR,
   LINHA_VERMELHA,
   LINHA_VERMELHA_COLOR,
-  METRO_STATIONS,
   sortLinhaLaranjaForFilter,
   type MetroStation,
 } from "../../data/linhasMetro";
@@ -356,11 +354,6 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
           </details>
         </div>
 
-        <p className="mt-1.5 text-[10px] leading-snug text-slate-400">
-          Com estações marcadas, mostra imóveis perto de{" "}
-          <strong>pelo menos uma</strong> delas (até{" "}
-          {DEFAULT_STATION_RADIUS_METERS} m) · {METRO_STATIONS.length} estações.
-        </p>
       </div>
 
       <div>
