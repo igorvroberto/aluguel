@@ -50,7 +50,24 @@ Stack isolada: **sem** redes/volumes `chatwoot_*`.
 | Traefik | `/opt/traefik/dynamic/radar-imoveis.yml` |
 | Domínio | `https://radar.liganer.com.br` |
 
-### Primeira subida (na VPS)
+### Fluxo normal (depois do runner)
+**Só faça merge no `main`.** O GitHub Actions na VPS roda `tools/deploy.sh` sozinho.
+
+### Setup único do deploy automático (uma vez na VPS)
+
+1. App já clonado em `/opt/radar-imoveis` com `.env` e primeiro `deploy.sh` ok.
+2. No GitHub: **aluguel → Settings → Actions → Runners → New self-hosted runner** → copie o **token** de registro.
+3. Na VPS:
+
+```bash
+cd /opt/radar-imoveis
+sudo git pull origin main
+sudo bash tools/setup-github-runner.sh SEU_TOKEN_AQUI
+```
+
+4. Teste: **Actions → Deploy VPS → Run workflow**.
+
+### Primeira subida manual (se ainda não existe a pasta)
 
 ```bash
 sudo mkdir -p /opt/radar-imoveis
@@ -58,15 +75,6 @@ sudo git clone https://github.com/igorvroberto/aluguel.git /opt/radar-imoveis
 cd /opt/radar-imoveis
 sudo cp .env.example .env
 sudo nano .env   # NEXT_PUBLIC_MAPBOX_TOKEN (+ GOOGLE_MAPS_API_KEY opcional)
-
-# DNS: A/AAAA radar.liganer.com.br → IP da VPS
-sudo bash tools/deploy.sh
-```
-
-Atualizações:
-
-```bash
-cd /opt/radar-imoveis
 sudo bash tools/deploy.sh
 ```
 
