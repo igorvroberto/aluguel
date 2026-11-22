@@ -376,8 +376,8 @@ export function FilterPanel({
               Linha 6-Laranja — Ativas ({LINHA_LARANJA_ATIVAS.length} estações)
             </summary>
             <p className="border-t border-slate-100 px-3 py-1.5 text-[10px] text-slate-500">
-              Perdizes, SESC-Pompéia e Água Branca no topo (perto da Emílio
-              Ribas).
+              Estações em operação (sem Brasilândia / Vila Cardoso / Itaberaba).
+              Destaques: Perdizes, SESC-Pompéia e Água Branca.
             </p>
             <div className="max-h-44 overflow-y-auto border-t border-slate-100">
               <StationChecklist
