@@ -16,7 +16,6 @@ import {
   downloadApartmentsJsonFile,
   fetchApartments,
   patchApartment,
-  scrapeStations,
 } from "@/lib/apartments-api";
 import { BUS_LINES } from "@/lib/bus-lines";
 import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
@@ -71,8 +70,6 @@ export function RadarApp() {
   const [hoverDistance, setHoverDistance] = useState<number | null>(null);
   const [mapInstance, setMapInstance] = useState<MapboxMap | null>(null);
   const [mapLayers, setMapLayers] = useState<MapLayersState>(initialMapLayers);
-  const [scraping, setScraping] = useState(false);
-  const [scrapeMessage, setScrapeMessage] = useState<string | null>(null);
   const [walkDirection, setWalkDirection] = useState<TripDirection>("ida");
   const [filters, setFilters] = useState<FiltersState>({
     maxPackage: DEFAULT_MAX_PACKAGE,
@@ -104,12 +101,6 @@ export function RadarApp() {
     },
     []
   );
-
-  const refreshApartments = useCallback(async () => {
-    const list = await fetchApartments();
-    setApartments(list);
-    return list;
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -274,50 +265,6 @@ export function RadarApp() {
     }
   };
 
-  const handleScrapeStations = async () => {
-    if (filters.stationIds.length === 0) {
-      setScrapeMessage("Selecione ao menos uma estação.");
-      return;
-    }
-    setScraping(true);
-    setScrapeMessage(
-      "Varrendo QuintoAndar, Viva Real, Imovelweb e Chaves na Mão…"
-    );
-    try {
-      const result = await scrapeStations({
-        stationIds: filters.stationIds,
-        radiusMeters: filters.stationRadiusMeters,
-        maxPackage: filters.maxPackage,
-        rooms: filters.rooms,
-      });
-      if (result.apartments?.length) {
-        setApartments(result.apartments);
-      } else {
-        await refreshApartments();
-      }
-      notePersist({
-        persisted: result.persisted,
-        persistError: result.persistError,
-      });
-      const warn =
-        result.warnings?.length > 0
-          ? ` Avisos: ${result.warnings.slice(0, 2).join(" · ")}`
-          : "";
-      setScrapeMessage(
-        (result.message ||
-          `${result.added} novos · ${result.skipped} duplicados · ${result.scanned} páginas`) +
-          warn
-      );
-    } catch (err) {
-      console.error(err);
-      setScrapeMessage(
-        err instanceof Error ? err.message : "Falha na varredura."
-      );
-    } finally {
-      setScraping(false);
-    }
-  };
-
   const handleDownloadServerJson = () => {
     void downloadApartmentsJsonFile().catch((err) => {
       console.error(err);
@@ -329,13 +276,7 @@ export function RadarApp() {
     apartments.find((a) => a.id === selectedId) ?? null;
 
   const filtersBlock = (
-    <FilterPanel
-      filters={filters}
-      onChange={setFilters}
-      onScrapeStations={handleScrapeStations}
-      scraping={scraping}
-      scrapeMessage={scrapeMessage}
-    />
+    <FilterPanel filters={filters} onChange={setFilters} />
   );
 
   const listBlock = (
