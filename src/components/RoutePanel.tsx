@@ -27,11 +27,18 @@ interface RoutePanelProps {
 
 function TransitLegBlock({
   label,
-  route,
+  routes,
+  selectedIndex,
+  onSelect,
 }: {
   label: string;
-  route: TransitRouteResult;
+  routes: TransitRouteResult[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
 }) {
+  const route = routes[selectedIndex] ?? routes[0];
+  if (!route) return null;
+
   return (
     <div className="space-y-2 rounded-md border border-slate-100 bg-white px-3 py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -49,6 +56,38 @@ function TransitLegBlock({
           ) : null}
         </p>
       </div>
+
+      {routes.length > 1 ? (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+            Opções do Google Maps
+          </p>
+          {routes.map((opt, idx) => {
+            const active = idx === selectedIndex;
+            return (
+              <button
+                key={`${label}-opt-${idx}-${opt.optionLabel}`}
+                type="button"
+                onClick={() => onSelect(idx)}
+                className={`rounded-md border px-3 py-2 text-left text-sm transition ${
+                  active
+                    ? "border-blue-600 bg-blue-50 text-blue-950"
+                    : "border-slate-200 bg-slate-50/60 text-slate-700 hover:border-slate-300"
+                }`}
+              >
+                <span className="font-medium">
+                  {opt.optionLabel || `Opção ${idx + 1}`}
+                </span>
+                {opt.source === "google" ? (
+                  <span className="mt-0.5 block text-[11px] text-slate-500">
+                    Google Routes
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       {route.preferDirectWalk ? (
         <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-950">
@@ -220,18 +259,23 @@ export function RoutePanel({
   onElevationLegChange,
 }: RoutePanelProps) {
   const [mode, setMode] = useState<"elevation" | "transit">("elevation");
-  const [transitIda, setTransitIda] = useState<TransitRouteResult | null>(null);
-  const [transitVolta, setTransitVolta] = useState<TransitRouteResult | null>(
-    null
-  );
+  const [idaRoutes, setIdaRoutes] = useState<TransitRouteResult[]>([]);
+  const [voltaRoutes, setVoltaRoutes] = useState<TransitRouteResult[]>([]);
+  const [idaOption, setIdaOption] = useState(0);
+  const [voltaOption, setVoltaOption] = useState(0);
   const [transitWarning, setTransitWarning] = useState<string | null>(null);
   const [loadingTransit, setLoadingTransit] = useState(false);
   const [transitError, setTransitError] = useState<string | null>(null);
 
+  const transitIda = idaRoutes[idaOption] ?? idaRoutes[0] ?? null;
+  const transitVolta = voltaRoutes[voltaOption] ?? voltaRoutes[0] ?? null;
+
   useEffect(() => {
     setMode("elevation");
-    setTransitIda(null);
-    setTransitVolta(null);
+    setIdaRoutes([]);
+    setVoltaRoutes([]);
+    setIdaOption(0);
+    setVoltaOption(0);
     setTransitWarning(null);
     setTransitError(null);
     onWalkDirectionChange("ida");
@@ -267,16 +311,26 @@ export function RoutePanel({
           });
           const data = (await res.json()) as {
             ok: boolean;
+            routes?: TransitRouteResult[];
             route?: TransitRouteResult;
             warning?: string;
             error?: string;
           };
-          if (!data.ok || !data.route) {
+          if (!data.ok) {
             throw new Error(
               data.error || "Não foi possível calcular o trajeto."
             );
           }
-          return { route: data.route, warning: data.warning };
+          const list =
+            data.routes && data.routes.length > 0
+              ? data.routes
+              : data.route
+                ? [data.route]
+                : [];
+          if (!list.length) {
+            throw new Error("Google não retornou opções de trajeto.");
+          }
+          return { routes: list, warning: data.warning };
         };
 
         const [idaRes, voltaRes] = await Promise.all([
@@ -285,8 +339,10 @@ export function RoutePanel({
         ]);
 
         if (cancelled) return;
-        setTransitIda(idaRes.route);
-        setTransitVolta(voltaRes.route);
+        setIdaRoutes(idaRes.routes);
+        setVoltaRoutes(voltaRes.routes);
+        setIdaOption(0);
+        setVoltaOption(0);
         setTransitWarning(idaRes.warning || voltaRes.warning || null);
       } catch (err) {
         if (!cancelled) {
@@ -446,16 +502,20 @@ export function RoutePanel({
           )}
 
           <div className="space-y-4">
-            {transitIda && (
+            {idaRoutes.length > 0 && (
               <TransitLegBlock
                 label="Ida (imóvel → faculdade)"
-                route={transitIda}
+                routes={idaRoutes}
+                selectedIndex={idaOption}
+                onSelect={setIdaOption}
               />
             )}
-            {transitVolta && (
+            {voltaRoutes.length > 0 && (
               <TransitLegBlock
                 label="Volta (faculdade → imóvel)"
-                route={transitVolta}
+                routes={voltaRoutes}
+                selectedIndex={voltaOption}
+                onSelect={setVoltaOption}
               />
             )}
           </div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildFallbackTransitRoute,
-  fetchGoogleTransitRoute,
+  fetchGoogleTransitRoutes,
   type TripDirection,
 } from "@/lib/transit";
 
@@ -38,60 +38,55 @@ export async function POST(req: NextRequest) {
     const mapboxToken =
       process.env.NEXT_PUBLIC_MAPBOX_TOKEN || process.env.MAPBOX_TOKEN;
 
-    if (apiKey) {
-      try {
-        const route = await fetchGoogleTransitRoute(
-          apiKey,
-          lat,
-          lng,
-          direction,
-          directWalkMinutes
-        );
-        return NextResponse.json({
-          ok: true,
-          route,
-          direction,
-          message: route.preferDirectWalk
-            ? "A pé direto é mais rápido que transporte público neste trajeto."
-            : "Trajeto via Google Routes API (TRANSIT). Elevação usa só trechos Caminhe.",
-        });
-      } catch (err) {
-        console.warn("Google TRANSIT fallback:", err);
-        const route = await buildFallbackTransitRoute(
-          lat,
-          lng,
-          direction,
-          directWalkMinutes,
-          mapboxToken,
-          apiKey
-        );
-        return NextResponse.json({
-          ok: true,
-          route,
-          direction,
-          warning:
-            "Estimativa local — Google Routes indisponível. Paradas via Places/seed (Maps); elevação só nos Caminhe.",
-          source: "local-fallback",
-        });
-      }
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Configure GOOGLE_MAPS_API_KEY no servidor para usar os mesmos trajetos do Google Maps (ônibus, metrô e alternativas).",
+          code: "missing_google_key",
+        },
+        { status: 503 }
+      );
     }
 
-    const route = await buildFallbackTransitRoute(
-      lat,
-      lng,
-      direction,
-      directWalkMinutes,
-      mapboxToken,
-      undefined
-    );
-    return NextResponse.json({
-      ok: true,
-      route,
-      direction,
-      warning:
-        "Estimativa local com paradas reais (seed Maps). Sem GOOGLE_MAPS_API_KEY o Google Routes/Places não roda.",
-      source: "local",
-    });
+    try {
+      const routes = await fetchGoogleTransitRoutes(
+        apiKey,
+        lat,
+        lng,
+        direction,
+        directWalkMinutes
+      );
+      return NextResponse.json({
+        ok: true,
+        routes,
+        route: routes[0],
+        direction,
+        source: "google",
+        message:
+          "Trajetos via Google Routes (TRANSIT), como no Maps — escolha a opção. Elevação só nos trechos Caminhe.",
+      });
+    } catch (err) {
+      console.warn("Google TRANSIT falhou, fallback local:", err);
+      const route = await buildFallbackTransitRoute(
+        lat,
+        lng,
+        direction,
+        directWalkMinutes,
+        mapboxToken,
+        apiKey
+      );
+      return NextResponse.json({
+        ok: true,
+        routes: [route],
+        route,
+        direction,
+        source: "local-fallback",
+        warning:
+          "Google Routes falhou agora. Estimativa local com paradas reais (seed/Places) — não é o Maps.",
+      });
+    }
   } catch (err) {
     console.error(err);
     return NextResponse.json(

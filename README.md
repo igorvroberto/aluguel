@@ -27,13 +27,13 @@ npm install
 cp .env.local.example .env.local
 # Edite .env.local:
 #   NEXT_PUBLIC_MAPBOX_TOKEN=...
-#   GOOGLE_MAPS_API_KEY=...   # Google Routes TRANSIT + Places (paradas reais)
+#   GOOGLE_MAPS_API_KEY=...   # obrigatório para Transporte Público (mesmo do Maps)
 npm run dev
 ```
 
 Abra [http://localhost:3000](http://localhost:3000).
 
-Sem o token Mapbox, a interface continua funcional e a área do mapa exibe um aviso claro. Com `GOOGLE_MAPS_API_KEY`, o trajeto usa **Google Routes (TRANSIT)** — as mesmas paradas do Maps — e o fallback enriquece hubs via Places. Sem a key, usa seed local de paradas reais (`data/busStops.ts`), não vértices inventados do traçado.
+Sem o token Mapbox, a interface continua funcional e a área do mapa exibe um aviso claro. **Transporte público** exige `GOOGLE_MAPS_API_KEY`: usa Google Routes TRANSIT com alternativas (ônibus/metrô), como no Maps. Sem a key a API responde 503. Fallback local só se o Routes falhar com a key presente.
 
 ## Scripts
 
