@@ -4,12 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { AddApartmentModal } from "@/components/AddApartmentModal";
 import { ApartmentCard } from "@/components/ApartmentCard";
-import { ElevationChart } from "@/components/ElevationChart";
 import { FilterPanel } from "@/components/FilterPanel";
 import { Header } from "@/components/Header";
 import { MapView } from "@/components/MapView";
+import { RoutePanel } from "@/components/RoutePanel";
 import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
 import { analyzeRoute } from "@/lib/elevation";
+import { buildExportRows, downloadBlob, toCsv } from "@/lib/export";
 import { getVisibleApartments } from "@/lib/filters";
 import { loadApartments, saveApartments } from "@/lib/storage";
 import type {
@@ -149,11 +150,36 @@ export function RadarApp() {
     }
   };
 
+  const handleExportCsv = () => {
+    const rows = buildExportRows(apartments, analyses);
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadBlob(
+      `perdizes-radar-${stamp}.csv`,
+      toCsv(rows),
+      "text/csv;charset=utf-8"
+    );
+  };
+
+  const handleExportJson = () => {
+    const rows = buildExportRows(apartments, analyses);
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadBlob(
+      `perdizes-radar-${stamp}.json`,
+      JSON.stringify({ exportedAt: new Date().toISOString(), apartments: rows }, null, 2),
+      "application/json"
+    );
+  };
+
+  const selectedApartment =
+    apartments.find((a) => a.id === selectedId) ?? null;
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#eef3f4]">
       <Header
         visibleCount={visible.length}
         onAdd={() => setModalOpen(true)}
+        onExportCsv={handleExportCsv}
+        onExportJson={handleExportJson}
       />
 
       <div className="flex min-h-0 flex-1">
@@ -193,8 +219,9 @@ export function RadarApp() {
               onSelectApartment={handleSelect}
             />
           </div>
-          <div className="min-h-[180px] basis-[30%] grow-[3]">
-            <ElevationChart
+          <div className="min-h-[200px] basis-[30%] grow-[3]">
+            <RoutePanel
+              apartment={selectedApartment}
               analysis={selectedAnalysis}
               hoverDistance={hoverDistance}
               onHoverDistance={setHoverDistance}

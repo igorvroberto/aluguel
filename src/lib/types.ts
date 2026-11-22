@@ -14,8 +14,12 @@ export interface Apartment {
   iptu: number;
   portaria24h: boolean;
   externalUrl: string;
+  areaM2?: number;
+  parkingSpots?: number;
   notes?: string;
 }
+
+export type TravelMode = "walk" | "transit";
 
 export interface ElevationPoint {
   distance: number;
@@ -55,5 +59,7 @@ export interface NewApartmentInput {
   iptu: number;
   portaria24h: boolean;
   externalUrl: string;
+  areaM2?: number;
+  parkingSpots?: number;
   notes?: string;
 }

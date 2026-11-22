@@ -16,6 +16,7 @@ interface ElevationChartProps {
   analysis: RouteAnalysis | null;
   hoverDistance: number | null;
   onHoverDistance: (distance: number | null) => void;
+  emptyMessage?: string;
 }
 
 function ChartTooltip({
@@ -46,13 +47,14 @@ export function ElevationChart({
   analysis,
   hoverDistance,
   onHoverDistance,
+  emptyMessage,
 }: ElevationChartProps) {
   if (!analysis) {
     return (
       <div className="flex h-full items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100/80 px-6 text-center">
         <p className="max-w-sm text-sm text-slate-500">
-          Selecione um imóvel para ver o perfil de elevação do trajeto a pé até
-          a R. Dr. Emílio Ribas, 89.
+          {emptyMessage ||
+            "Selecione um imóvel para ver o perfil de elevação do trajeto a pé até a R. Dr. Emílio Ribas, 89."}
         </p>
       </div>
     );
