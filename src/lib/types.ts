@@ -37,6 +37,7 @@ export interface Apartment {
 }
 
 export type TravelMode = "walk" | "transit";
+export type TripDirection = "ida" | "volta";
 
 export interface ElevationPoint {
   distance: number;
@@ -46,8 +47,24 @@ export interface ElevationPoint {
   grade: number;
 }
 
+/** Um trecho a pé (ida ou volta). Altimetria só deste caminhar. */
+export interface WalkLegAnalysis {
+  distanceMeters: number;
+  durationMinutes: number;
+  elevationGain: number;
+  maxGrade: number;
+  topography: TopographyClass;
+  coordinates: [number, number][];
+  elevationProfile: ElevationPoint[];
+  segmentGrades: number[];
+}
+
 export interface RouteAnalysis {
   apartmentId: string;
+  /** Ida: imóvel → destino (compat: campos flat espelham a ida). */
+  ida: WalkLegAnalysis;
+  /** Volta: destino → imóvel. */
+  volta: WalkLegAnalysis;
   distanceMeters: number;
   elevationGain: number;
   maxGrade: number;
@@ -60,8 +77,6 @@ export interface RouteAnalysis {
 export interface FiltersState {
   maxPackage: number;
   rooms: Array<1 | 2 | 3>;
-  onlyFlat: boolean;
-  portaria24h: boolean;
   sortBy: SortOption;
   stationIds: string[];
   stationRadiusMeters: number;

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MapboxMap } from "mapbox-gl";
-import { AddApartmentModal } from "@/components/AddApartmentModal";
 import { ApartmentCard } from "@/components/ApartmentCard";
 import { FilterPanel } from "@/components/FilterPanel";
 import { Header } from "@/components/Header";
@@ -14,25 +13,22 @@ import { MapView } from "@/components/MapView";
 import { RoutePanel } from "@/components/RoutePanel";
 import { DEFAULT_STATION_RADIUS_METERS } from "../../data/linhasMetro";
 import {
-  createApartments,
   downloadApartmentsJsonFile,
   fetchApartments,
   patchApartment,
-  removeApartment,
   scrapeStations,
 } from "@/lib/apartments-api";
 import { BUS_LINES } from "@/lib/bus-lines";
 import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
 import { analyzeRoute } from "@/lib/elevation";
-import { buildExportRows, downloadBlob, toCsv } from "@/lib/export";
 import { getVisibleApartments } from "@/lib/filters";
 import {
   APARTMENT_STATUSES,
   type Apartment,
   type ApartmentStatus,
   type FiltersState,
-  type NewApartmentInput,
   type RouteAnalysis,
+  type TripDirection,
 } from "@/lib/types";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -47,6 +43,24 @@ function initialMapLayers(): MapLayersState {
   };
 }
 
+function displayAnalysis(
+  full: RouteAnalysis | null | undefined,
+  direction: TripDirection
+): RouteAnalysis | null {
+  if (!full) return null;
+  const leg = direction === "ida" ? full.ida : full.volta;
+  return {
+    ...full,
+    distanceMeters: leg.distanceMeters,
+    elevationGain: leg.elevationGain,
+    maxGrade: leg.maxGrade,
+    topography: leg.topography,
+    coordinates: leg.coordinates,
+    elevationProfile: leg.elevationProfile,
+    segmentGrades: leg.segmentGrades,
+  };
+}
+
 export function RadarApp() {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -55,17 +69,14 @@ export function RadarApp() {
   const [analyses, setAnalyses] = useState<Record<string, RouteAnalysis>>({});
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
   const [hoverDistance, setHoverDistance] = useState<number | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
   const [mapInstance, setMapInstance] = useState<MapboxMap | null>(null);
-  const [focusStationsToken, setFocusStationsToken] = useState(0);
   const [mapLayers, setMapLayers] = useState<MapLayersState>(initialMapLayers);
   const [scraping, setScraping] = useState(false);
   const [scrapeMessage, setScrapeMessage] = useState<string | null>(null);
+  const [walkDirection, setWalkDirection] = useState<TripDirection>("ida");
   const [filters, setFilters] = useState<FiltersState>({
     maxPackage: DEFAULT_MAX_PACKAGE,
     rooms: [1, 2, 3],
-    onlyFlat: false,
-    portaria24h: false,
     sortBy: "pacote",
     stationIds: [],
     stationRadiusMeters: DEFAULT_STATION_RADIUS_METERS,
@@ -79,17 +90,20 @@ export function RadarApp() {
     apartmentsRef.current = apartments;
   }, [apartments]);
 
-  const notePersist = useCallback((meta?: { persisted?: boolean; persistError?: string }) => {
-    if (meta?.persisted === false) {
-      setPersistHint(
-        meta.persistError
-          ? `FS read-only — alterações só em memória. Baixe o JSON. (${meta.persistError})`
-          : "FS read-only — use “Baixar JSON Atualizado” para commit local."
-      );
-    } else {
-      setPersistHint(null);
-    }
-  }, []);
+  const notePersist = useCallback(
+    (meta?: { persisted?: boolean; persistError?: string }) => {
+      if (meta?.persisted === false) {
+        setPersistHint(
+          meta.persistError
+            ? `FS read-only — alterações só em memória. Baixe o JSON. (${meta.persistError})`
+            : "FS read-only — use “Baixar JSON Atualizado” para commit local."
+        );
+      } else {
+        setPersistHint(null);
+      }
+    },
+    []
+  );
 
   const refreshApartments = useCallback(async () => {
     const list = await fetchApartments();
@@ -138,7 +152,13 @@ export function RadarApp() {
     el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [selectedId]);
 
-  const selectedAnalysis = selectedId ? analyses[selectedId] ?? null : null;
+  const selectedFullAnalysis = selectedId
+    ? analyses[selectedId] ?? null
+    : null;
+  const selectedAnalysis = displayAnalysis(
+    selectedFullAnalysis,
+    walkDirection
+  );
 
   const runAnalysis = useCallback(
     async (apartment: Apartment, map: MapboxMap) => {
@@ -180,6 +200,7 @@ export function RadarApp() {
     (id: string) => {
       setSelectedId(id);
       setHoverDistance(null);
+      setWalkDirection("ida");
       const apt = apartments.find((a) => a.id === id);
       if (!apt || !mapInstance || !MAPBOX_TOKEN) return;
       void runAnalysis(apt, mapInstance);
@@ -217,53 +238,6 @@ export function RadarApp() {
     })();
   }, []);
 
-  const handleAdd = async (input: NewApartmentInput) => {
-    try {
-      const result = await createApartments({
-        ...input,
-        status: input.status || "Candidato",
-      });
-      setApartments(result.apartments);
-      notePersist(result.meta);
-      const created = result.apartments.find(
-        (a) => a.externalUrl === input.externalUrl && a.address === input.address
-      );
-      if (created) {
-        setSelectedId(created.id);
-        if (mapInstance && MAPBOX_TOKEN) {
-          void runAnalysis(created, mapInstance);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      setPersistHint(
-        err instanceof Error ? err.message : "Falha ao salvar imóvel."
-      );
-    }
-  };
-
-  const handleAddBatch = async (inputs: NewApartmentInput[]) => {
-    try {
-      const result = await createApartments(
-        inputs.map((input) => ({
-          ...input,
-          status: input.status || "Candidato",
-        }))
-      );
-      setApartments(result.apartments);
-      notePersist(result.meta);
-      if (result.apartments[0] && mapInstance && MAPBOX_TOKEN) {
-        setSelectedId(result.apartments[0].id);
-        void runAnalysis(result.apartments[0], mapInstance);
-      }
-    } catch (err) {
-      console.error(err);
-      setPersistHint(
-        err instanceof Error ? err.message : "Falha ao salvar lote."
-      );
-    }
-  };
-
   const handleUpdateListingUrl = async (id: string, url: string) => {
     try {
       const result = await patchApartment(id, { externalUrl: url });
@@ -300,24 +274,15 @@ export function RadarApp() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      const result = await removeApartment(id);
-      setApartments((prev) => prev.filter((a) => a.id !== id));
-      if (selectedId === id) setSelectedId(null);
-      notePersist(result.meta);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const handleScrapeStations = async () => {
     if (filters.stationIds.length === 0) {
       setScrapeMessage("Selecione ao menos uma estação.");
       return;
     }
     setScraping(true);
-    setScrapeMessage("Varrendo QuintoAndar, Viva Real, Imovelweb e Chaves na Mão…");
+    setScrapeMessage(
+      "Varrendo QuintoAndar, Viva Real, Imovelweb e Chaves na Mão…"
+    );
     try {
       const result = await scrapeStations({
         stationIds: filters.stationIds,
@@ -353,30 +318,6 @@ export function RadarApp() {
     }
   };
 
-  const handleExportCsv = () => {
-    const rows = buildExportRows(apartments, analyses);
-    const stamp = new Date().toISOString().slice(0, 10);
-    downloadBlob(
-      `imoveis-radar-${stamp}.csv`,
-      toCsv(rows),
-      "text/csv;charset=utf-8"
-    );
-  };
-
-  const handleExportJson = () => {
-    const rows = buildExportRows(apartments, analyses);
-    const stamp = new Date().toISOString().slice(0, 10);
-    downloadBlob(
-      `imoveis-radar-${stamp}.json`,
-      JSON.stringify(
-        { exportedAt: new Date().toISOString(), apartments: rows },
-        null,
-        2
-      ),
-      "application/json"
-    );
-  };
-
   const handleDownloadServerJson = () => {
     void downloadApartmentsJsonFile().catch((err) => {
       console.error(err);
@@ -387,104 +328,101 @@ export function RadarApp() {
   const selectedApartment =
     apartments.find((a) => a.id === selectedId) ?? null;
 
+  const filtersBlock = (
+    <FilterPanel
+      filters={filters}
+      onChange={setFilters}
+      onScrapeStations={handleScrapeStations}
+      scraping={scraping}
+      scrapeMessage={scrapeMessage}
+    />
+  );
+
+  const listBlock = (
+    <div ref={listRef} className="lg:max-h-[70vh] lg:overflow-y-auto">
+      {!hydrated ? (
+        <p className="p-4 text-sm text-slate-500">Carregando imóveis…</p>
+      ) : visible.length === 0 ? (
+        <p className="p-4 text-sm text-slate-500">
+          Nenhum imóvel corresponde aos filtros atuais.
+        </p>
+      ) : (
+        visible.map((apt) => (
+          <div key={apt.id} data-apartment-id={apt.id}>
+            <ApartmentCard
+              apartment={apt}
+              analysis={analyses[apt.id]}
+              selected={selectedId === apt.id}
+              analyzing={analyzingId === apt.id}
+              onSelect={() => handleSelect(apt.id)}
+              onUpdateListingUrl={handleUpdateListingUrl}
+              onUpdateStatus={handleUpdateStatus}
+              onUpdateComments={handleUpdateComments}
+            />
+          </div>
+        ))
+      )}
+    </div>
+  );
+
+  const mapBlock = (
+    <section className="flex min-w-0 flex-1 flex-col">
+      <MapLayersPanel
+        layers={mapLayers}
+        onChange={setMapLayers}
+        stationIds={filters.stationIds}
+        stationRadiusMeters={filters.stationRadiusMeters}
+      />
+      <div className="h-[45vh] min-h-[280px] border-b border-slate-200 lg:h-[70vh]">
+        <MapView
+          token={MAPBOX_TOKEN}
+          apartments={visible}
+          selectedId={selectedId}
+          analysis={selectedAnalysis}
+          hoverDistance={hoverDistance}
+          stationIds={filters.stationIds}
+          stationRadiusMeters={filters.stationRadiusMeters}
+          layers={mapLayers}
+          onMapReady={handleMapReady}
+          onSelectApartment={handleSelect}
+        />
+      </div>
+      <div className="min-h-[220px] lg:min-h-[240px]">
+        <RoutePanel
+          apartment={selectedApartment}
+          analysis={selectedFullAnalysis}
+          hoverDistance={hoverDistance}
+          onHoverDistance={setHoverDistance}
+          walkDirection={walkDirection}
+          onWalkDirectionChange={setWalkDirection}
+        />
+      </div>
+    </section>
+  );
+
   return (
     <div className="flex min-h-screen flex-col bg-[#eef3f4]">
       <Header
         visibleCount={visible.length}
-        onAdd={() => setModalOpen(true)}
-        onExportCsv={handleExportCsv}
-        onExportJson={handleExportJson}
         onDownloadServerJson={handleDownloadServerJson}
       />
 
+      {/* Mobile: mapa/camadas primeiro; Desktop: lista à esquerda */}
       <div className="flex flex-1 flex-col lg:flex-row">
-        <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white/90 shadow-[4px_0_24px_rgba(15,61,62,0.04)] lg:w-[420px] lg:border-b-0 lg:border-r">
-          <FilterPanel
-            filters={filters}
-            onChange={setFilters}
-            onFocusStations={() => setFocusStationsToken((n) => n + 1)}
-            onScrapeStations={handleScrapeStations}
-            scraping={scraping}
-            scrapeMessage={scrapeMessage}
-          />
-
+        <aside className="order-2 flex w-full shrink-0 flex-col border-b border-slate-200 bg-white/90 shadow-[4px_0_24px_rgba(15,61,62,0.04)] lg:order-1 lg:w-[420px] lg:border-b-0 lg:border-r">
+          {filtersBlock}
           {persistHint && (
             <div className="border-b border-amber-100 bg-amber-50/90 px-4 py-2 text-[11px] text-amber-950">
               {persistHint}
             </div>
           )}
-
-          <div ref={listRef} className="lg:max-h-[70vh] lg:overflow-y-auto">
-            {!hydrated ? (
-              <p className="p-4 text-sm text-slate-500">Carregando imóveis…</p>
-            ) : visible.length === 0 ? (
-              <p className="p-4 text-sm text-slate-500">
-                Nenhum imóvel corresponde aos filtros atuais.
-              </p>
-            ) : (
-              visible.map((apt) => (
-                <div key={apt.id} data-apartment-id={apt.id}>
-                  <ApartmentCard
-                    apartment={apt}
-                    analysis={analyses[apt.id]}
-                    selected={selectedId === apt.id}
-                    analyzing={analyzingId === apt.id}
-                    onSelect={() => handleSelect(apt.id)}
-                    onUpdateListingUrl={handleUpdateListingUrl}
-                    onUpdateStatus={handleUpdateStatus}
-                    onUpdateComments={handleUpdateComments}
-                    onDelete={handleDelete}
-                  />
-                </div>
-              ))
-            )}
-          </div>
+          {listBlock}
         </aside>
 
-        <section className="flex min-w-0 flex-1 flex-col">
-          <MapLayersPanel
-            layers={mapLayers}
-            onChange={setMapLayers}
-            stationIds={filters.stationIds}
-            stationRadiusMeters={filters.stationRadiusMeters}
-          />
-          <div className="h-[55vh] min-h-[360px] border-b border-slate-200 lg:h-[70vh]">
-            <MapView
-              token={MAPBOX_TOKEN}
-              apartments={visible}
-              selectedId={selectedId}
-              analysis={selectedAnalysis}
-              hoverDistance={hoverDistance}
-              stationIds={filters.stationIds}
-              stationRadiusMeters={filters.stationRadiusMeters}
-              focusStationsToken={focusStationsToken}
-              layers={mapLayers}
-              onMapReady={handleMapReady}
-              onSelectApartment={handleSelect}
-            />
-          </div>
-          <div className="min-h-[240px]">
-            <RoutePanel
-              apartment={selectedApartment}
-              analysis={selectedAnalysis}
-              hoverDistance={hoverDistance}
-              onHoverDistance={setHoverDistance}
-            />
-          </div>
-        </section>
+        <div className="order-1 flex min-w-0 flex-1 flex-col lg:order-2">
+          {mapBlock}
+        </div>
       </div>
-
-      <AddApartmentModal
-        open={modalOpen}
-        mapboxToken={MAPBOX_TOKEN}
-        onClose={() => setModalOpen(false)}
-        onSave={(input) => {
-          void handleAdd(input);
-        }}
-        onSaveBatch={(inputs) => {
-          void handleAddBatch(inputs);
-        }}
-      />
     </div>
   );
 }

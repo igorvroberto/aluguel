@@ -16,16 +16,9 @@ export function getVisibleApartments(
     const roomKey = (apt.rooms >= 3 ? 3 : apt.rooms) as 1 | 2 | 3;
     if (roomSet.size > 0 && !roomSet.has(roomKey)) return false;
 
-    if (filters.portaria24h && !apt.portaria24h) return false;
-
     if (filters.statuses && filters.statuses.length > 0) {
       const status = apt.status || "Candidato";
       if (!filters.statuses.includes(status)) return false;
-    }
-
-    if (filters.onlyFlat) {
-      const analysis = analyses[apt.id];
-      if (!analysis || analysis.topography !== "Plano") return false;
     }
 
     if (
