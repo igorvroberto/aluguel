@@ -132,23 +132,10 @@ function WalkSegmentCharts({
   const legs = useMemo(() => {
     const segments = route?.walkSegments ?? [];
     if (!map || segments.length === 0) return [];
-    return segments
-      .filter(
-        (seg) =>
-          seg.distanceMeters >= 50 &&
-          seg.coordinates.length >= 2 &&
-          !(
-            seg.coordinates[0][0] ===
-              seg.coordinates[seg.coordinates.length - 1][0] &&
-            seg.coordinates[0][1] ===
-              seg.coordinates[seg.coordinates.length - 1][1]
-          )
-      )
-      .map((seg) => ({
-        segment: seg,
-        leg: segmentToLeg(map, seg),
-      }))
-      .filter(({ leg }) => leg.elevationProfile.length > 0);
+    return segments.map((seg) => ({
+      segment: seg,
+      leg: segmentToLeg(map, seg),
+    }));
   }, [map, route?.walkSegments]);
 
   if (!route) {
