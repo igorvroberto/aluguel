@@ -5,7 +5,7 @@ import type { Map as MapboxMap } from "mapbox-gl";
 import { Bus, Loader2, Mountain } from "lucide-react";
 import { ElevationChart } from "@/components/ElevationChart";
 import { legFromCoordinates } from "@/lib/elevation";
-import type { TransitRouteResult } from "@/lib/transit";
+import type { TransitRouteResult, WalkPathSegment } from "@/lib/transit";
 import type {
   Apartment,
   RouteAnalysis,
@@ -21,29 +21,8 @@ interface RoutePanelProps {
   onHoverDistance: (distance: number | null) => void;
   walkDirection: TripDirection;
   onWalkDirectionChange: (dir: TripDirection) => void;
-  /** Geometria só dos trechos Caminhe — para desenhar no mapa. */
+  /** Geometria do trecho Caminhe em foco — para desenhar no mapa. */
   onElevationLegChange?: (leg: WalkLegAnalysis | null) => void;
-}
-
-function WalkLegSummary({
-  leg,
-  label,
-}: {
-  leg: WalkLegAnalysis;
-  label: string;
-}) {
-  return (
-    <div className="rounded-md border border-slate-100 bg-white px-3 py-2 text-xs text-slate-600">
-      <p className="font-semibold text-slate-800">{label}</p>
-      <p>
-        {Math.round(leg.distanceMeters)} m · {leg.durationMinutes} min · subida +
-        {Math.round(leg.elevationGain)} m · {leg.topography}
-      </p>
-      <p className="mt-0.5 text-[10px] text-slate-400">
-        Só trechos “Caminhe” (sem metrô/ônibus)
-      </p>
-    </div>
-  );
 }
 
 function TransitLegBlock({
@@ -79,7 +58,7 @@ function TransitLegBlock({
       ) : (
         <p className="text-[11px] text-slate-500">
           Caminhada no trajeto: {route.walkDurationMinutes} min · elevação no
-          botão Elevação (só “Caminhe”)
+          botão Elevação (um gráfico por trecho Caminhe)
         </p>
       )}
 
@@ -117,19 +96,116 @@ function TransitLegBlock({
   );
 }
 
-function buildWalkElevationLeg(
-  map: MapboxMap | null,
-  route: TransitRouteResult | null
-): WalkLegAnalysis | null {
-  if (!map || !route?.walkCoordinates || route.walkCoordinates.length < 2) {
-    return null;
-  }
-  const durationSeconds = Math.max(60, route.walkDurationMinutes * 60);
+function segmentToLeg(
+  map: MapboxMap,
+  segment: WalkPathSegment
+): WalkLegAnalysis {
   return legFromCoordinates(
     map,
-    route.walkCoordinates,
-    route.walkDistanceMeters || 0,
-    durationSeconds
+    segment.coordinates,
+    segment.distanceMeters,
+    Math.max(60, segment.durationMinutes * 60)
+  );
+}
+
+function WalkSegmentCharts({
+  directionLabel,
+  direction,
+  route,
+  map,
+  activeDirection,
+  hoverDistance,
+  onHoverDistance,
+  onWalkDirectionChange,
+  onFocusLeg,
+}: {
+  directionLabel: string;
+  direction: TripDirection;
+  route: TransitRouteResult | null;
+  map: MapboxMap | null;
+  activeDirection: TripDirection;
+  hoverDistance: number | null;
+  onHoverDistance: (distance: number | null) => void;
+  onWalkDirectionChange: (dir: TripDirection) => void;
+  onFocusLeg: (leg: WalkLegAnalysis | null) => void;
+}) {
+  const legs = useMemo(() => {
+    const segments = route?.walkSegments ?? [];
+    if (!map || segments.length === 0) return [];
+    return segments.map((seg) => ({
+      segment: seg,
+      leg: segmentToLeg(map, seg),
+    }));
+  }, [map, route?.walkSegments]);
+
+  if (!route) {
+    return (
+      <p className="px-4 py-3 text-xs text-slate-400">
+        {directionLabel}: aguardando trajeto…
+      </p>
+    );
+  }
+
+  if (!map) {
+    return (
+      <p className="px-4 py-3 text-xs text-slate-400">
+        {directionLabel}: aguarde o mapa carregar o terreno…
+      </p>
+    );
+  }
+
+  if (legs.length === 0) {
+    return (
+      <p className="px-4 py-3 text-xs text-slate-400">
+        {directionLabel}: sem trechos Caminhe neste trajeto.
+      </p>
+    );
+  }
+
+  return (
+    <div className="border-b border-slate-100">
+      <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+          {directionLabel}
+        </p>
+        <p className="text-[10px] text-slate-400">
+          {legs.length} trecho{legs.length === 1 ? "" : "s"} Caminhe · um
+          gráfico por caminhada
+        </p>
+      </div>
+
+      {legs.map(({ segment, leg }, idx) => (
+        <div
+          key={`${direction}-${idx}-${segment.label}`}
+          className="border-b border-slate-100 last:border-b-0"
+          onMouseEnter={() => {
+            onWalkDirectionChange(direction);
+            onFocusLeg(leg);
+          }}
+        >
+          <ElevationChart
+            leg={leg}
+            hoverDistance={
+              activeDirection === direction ? hoverDistance : null
+            }
+            onHoverDistance={(d) => {
+              onWalkDirectionChange(direction);
+              onFocusLeg(leg);
+              onHoverDistance(d);
+            }}
+            title={`${directionLabel} · Caminhe ${idx + 1}/${legs.length}`}
+            chartHeight={180}
+            emptyMessage="Perfil indisponível para este trecho."
+          />
+          <p className="px-4 pb-2 text-[11px] text-slate-500">
+            {segment.label}
+            {" · "}
+            {Math.round(segment.distanceMeters)} m · {segment.durationMinutes}{" "}
+            min · subida +{Math.round(leg.elevationGain)} m · {leg.topography}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -230,34 +306,38 @@ export function RoutePanel({
     };
   }, [apartment, walkIdaMin, walkVoltaMin]);
 
-  const elevIda = useMemo(
-    () => buildWalkElevationLeg(map, transitIda),
-    [map, transitIda]
-  );
-  const elevVolta = useMemo(
-    () => buildWalkElevationLeg(map, transitVolta),
-    [map, transitVolta]
-  );
-
+  // Foco inicial no primeiro trecho Caminhe da ida
   useEffect(() => {
-    if (mode !== "elevation") {
-      onElevationLegChange?.(null);
+    if (mode !== "elevation" || !map) {
+      if (mode !== "elevation") onElevationLegChange?.(null);
       return;
     }
-    const leg = walkDirection === "ida" ? elevIda : elevVolta;
-    onElevationLegChange?.(leg);
-  }, [mode, walkDirection, elevIda, elevVolta, onElevationLegChange]);
+    const segs =
+      walkDirection === "ida"
+        ? transitIda?.walkSegments
+        : transitVolta?.walkSegments;
+    if (segs?.[0]) {
+      onElevationLegChange?.(segmentToLeg(map, segs[0]));
+    } else {
+      onElevationLegChange?.(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, map, walkDirection, transitIda, transitVolta]);
 
   if (!apartment) {
     return (
       <div className="flex h-full items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100/80 px-6 text-center">
         <p className="max-w-sm text-sm text-slate-500">
-          Selecione um imóvel para ver elevação (só trechos Caminhe do Google) e
-          transporte público — ida e volta.
+          Selecione um imóvel para ver elevação (um gráfico por trecho Caminhe)
+          e transporte público — ida e volta.
         </p>
       </div>
     );
   }
+
+  const hasWalkSegs =
+    (transitIda?.walkSegments?.length ?? 0) > 0 ||
+    (transitVolta?.walkSegments?.length ?? 0) > 0;
 
   return (
     <div className="flex h-full flex-col bg-gradient-to-b from-white to-slate-50">
@@ -289,22 +369,16 @@ export function RoutePanel({
           </button>
         </div>
         <p className="text-[10px] text-slate-400">
-          Ida e volta na mesma vista
-          {mode === "elevation" ? (
-            <>
-              {" "}
-              · mapa: <span className="font-semibold">{walkDirection}</span>
-            </>
-          ) : null}
+          Ida e volta · um gráfico por Caminhe
         </p>
       </div>
 
       {mode === "elevation" ? (
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {loadingTransit && !elevIda && !elevVolta ? (
+          {loadingTransit && !hasWalkSegs ? (
             <div className="flex h-[160px] items-center justify-center gap-2 px-6 text-sm text-slate-500">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Calculando trechos Caminhe (Google) para elevação…
+              Calculando trechos Caminhe para elevação…
             </div>
           ) : null}
 
@@ -321,69 +395,34 @@ export function RoutePanel({
           )}
 
           <p className="border-b border-slate-100 px-4 py-2 text-[11px] text-slate-500">
-            Elevação só dos trechos <strong>Caminhe</strong> do Google Maps
-            (TRANSIT) — metrô/ônibus e o a pé porta-a-porta total ficam de fora.
+            Cada gráfico é <strong>só um trecho Caminhe</strong> (até a
+            estação, da estação ao destino, etc.). Metrô/ônibus e o a pé
+            porta-a-porta total ficam de fora.
           </p>
 
-          {(elevIda || elevVolta) && (
-            <div className="grid grid-cols-1 gap-2 border-b border-slate-100 px-4 py-2 sm:grid-cols-2">
-              {elevIda ? (
-                <WalkLegSummary
-                  leg={elevIda}
-                  label="Ida — só Caminhe"
-                />
-              ) : (
-                <p className="text-xs text-slate-400">Ida: sem trecho a pé</p>
-              )}
-              {elevVolta ? (
-                <WalkLegSummary
-                  leg={elevVolta}
-                  label="Volta — só Caminhe"
-                />
-              ) : (
-                <p className="text-xs text-slate-400">Volta: sem trecho a pé</p>
-              )}
-            </div>
-          )}
+          <WalkSegmentCharts
+            directionLabel="Ida"
+            direction="ida"
+            route={transitIda}
+            map={map}
+            activeDirection={walkDirection}
+            hoverDistance={hoverDistance}
+            onHoverDistance={onHoverDistance}
+            onWalkDirectionChange={onWalkDirectionChange}
+            onFocusLeg={(leg) => onElevationLegChange?.(leg)}
+          />
 
-          <div
-            className="border-b border-slate-100"
-            onMouseEnter={() => onWalkDirectionChange("ida")}
-          >
-            <ElevationChart
-              leg={elevIda}
-              hoverDistance={walkDirection === "ida" ? hoverDistance : null}
-              onHoverDistance={(d) => {
-                onWalkDirectionChange("ida");
-                onHoverDistance(d);
-              }}
-              title="Elevação — Ida (Caminhe)"
-              emptyMessage={
-                map
-                  ? "Sem trechos Caminhe na ida (ou mapa ainda carregando o terreno)."
-                  : "Aguarde o mapa carregar para calcular a elevação."
-              }
-            />
-          </div>
-
-          <div onMouseEnter={() => onWalkDirectionChange("volta")}>
-            <ElevationChart
-              leg={elevVolta}
-              hoverDistance={
-                walkDirection === "volta" ? hoverDistance : null
-              }
-              onHoverDistance={(d) => {
-                onWalkDirectionChange("volta");
-                onHoverDistance(d);
-              }}
-              title="Elevação — Volta (Caminhe)"
-              emptyMessage={
-                map
-                  ? "Sem trechos Caminhe na volta (ou mapa ainda carregando o terreno)."
-                  : "Aguarde o mapa carregar para calcular a elevação."
-              }
-            />
-          </div>
+          <WalkSegmentCharts
+            directionLabel="Volta"
+            direction="volta"
+            route={transitVolta}
+            map={map}
+            activeDirection={walkDirection}
+            hoverDistance={hoverDistance}
+            onHoverDistance={onHoverDistance}
+            onWalkDirectionChange={onWalkDirectionChange}
+            onFocusLeg={(leg) => onElevationLegChange?.(leg)}
+          />
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
