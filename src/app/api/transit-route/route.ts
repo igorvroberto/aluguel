@@ -40,7 +40,8 @@ export async function POST(req: NextRequest) {
           ok: true,
           route,
           warning:
-            "Google Routes indisponível; usando estimativa local (estação/corredor mais próximo).",
+            "Estimativa local (estação/corredor mais próximo) — Google Routes indisponível no momento.",
+          source: "local-fallback",
         });
       }
     }
@@ -50,7 +51,8 @@ export async function POST(req: NextRequest) {
       ok: true,
       route,
       warning:
-        "GOOGLE_MAPS_API_KEY não configurada; usando estimativa local até o ponto/estação mais próximo.",
+        "Estimativa local até a estação/corredor mais próximo. Para rotas oficiais do Google, configure a chave no .env da VPS e reinicie o container.",
+      source: "local",
     });
   } catch (err) {
     console.error(err);

@@ -7,9 +7,14 @@ import { AddApartmentModal } from "@/components/AddApartmentModal";
 import { ApartmentCard } from "@/components/ApartmentCard";
 import { FilterPanel } from "@/components/FilterPanel";
 import { Header } from "@/components/Header";
+import {
+  MapLayersPanel,
+  type MapLayersState,
+} from "@/components/MapLayersPanel";
 import { MapView } from "@/components/MapView";
 import { RoutePanel } from "@/components/RoutePanel";
 import { DEFAULT_STATION_RADIUS_METERS } from "../../data/linhaVermelha";
+import { BUS_LINES } from "@/lib/bus-lines";
 import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
 import { analyzeRoute } from "@/lib/elevation";
 import { buildExportRows, downloadBlob, toCsv } from "@/lib/export";
@@ -30,6 +35,15 @@ import type {
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
+function initialMapLayers(): MapLayersState {
+  return {
+    showBusLines: true,
+    enabledLines: Object.fromEntries(BUS_LINES.map((l) => [l.id, true])),
+    showLinhaVermelha: true,
+    showTransit: false,
+  };
+}
+
 export function RadarApp() {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -40,6 +54,7 @@ export function RadarApp() {
   const [modalOpen, setModalOpen] = useState(false);
   const [mapInstance, setMapInstance] = useState<MapboxMap | null>(null);
   const [focusStationsToken, setFocusStationsToken] = useState(0);
+  const [mapLayers, setMapLayers] = useState<MapLayersState>(initialMapLayers);
   const [filters, setFilters] = useState<FiltersState>({
     maxPackage: DEFAULT_MAX_PACKAGE,
     rooms: [1, 2, 3],
@@ -50,6 +65,7 @@ export function RadarApp() {
     stationRadiusMeters: DEFAULT_STATION_RADIUS_METERS,
   });
   const analyzingRef = useRef<Set<string>>(new Set());
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setApartments(loadApartments());
@@ -64,10 +80,24 @@ export function RadarApp() {
   const showRestore = hydrated && needsSeedRestore(apartments);
   const seedCount = getSeedApartments().length;
 
-  const visible = useMemo(
-    () => getVisibleApartments(apartments, filters, analyses),
-    [apartments, filters, analyses]
-  );
+  const visible = useMemo(() => {
+    const list = getVisibleApartments(apartments, filters, analyses);
+    if (!selectedId) return list;
+    const idx = list.findIndex((a) => a.id === selectedId);
+    if (idx <= 0) return list;
+    const next = [...list];
+    const [picked] = next.splice(idx, 1);
+    next.unshift(picked);
+    return next;
+  }, [apartments, filters, analyses, selectedId]);
+
+  useEffect(() => {
+    if (!selectedId || !listRef.current) return;
+    const el = listRef.current.querySelector<HTMLElement>(
+      `[data-apartment-id="${selectedId}"]`
+    );
+    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selectedId]);
 
   const selectedAnalysis = selectedId ? analyses[selectedId] ?? null : null;
 
@@ -245,7 +275,7 @@ export function RadarApp() {
             </p>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
             {!hydrated ? (
               <p className="p-4 text-sm text-slate-500">Carregando imóveis…</p>
             ) : visible.length === 0 ? (
@@ -254,21 +284,28 @@ export function RadarApp() {
               </p>
             ) : (
               visible.map((apt) => (
-                <ApartmentCard
-                  key={apt.id}
-                  apartment={apt}
-                  analysis={analyses[apt.id]}
-                  selected={selectedId === apt.id}
-                  analyzing={analyzingId === apt.id}
-                  onSelect={() => handleSelect(apt.id)}
-                  onUpdateListingUrl={handleUpdateListingUrl}
-                />
+                <div key={apt.id} data-apartment-id={apt.id}>
+                  <ApartmentCard
+                    apartment={apt}
+                    analysis={analyses[apt.id]}
+                    selected={selectedId === apt.id}
+                    analyzing={analyzingId === apt.id}
+                    onSelect={() => handleSelect(apt.id)}
+                    onUpdateListingUrl={handleUpdateListingUrl}
+                  />
+                </div>
               ))
             )}
           </div>
         </aside>
 
         <section className="flex min-w-0 flex-1 flex-col">
+          <MapLayersPanel
+            layers={mapLayers}
+            onChange={setMapLayers}
+            stationIds={filters.stationIds}
+            stationRadiusMeters={filters.stationRadiusMeters}
+          />
           <div className="min-h-0 basis-[70%] grow-[7] border-b border-slate-200">
             <MapView
               token={MAPBOX_TOKEN}
@@ -279,6 +316,7 @@ export function RadarApp() {
               stationIds={filters.stationIds}
               stationRadiusMeters={filters.stationRadiusMeters}
               focusStationsToken={focusStationsToken}
+              layers={mapLayers}
               onMapReady={handleMapReady}
               onSelectApartment={handleSelect}
             />
