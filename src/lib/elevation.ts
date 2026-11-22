@@ -6,11 +6,17 @@ import {
   SAMPLE_INTERVAL_METERS,
   TOPOGRAPHY_THRESHOLDS,
 } from "./constants";
-import type { ElevationPoint, RouteAnalysis, TopographyClass } from "./types";
+import type {
+  ElevationPoint,
+  RouteAnalysis,
+  TopographyClass,
+  WalkLegAnalysis,
+} from "./types";
 
 interface DirectionsResponse {
   routes?: Array<{
     distance: number;
+    duration?: number;
     geometry: {
       coordinates: [number, number][];
     };
@@ -24,7 +30,6 @@ export function classifyTopography(
 ): TopographyClass {
   const absMax = Math.abs(maxGrade);
 
-  // Ladeira Íngreme: > 28m OR > 7%
   if (
     elevationGain > TOPOGRAPHY_THRESHOLDS.moderateGain ||
     absMax > TOPOGRAPHY_THRESHOLDS.moderateGrade
@@ -32,7 +37,6 @@ export function classifyTopography(
     return "Ladeira Íngreme";
   }
 
-  // Plano: <= 12m AND máx < 4%
   if (
     elevationGain <= TOPOGRAPHY_THRESHOLDS.flatGain &&
     absMax < TOPOGRAPHY_THRESHOLDS.flatGrade
@@ -40,7 +44,6 @@ export function classifyTopography(
     return "Plano";
   }
 
-  // Inclinação Moderada: 13–28m OR 4–7% (e demais casos intermediários)
   return "Inclinação Moderada";
 }
 
@@ -92,7 +95,12 @@ export function extractElevations(
 export function buildProfile(
   sampled: [number, number][],
   elevations: number[]
-): { profile: ElevationPoint[]; elevationGain: number; maxGrade: number; segmentGrades: number[] } {
+): {
+  profile: ElevationPoint[];
+  elevationGain: number;
+  maxGrade: number;
+  segmentGrades: number[];
+} {
   const profile: ElevationPoint[] = [];
   const segmentGrades: number[] = [];
   let cumulative = 0;
@@ -128,11 +136,17 @@ export function buildProfile(
 export async function fetchWalkingRoute(
   token: string,
   fromLng: number,
-  fromLat: number
-): Promise<{ coordinates: [number, number][]; distanceMeters: number }> {
+  fromLat: number,
+  toLng: number = DESTINATION.lng,
+  toLat: number = DESTINATION.lat
+): Promise<{
+  coordinates: [number, number][];
+  distanceMeters: number;
+  durationSeconds: number;
+}> {
   const url =
     `https://api.mapbox.com/directions/v5/mapbox/walking/` +
-    `${fromLng},${fromLat};${DESTINATION.lng},${DESTINATION.lat}` +
+    `${fromLng},${fromLat};${toLng},${toLat}` +
     `?geometries=geojson&overview=full&access_token=${token}`;
 
   const res = await fetch(url);
@@ -146,9 +160,35 @@ export async function fetchWalkingRoute(
   return {
     coordinates: route.geometry.coordinates,
     distanceMeters: route.distance,
+    durationSeconds: route.duration ?? route.distance / 1.333,
   };
 }
 
+function legFromRoute(
+  map: MapboxMap,
+  coordinates: [number, number][],
+  distanceMeters: number,
+  durationSeconds: number
+): WalkLegAnalysis {
+  const sampled = resampleRoute(coordinates);
+  const elevations = extractElevations(map, sampled);
+  const { profile, elevationGain, maxGrade, segmentGrades } = buildProfile(
+    sampled,
+    elevations
+  );
+  return {
+    distanceMeters,
+    durationMinutes: Math.max(1, Math.round(durationSeconds / 60)),
+    elevationGain,
+    maxGrade,
+    topography: classifyTopography(elevationGain, maxGrade),
+    coordinates,
+    elevationProfile: profile,
+    segmentGrades,
+  };
+}
+
+/** Análise a pé ida (imóvel→destino) e volta (destino→imóvel). Altimetria só dos trechos caminhados. */
 export async function analyzeRoute(
   map: MapboxMap,
   token: string,
@@ -156,23 +196,36 @@ export async function analyzeRoute(
   lng: number,
   lat: number
 ): Promise<RouteAnalysis> {
-  const { coordinates, distanceMeters } = await fetchWalkingRoute(token, lng, lat);
-  const sampled = resampleRoute(coordinates);
-  const elevations = extractElevations(map, sampled);
-  const { profile, elevationGain, maxGrade, segmentGrades } = buildProfile(
-    sampled,
-    elevations
+  const [outbound, inbound] = await Promise.all([
+    fetchWalkingRoute(token, lng, lat, DESTINATION.lng, DESTINATION.lat),
+    fetchWalkingRoute(token, DESTINATION.lng, DESTINATION.lat, lng, lat),
+  ]);
+
+  const ida = legFromRoute(
+    map,
+    outbound.coordinates,
+    outbound.distanceMeters,
+    outbound.durationSeconds
+  );
+  const volta = legFromRoute(
+    map,
+    inbound.coordinates,
+    inbound.distanceMeters,
+    inbound.durationSeconds
   );
 
   return {
     apartmentId,
-    distanceMeters,
-    elevationGain,
-    maxGrade,
-    topography: classifyTopography(elevationGain, maxGrade),
-    coordinates,
-    elevationProfile: profile,
-    segmentGrades,
+    ida,
+    volta,
+    // flat = ida (mapa / cards / ordenação)
+    distanceMeters: ida.distanceMeters,
+    elevationGain: ida.elevationGain,
+    maxGrade: ida.maxGrade,
+    topography: ida.topography,
+    coordinates: ida.coordinates,
+    elevationProfile: ida.elevationProfile,
+    segmentGrades: ida.segmentGrades,
   };
 }
 

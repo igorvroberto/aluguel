@@ -39,7 +39,7 @@ export function MapLayersPanel({
       <details className="group min-w-[200px] max-w-[280px] rounded-md border border-slate-200 bg-white open:shadow-sm">
         <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 [&::-webkit-details-marker]:hidden">
           <Bus className="h-3.5 w-3.5 text-teal-700" aria-hidden />
-          Linhas Barra Funda
+          Linhas de ônibus
           <span className="ml-auto text-[10px] font-medium text-slate-400">
             {layers.showBusLines ? "visível" : "oculto"}
           </span>

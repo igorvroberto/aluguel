@@ -1,15 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, MapPinned, Search, TrainFront, X } from "lucide-react";
+import { Loader2, Search, TrainFront, X } from "lucide-react";
 import {
   DEFAULT_STATION_RADIUS_METERS,
   LINHA_LARANJA_ATIVAS,
   LINHA_LARANJA_COLOR,
-  LINHA_LARANJA_NEAR_DEST_IDS,
   LINHA_VERMELHA,
   LINHA_VERMELHA_COLOR,
-  LINHA_VERMELHA_WEST_CENTER_IDS,
   METRO_STATIONS,
   STATION_RADIUS_OPTIONS,
   sortLinhaLaranjaForFilter,
@@ -27,7 +25,6 @@ import {
 interface FilterPanelProps {
   filters: FiltersState;
   onChange: (next: FiltersState) => void;
-  onFocusStations?: () => void;
   onScrapeStations?: () => void;
   scraping?: boolean;
   scrapeMessage?: string | null;
@@ -50,58 +47,69 @@ function StationChecklist({
   selectedIds,
   accent,
   onToggle,
+  onToggleAll,
 }: {
   stations: MetroStation[];
   selectedIds: string[];
   accent: string;
   onToggle: (id: string) => void;
+  onToggleAll: () => void;
 }) {
-  if (stations.length === 0) {
-    return (
-      <p className="px-3 py-2 text-[11px] text-slate-400">
-        Nenhuma estação encontrada.
-      </p>
-    );
-  }
+  const allIds = stations.map((s) => s.id);
+  const allSelected =
+    allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
+
   return (
     <ul className="divide-y divide-slate-100">
-      {stations.map((s) => {
-        const active = selectedIds.includes(s.id);
-        return (
-          <li key={s.id}>
-            <label className="flex cursor-pointer items-start gap-2 px-2.5 py-1.5 hover:bg-slate-50">
-              <input
-                type="checkbox"
-                checked={active}
-                onChange={() => onToggle(s.id)}
-                className="mt-0.5"
-                style={{ accentColor: accent }}
-              />
-              <span className="min-w-0">
-                <span className="block text-xs font-medium text-slate-800">
-                  {s.highlight && (
-                    <span
-                      className="mr-1 rounded px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white"
-                      style={{ backgroundColor: accent }}
-                    >
-                      perto
+      <li>
+        <label className="flex cursor-pointer items-start gap-2 bg-slate-50/80 px-2.5 py-1.5 hover:bg-slate-100">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={onToggleAll}
+            className="mt-0.5"
+            style={{ accentColor: accent }}
+          />
+          <span className="text-xs font-semibold text-slate-800">Todas</span>
+        </label>
+      </li>
+      {stations.length === 0 ? (
+        <li>
+          <p className="px-3 py-2 text-[11px] text-slate-400">
+            Nenhuma estação encontrada.
+          </p>
+        </li>
+      ) : (
+        stations.map((s) => {
+          const active = selectedIds.includes(s.id);
+          return (
+            <li key={s.id}>
+              <label className="flex cursor-pointer items-start gap-2 px-2.5 py-1.5 hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  checked={active}
+                  onChange={() => onToggle(s.id)}
+                  className="mt-0.5"
+                  style={{ accentColor: accent }}
+                />
+                <span className="min-w-0">
+                  <span className="block text-xs font-medium text-slate-800">
+                    <span className="mr-1 tabular-nums text-slate-400">
+                      {String(s.order).padStart(2, "0")}.
+                    </span>
+                    {s.name}
+                  </span>
+                  {s.integration && (
+                    <span className="block text-[10px] leading-snug text-slate-400">
+                      {s.integration}
                     </span>
                   )}
-                  <span className="mr-1 tabular-nums text-slate-400">
-                    {String(s.order).padStart(2, "0")}.
-                  </span>
-                  {s.name}
                 </span>
-                {s.integration && (
-                  <span className="block text-[10px] leading-snug text-slate-400">
-                    {s.integration}
-                  </span>
-                )}
-              </span>
-            </label>
-          </li>
-        );
-      })}
+              </label>
+            </li>
+          );
+        })
+      )}
     </ul>
   );
 }
@@ -109,7 +117,6 @@ function StationChecklist({
 export function FilterPanel({
   filters,
   onChange,
-  onFocusStations,
   onScrapeStations,
   scraping,
   scrapeMessage,
@@ -156,6 +163,20 @@ export function FilterPanel({
       ? filters.stationIds.filter((s) => s !== id)
       : [...filters.stationIds, id];
     onChange({ ...filters, stationIds });
+  };
+
+  const toggleAllOnLine = (lineStations: MetroStation[]) => {
+    const ids = lineStations.map((s) => s.id);
+    const allOn = ids.every((id) => filters.stationIds.includes(id));
+    if (allOn) {
+      onChange({
+        ...filters,
+        stationIds: filters.stationIds.filter((id) => !ids.includes(id)),
+      });
+    } else {
+      const set = new Set([...filters.stationIds, ...ids]);
+      onChange({ ...filters, stationIds: Array.from(set) });
+    }
   };
 
   const selectedCount = filters.stationIds.length;
@@ -224,51 +245,6 @@ export function FilterPanel({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <p className="mb-2 text-sm font-medium text-slate-700">Topografia</p>
-          <div className="flex rounded-md border border-slate-200 p-0.5">
-            <button
-              type="button"
-              onClick={() => onChange({ ...filters, onlyFlat: false })}
-              className={`flex-1 rounded px-2 py-1.5 text-xs font-medium transition ${
-                !filters.onlyFlat
-                  ? "bg-slate-800 text-white"
-                  : "text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              Todos
-            </button>
-            <button
-              type="button"
-              onClick={() => onChange({ ...filters, onlyFlat: true })}
-              className={`flex-1 rounded px-2 py-1.5 text-xs font-medium transition ${
-                filters.onlyFlat
-                  ? "bg-emerald-700 text-white"
-                  : "text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              Apenas Planos
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <p className="mb-2 text-sm font-medium text-slate-700">Portaria</p>
-          <label className="flex h-[34px] cursor-pointer items-center justify-between rounded-md border border-slate-200 px-3">
-            <span className="text-xs text-slate-600">Portaria 24h</span>
-            <input
-              type="checkbox"
-              checked={filters.portaria24h}
-              onChange={(e) =>
-                onChange({ ...filters, portaria24h: e.target.checked })
-              }
-              className="h-4 w-4 accent-teal-700"
-            />
-          </label>
-        </div>
-      </div>
-
       <div>
         <div className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-700">
           <TrainFront className="h-3.5 w-3.5 text-slate-700" aria-hidden />
@@ -304,47 +280,13 @@ export function FilterPanel({
           )}
         </div>
 
-        <div className="mb-2 flex flex-wrap gap-1.5">
+        <div className="mb-2">
           <button
             type="button"
             onClick={() => onChange({ ...filters, stationIds: [] })}
             className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-50"
           >
             Limpar Seleção
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              onChange({
-                ...filters,
-                stationIds: [...LINHA_VERMELHA_WEST_CENTER_IDS],
-              })
-            }
-            className="rounded-md border px-2 py-1 text-[10px] font-semibold text-white"
-            style={{
-              backgroundColor: LINHA_VERMELHA_COLOR,
-              borderColor: LINHA_VERMELHA_COLOR,
-            }}
-            title="Palmeiras–Barra Funda → República"
-          >
-            L3 Oeste/Centro
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              onChange({
-                ...filters,
-                stationIds: [...LINHA_LARANJA_NEAR_DEST_IDS],
-              })
-            }
-            className="rounded-md border px-2 py-1 text-[10px] font-semibold text-white"
-            style={{
-              backgroundColor: LINHA_LARANJA_COLOR,
-              borderColor: LINHA_LARANJA_COLOR,
-            }}
-            title="Perdizes, SESC-Pompéia, Água Branca"
-          >
-            L6 perto do destino
           </button>
         </div>
 
@@ -363,6 +305,7 @@ export function FilterPanel({
                 selectedIds={filters.stationIds}
                 accent={LINHA_VERMELHA_COLOR}
                 onToggle={toggleStation}
+                onToggleAll={() => toggleAllOnLine(filteredL3)}
               />
             </div>
           </details>
@@ -375,16 +318,13 @@ export function FilterPanel({
               />
               Linha 6-Laranja — Ativas ({LINHA_LARANJA_ATIVAS.length} estações)
             </summary>
-            <p className="border-t border-slate-100 px-3 py-1.5 text-[10px] text-slate-500">
-              Estações em operação (sem Brasilândia / Vila Cardoso / Itaberaba).
-              Destaques: Perdizes, SESC-Pompéia e Água Branca.
-            </p>
             <div className="max-h-44 overflow-y-auto border-t border-slate-100">
               <StationChecklist
                 stations={filteredL6}
                 selectedIds={filters.stationIds}
                 accent={LINHA_LARANJA_COLOR}
                 onToggle={toggleStation}
+                onToggleAll={() => toggleAllOnLine(filteredL6)}
               />
             </div>
           </details>
@@ -417,17 +357,6 @@ export function FilterPanel({
           </div>
         </div>
 
-        {selectedCount > 0 && onFocusStations && (
-          <button
-            type="button"
-            onClick={onFocusStations}
-            className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100"
-          >
-            <MapPinned className="h-3.5 w-3.5" aria-hidden />
-            Focar Estações Selecionadas
-          </button>
-        )}
-
         {onScrapeStations && (
           <button
             type="button"
@@ -453,9 +382,8 @@ export function FilterPanel({
 
         <p className="mt-1.5 text-[10px] leading-snug text-slate-400">
           Com estações marcadas, mostra imóveis a até o raio de{" "}
-          <strong>pelo menos uma</strong> delas (L3 ou L6). Padrão:{" "}
-          {DEFAULT_STATION_RADIUS_METERS} m · {METRO_STATIONS.length} estações
-          no total.
+          <strong>pelo menos uma</strong> delas. Padrão:{" "}
+          {DEFAULT_STATION_RADIUS_METERS} m · {METRO_STATIONS.length} estações.
         </p>
       </div>
 

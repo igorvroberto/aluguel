@@ -214,52 +214,20 @@ export const LINHA_VERMELHA: MetroStation[] = [
 
 /**
  * Trecho Norte–Oeste ativo da Linha 6-Laranja.
- * Brasilândia / Vila Cardoso / Itaberaba ainda não estão em operação — fora da lista.
+ * Numeração a partir de Perdizes (perto da faculdade) rumo ao norte.
+ * Brasilândia / Vila Cardoso / Itaberaba ainda não estão em operação.
  */
 export const LINHA_LARANJA_ATIVAS: MetroStation[] = [
   {
-    id: "l6-joao-paulo-i",
-    name: "João Paulo I",
+    id: "l6-perdizes",
+    name: "Perdizes",
     line: "l6",
     lineCode: "L6",
     color: LINHA_LARANJA_COLOR,
     order: 1,
-    lat: -23.5015,
-    lng: -46.6978,
-    ativa: true,
-  },
-  {
-    id: "l6-freguesia-do-o",
-    name: "Freguesia do Ó",
-    line: "l6",
-    lineCode: "L6",
-    color: LINHA_LARANJA_COLOR,
-    order: 2,
-    lat: -23.5098,
-    lng: -46.6961,
-    ativa: true,
-  },
-  {
-    id: "l6-santa-marina",
-    name: "Santa Marina",
-    line: "l6",
-    lineCode: "L6",
-    color: LINHA_LARANJA_COLOR,
-    order: 3,
-    lat: -23.5168,
-    lng: -46.6894,
-    ativa: true,
-  },
-  {
-    id: "l6-agua-branca",
-    name: "Água Branca",
-    line: "l6",
-    lineCode: "L6",
-    color: LINHA_LARANJA_COLOR,
-    order: 4,
-    lat: -23.5222,
-    lng: -46.6845,
-    integration: "CPTM Linhas 7 e 8",
+    lat: -23.5385,
+    lng: -46.6738,
+    integration: "Acesso próximo à Faculdade Santa Marcelina (R. Dr. Emílio Ribas, 89)",
     ativa: true,
     highlight: true,
   },
@@ -269,24 +237,57 @@ export const LINHA_LARANJA_ATIVAS: MetroStation[] = [
     line: "l6",
     lineCode: "L6",
     color: LINHA_LARANJA_COLOR,
-    order: 5,
+    order: 2,
     lat: -23.5276,
     lng: -46.6808,
     ativa: true,
     highlight: true,
   },
   {
-    id: "l6-perdizes",
-    name: "Perdizes",
+    id: "l6-agua-branca",
+    name: "Água Branca",
+    line: "l6",
+    lineCode: "L6",
+    color: LINHA_LARANJA_COLOR,
+    order: 3,
+    lat: -23.5222,
+    lng: -46.6845,
+    integration: "CPTM Linhas 7 e 8",
+    ativa: true,
+    highlight: true,
+  },
+  {
+    id: "l6-santa-marina",
+    name: "Santa Marina",
+    line: "l6",
+    lineCode: "L6",
+    color: LINHA_LARANJA_COLOR,
+    order: 4,
+    lat: -23.5168,
+    lng: -46.6894,
+    ativa: true,
+  },
+  {
+    id: "l6-freguesia-do-o",
+    name: "Freguesia do Ó",
+    line: "l6",
+    lineCode: "L6",
+    color: LINHA_LARANJA_COLOR,
+    order: 5,
+    lat: -23.5098,
+    lng: -46.6961,
+    ativa: true,
+  },
+  {
+    id: "l6-joao-paulo-i",
+    name: "João Paulo I",
     line: "l6",
     lineCode: "L6",
     color: LINHA_LARANJA_COLOR,
     order: 6,
-    lat: -23.5385,
-    lng: -46.6738,
-    integration: "Acesso próximo à Faculdade Santa Marcelina (R. Dr. Emílio Ribas, 89)",
+    lat: -23.5015,
+    lng: -46.6978,
     ativa: true,
-    highlight: true,
   },
 ];
 
@@ -301,13 +302,6 @@ export const LINHA_VERMELHA_WEST_CENTER_IDS = LINHA_VERMELHA.filter(
   (s) => s.order >= 1 && s.order <= 4
 ).map((s) => s.id);
 
-/** Destaques L6 perto do destino (topo do grupo no filtro). */
-export const LINHA_LARANJA_NEAR_DEST_IDS = [
-  "l6-perdizes",
-  "l6-sesc-pompeia",
-  "l6-agua-branca",
-] as const;
-
 export const STATION_RADIUS_OPTIONS = [
   { value: 500, label: "500 m" },
   { value: 800, label: "800 m" },
@@ -320,23 +314,9 @@ export function getMetroStation(id: string): MetroStation | undefined {
   return METRO_STATIONS.find((s) => s.id === id);
 }
 
-/** L6 no filtro: destaques primeiro, depois ordem do traçado. */
+/** L6 no filtro: ordem numérica (1 Perdizes → 6 João Paulo I). */
 export function sortLinhaLaranjaForFilter(
   stations: MetroStation[]
 ): MetroStation[] {
-  const highlightOrder = new Map<string, number>(
-    LINHA_LARANJA_NEAR_DEST_IDS.map((id, i) => [id, i])
-  );
-  return [...stations].sort((a, b) => {
-    const ha = highlightOrder.has(a.id);
-    const hb = highlightOrder.has(b.id);
-    if (ha && hb) {
-      return (
-        (highlightOrder.get(a.id) ?? 0) - (highlightOrder.get(b.id) ?? 0)
-      );
-    }
-    if (ha) return -1;
-    if (hb) return 1;
-    return a.order - b.order;
-  });
+  return [...stations].sort((a, b) => a.order - b.order);
 }

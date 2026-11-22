@@ -1,4 +1,7 @@
-/** Itinerários aproximados saindo do Terminal Palmeiras–Barra Funda. */
+/**
+ * Linhas de ônibus que passam perto da Faculdade Santa Marcelina (Perdizes)
+ * e dos corredores onde costumam ficar os imóveis analisados.
+ */
 
 export interface BusLineDef {
   id: string;
@@ -11,89 +14,78 @@ export interface BusLineDef {
   coordinates: [number, number][];
 }
 
-/** Terminal / Estação Palmeiras–Barra Funda */
-export const BARRA_FUNDA: [number, number] = [-46.6675, -23.5255];
+/** Faculdade Santa Marcelina / R. Dr. Emílio Ribas, 89 */
+export const FACULDADE: [number, number] = [-46.66692, -23.53231];
 
 export const BUS_LINES: BusLineDef[] = [
   {
     id: "875P-10",
     code: "875P-10",
-    name: "Barra Funda ↔ Metrô Ana Rosa",
-    itinerary: "Av. Francisco Matarazzo → Rua Turiassu → Rua Dr. Cândido Espinheira",
+    name: "Pompéia / Perdizes ↔ Ana Rosa",
+    itinerary:
+      "R. Turiassu → R. Dr. Cândido Espinheira → proximidade Emílio Ribas → eixo sul",
     color: "#2563EB",
     offset: -4,
     coordinates: [
-      BARRA_FUNDA,
-      [-46.6702, -23.5272],
-      [-46.6735, -23.5288],
-      [-46.6768, -23.5302],
-      [-46.6752, -23.5318],
-      [-46.6725, -23.5335],
-      [-46.6698, -23.5352],
-      [-46.6665, -23.5368],
-      [-46.6632, -23.5385],
-      [-46.6598, -23.5425],
-      [-46.6555, -23.5485],
+      [-46.6785, -23.5285],
+      [-46.6752, -23.5305],
+      [-46.6725, -23.5318],
+      FACULDADE,
+      [-46.6635, -23.5345],
+      [-46.6585, -23.5405],
+      [-46.6525, -23.5485],
       [-46.6485, -23.5555],
     ],
   },
   {
     id: "175P-10",
     code: "175P-10",
-    name: "Metrô Santana ↔ Ana Rosa via Barra Funda",
-    itinerary: "Av. Pacaembu → Higienópolis → eixo Ana Rosa",
+    name: "Pacaembu / Higienópolis ↔ Ana Rosa",
+    itinerary: "Av. Pacaembu → proximidade faculdade → Higienópolis → Ana Rosa",
     color: "#EA580C",
     offset: -1.5,
     coordinates: [
-      BARRA_FUNDA,
-      [-46.6655, -23.5268],
-      [-46.6638, -23.5285],
-      [-46.6622, -23.5315],
-      [-46.6610, -23.5355],
-      [-46.6598, -23.5395],
-      [-46.6585, -23.5435],
-      [-46.6565, -23.5485],
-      [-46.6525, -23.5535],
+      [-46.6625, -23.5225],
+      [-46.6615, -23.5285],
+      [-46.6605, -23.5315],
+      FACULDADE,
+      [-46.6585, -23.5385],
+      [-46.6545, -23.5485],
       [-46.6480, -23.5585],
     ],
   },
   {
     id: "208M-10",
     code: "208M-10",
-    name: "Metrô Santana ↔ Terminal Pinheiros via Barra Funda",
-    itinerary: "Av. Francisco Matarazzo → Av. Sumaré → Pinheiros",
+    name: "Sumaré / Perdizes ↔ Pinheiros",
+    itinerary: "Av. Sumaré → Cardoso de Almeida → proximidade Perdizes → Pinheiros",
     color: "#059669",
     offset: 1.5,
     coordinates: [
-      BARRA_FUNDA,
-      [-46.6705, -23.5275],
-      [-46.6745, -23.5295],
-      [-46.6785, -23.5315],
-      [-46.6825, -23.5345],
-      [-46.6855, -23.5385],
-      [-46.6875, -23.5435],
-      [-46.6895, -23.5485],
-      [-46.6915, -23.5535],
+      [-46.6725, -23.5225],
+      [-46.6705, -23.5285],
+      FACULDADE,
+      [-46.6745, -23.5365],
+      [-46.6825, -23.5425],
+      [-46.6895, -23.5505],
       [-46.6935, -23.5585],
     ],
   },
   {
     id: "6232-10",
     code: "6232-10",
-    name: "Metrô Barra Funda ↔ Pinheiros / Vila Ida",
-    itinerary: "Perdizes → Rua Cardoso de Almeida → Pinheiros",
+    name: "Perdizes ↔ Pinheiros / Vila Ida",
+    itinerary:
+      "R. Cardoso de Almeida → corredor Perdizes (perto da faculdade) → Pinheiros",
     color: "#7C3AED",
     offset: 4,
     coordinates: [
-      BARRA_FUNDA,
-      [-46.6695, -23.5285],
-      [-46.6725, -23.5315],
-      [-46.6755, -23.5345],
-      [-46.6785, -23.5365],
-      [-46.6815, -23.5385],
-      [-46.6845, -23.5405],
-      [-46.6875, -23.5445],
-      [-46.6905, -23.5495],
+      [-46.6785, -23.5285],
+      [-46.6745, -23.5305],
+      FACULDADE,
+      [-46.6705, -23.5345],
+      [-46.6785, -23.5385],
+      [-46.6865, -23.5465],
       [-46.6935, -23.5545],
     ],
   },

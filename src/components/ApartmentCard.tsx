@@ -8,7 +8,6 @@ import {
   MapPinned,
   Mountain,
   Shield,
-  Trash2,
   TrainFront,
 } from "lucide-react";
 import {
@@ -42,7 +41,6 @@ interface ApartmentCardProps {
   onUpdateListingUrl?: (id: string, url: string) => void;
   onUpdateStatus?: (id: string, status: ApartmentStatus) => void;
   onUpdateComments?: (id: string, comments: string) => void;
-  onDelete?: (id: string) => void;
 }
 
 const STATUS_STYLES: Record<ApartmentStatus, string> = {
@@ -61,7 +59,6 @@ export function ApartmentCard({
   onUpdateListingUrl,
   onUpdateStatus,
   onUpdateComments,
-  onDelete,
 }: ApartmentCardProps) {
   const [editingUrl, setEditingUrl] = useState(false);
   const [urlDraft, setUrlDraft] = useState(apartment.externalUrl || "");
@@ -271,21 +268,6 @@ export function ApartmentCard({
           >
             <Link2 className="h-3 w-3" aria-hidden />
             Link
-          </button>
-        )}
-        {onDelete && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (window.confirm("Remover este imóvel do servidor?")) {
-                onDelete(apartment.id);
-              }
-            }}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50"
-          >
-            <Trash2 className="h-3 w-3" aria-hidden />
-            Remover
           </button>
         )}
       </div>
