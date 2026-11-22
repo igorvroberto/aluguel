@@ -6,8 +6,9 @@ ROOT="${RADAR_IMOVEIS_ROOT:-/opt/radar-imoveis}"
 REF="${RADAR_IMOVEIS_REF:-main}"
 
 if [[ ! -w "${ROOT}/.git" || ! -w "${ROOT}" ]] && [[ "$(id -u)" -ne 0 ]]; then
-  # VAR=value antes do comando casa com o sudoers (NOPASSWD: .../tools/deploy.sh).
-  exec sudo -n RADAR_IMOVEIS_ROOT="$ROOT" RADAR_IMOVEIS_REF="$REF" "$0"
+  # Sem VAR=value no sudo: o sudoers da VPS bloqueia setar env na linha de comando.
+  # Defaults de ROOT/REF (/opt/radar-imoveis + main) bastam no deploy de produção.
+  exec sudo -n "$0"
 fi
 
 cd "$ROOT"
