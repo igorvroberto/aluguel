@@ -10,15 +10,16 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { ElevationPoint, RouteAnalysis } from "@/lib/types";
+import type { ElevationPoint, WalkLegAnalysis } from "@/lib/types";
 
 interface ElevationChartProps {
-  analysis: RouteAnalysis | null;
+  /** Trecho a pé (ida ou volta) — escala Y só deste perfil. */
+  leg: WalkLegAnalysis | null;
   hoverDistance: number | null;
   onHoverDistance: (distance: number | null) => void;
   emptyMessage?: string;
   title?: string;
-  /** Altura fixa do gráfico (px). Evita colapso com flex min-h-0. */
+  /** Altura do canvas do gráfico (px). Não afeta a escala de elevação. */
   chartHeight?: number;
 }
 
@@ -46,15 +47,43 @@ function ChartTooltip({
   );
 }
 
+function profileStats(data: ElevationPoint[]) {
+  if (data.length === 0) {
+    return { min: 0, max: 0, start: 0, end: 0, net: 0, loss: 0 };
+  }
+  let min = data[0].elevation;
+  let max = data[0].elevation;
+  let loss = 0;
+  for (let i = 0; i < data.length; i++) {
+    const e = data[i].elevation;
+    if (e < min) min = e;
+    if (e > max) max = e;
+    if (i > 0) {
+      const delta = e - data[i - 1].elevation;
+      if (delta < 0) loss += -delta;
+    }
+  }
+  const start = data[0].elevation;
+  const end = data[data.length - 1].elevation;
+  return { min, max, start, end, net: end - start, loss };
+}
+
+function formatNet(net: number): string {
+  const rounded = Math.round(net);
+  if (rounded > 0) return `líquido +${rounded} m`;
+  if (rounded < 0) return `líquido ${rounded} m`;
+  return "líquido 0 m";
+}
+
 export function ElevationChart({
-  analysis,
+  leg,
   hoverDistance,
   onHoverDistance,
   emptyMessage,
-  title = "Perfil de Elevação",
+  title = "Perfil a pé",
   chartHeight = 200,
 }: ElevationChartProps) {
-  if (!analysis) {
+  if (!leg || leg.elevationProfile.length === 0) {
     return (
       <div
         className="flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100/80 px-6 text-center"
@@ -62,13 +91,18 @@ export function ElevationChart({
       >
         <p className="max-w-sm text-sm text-slate-500">
           {emptyMessage ||
-            "Selecione um imóvel para ver o perfil de elevação do trajeto a pé até a R. Dr. Emílio Ribas, 89."}
+            "Selecione um imóvel para ver o perfil de elevação do trajeto a pé."}
         </p>
       </div>
     );
   }
 
-  const data = analysis.elevationProfile;
+  const data = leg.elevationProfile;
+  const stats = profileStats(data);
+  // Escala Y exclusiva deste trecho (ida ≠ volta).
+  const pad = Math.max(5, (stats.max - stats.min) * 0.08);
+  const yDomain: [number, number] = [stats.min - pad, stats.max + pad];
+
   const hoverPoint =
     hoverDistance == null
       ? null
@@ -87,8 +121,15 @@ export function ElevationChart({
         <div>
           <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
           <p className="text-[11px] text-slate-500">
-            Subida acumulada +{Math.round(analysis.elevationGain)} m · máx.{" "}
-            {Math.abs(analysis.maxGrade).toFixed(1)}% · {analysis.topography}
+            Subida +{Math.round(leg.elevationGain)} m
+            {stats.loss > 0.5 ? ` · descida −${Math.round(stats.loss)} m` : ""}
+            {" · "}
+            {formatNet(stats.net)} · máx. {Math.abs(leg.maxGrade).toFixed(1)}% ·{" "}
+            {leg.topography}
+          </p>
+          <p className="text-[10px] text-slate-400">
+            Escala {Math.round(stats.min)}–{Math.round(stats.max)} m (só este
+            trajeto a pé)
           </p>
         </div>
         <div className="hidden items-center gap-3 text-[10px] text-slate-500 sm:flex">
@@ -144,7 +185,8 @@ export function ElevationChart({
               axisLine={false}
               tickLine={false}
               tickFormatter={(v: number) => `${Math.round(v)}`}
-              domain={["dataMin - 5", "dataMax + 5"]}
+              domain={yDomain}
+              allowDataOverflow
             />
             <Tooltip content={<ChartTooltip />} />
             <Area
@@ -154,7 +196,12 @@ export function ElevationChart({
               strokeWidth={2}
               fill={`url(#${gradientId})`}
               isAnimationActive={false}
-              activeDot={{ r: 5, fill: "#f0b429", stroke: "#0f172a", strokeWidth: 1 }}
+              activeDot={{
+                r: 5,
+                fill: "#f0b429",
+                stroke: "#0f172a",
+                strokeWidth: 1,
+              }}
             />
             {hoverPoint && (
               <ReferenceDot

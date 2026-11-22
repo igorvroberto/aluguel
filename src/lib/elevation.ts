@@ -188,7 +188,11 @@ function legFromRoute(
   };
 }
 
-/** Análise a pé ida (imóvel→destino) e volta (destino→imóvel). Altimetria só dos trechos caminhados. */
+/**
+ * Análise a pé ida (imóvel→destino) e volta (destino→imóvel).
+ * Rota e altimetria vêm só do Mapbox Directions `walking` + terrain do mapa —
+ * transporte público não entra no perfil de elevação.
+ */
 export async function analyzeRoute(
   map: MapboxMap,
   token: string,
