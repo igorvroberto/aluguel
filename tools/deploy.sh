@@ -6,7 +6,8 @@ ROOT="${RADAR_IMOVEIS_ROOT:-/opt/radar-imoveis}"
 REF="${RADAR_IMOVEIS_REF:-main}"
 
 if [[ ! -w "${ROOT}/.git" || ! -w "${ROOT}" ]] && [[ "$(id -u)" -ne 0 ]]; then
-  exec sudo -n env RADAR_IMOVEIS_ROOT="$ROOT" RADAR_IMOVEIS_REF="$REF" "$0"
+  # VAR=value antes do comando casa com o sudoers (NOPASSWD: .../tools/deploy.sh).
+  exec sudo -n RADAR_IMOVEIS_ROOT="$ROOT" RADAR_IMOVEIS_REF="$REF" "$0"
 fi
 
 cd "$ROOT"

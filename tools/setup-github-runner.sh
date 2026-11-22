@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# Instala o GitHub Actions runner em /opt/radar-imoveis/actions-runner (UMA VEZ na VPS).
-# Depois disso, todo merge em main dispara o deploy automaticamente.
+# Instala o GitHub Actions runner em /opt/radar-imoveis/actions-runner (uma vez na VPS).
+# config.sh NÃO pode rodar como root — use este script (cria usuário radar-imoveis-runner).
 #
 # Uso (como root na VPS):
 #   bash tools/setup-github-runner.sh SEU_TOKEN
 #
 # Token: GitHub → aluguel → Settings → Actions → Runners → New self-hosted runner
-#   (copie só o token de registro, não a chave SSH)
 #
 set -euo pipefail
 
@@ -22,7 +21,6 @@ REPO_URL="https://github.com/igorvroberto/aluguel"
 
 if [[ -z "$TOKEN" ]]; then
   echo "Uso: $0 <registration-token>"
-  echo "Token: GitHub → aluguel → Settings → Actions → Runners → New self-hosted runner"
   exit 1
 fi
 
@@ -32,8 +30,7 @@ if [[ "$(id -u)" -ne 0 ]]; then
 fi
 
 if [[ ! -d "$ROOT/.git" ]]; then
-  echo "ERRO: $ROOT não é um clone git. Clone antes:"
-  echo "  sudo git clone $REPO_URL $ROOT"
+  echo "ERRO: $ROOT não é um clone git"
   exit 1
 fi
 
@@ -79,6 +76,5 @@ cd "$RUNNER_DIR"
 ./svc.sh status
 
 echo
-echo "OK. Runner ${RUNNER_NAME} ativo."
-echo "A partir de agora: merge no main → deploy automático em /opt/radar-imoveis."
-echo "Teste: GitHub → Actions → Deploy VPS → Run workflow."
+echo "OK. Runner ${RUNNER_NAME} ativo em ${RUNNER_DIR}."
+echo "Reexecute o workflow em GitHub → Actions → Deploy VPS → Re-run."
