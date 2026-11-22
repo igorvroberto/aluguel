@@ -10,11 +10,11 @@ on:
 
 jobs:
   deploy:
-    # Runner self-hosted na mesma VPS do /opt/radar-imoveis (uma vez: tools/setup-github-runner.sh).
+    # Runner self-hosted na VPS (/opt/radar-imoveis). Sem SSH externo.
     runs-on: [self-hosted, radar-imoveis]
     steps:
       - name: Deploy Perdizes Radar
-        run: sudo -n bash /opt/radar-imoveis/tools/deploy.sh
+        run: bash /opt/radar-imoveis/tools/deploy.sh
         env:
           RADAR_IMOVEIS_ROOT: /opt/radar-imoveis
           RADAR_IMOVEIS_REF: main
