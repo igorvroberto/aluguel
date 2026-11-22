@@ -13,7 +13,7 @@ jobs:
     # Runner self-hosted na VPS (/opt/radar-imoveis). Sem SSH externo.
     runs-on: [self-hosted, radar-imoveis]
     steps:
-      - name: Deploy Perdizes Radar
+      - name: Deploy Imóveis Radar
         run: bash /opt/radar-imoveis/tools/deploy.sh
         env:
           RADAR_IMOVEIS_ROOT: /opt/radar-imoveis

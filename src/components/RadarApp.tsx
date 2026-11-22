@@ -185,7 +185,7 @@ export function RadarApp() {
     const rows = buildExportRows(apartments, analyses);
     const stamp = new Date().toISOString().slice(0, 10);
     downloadBlob(
-      `perdizes-radar-${stamp}.csv`,
+      `imoveis-radar-${stamp}.csv`,
       toCsv(rows),
       "text/csv;charset=utf-8"
     );
@@ -195,7 +195,7 @@ export function RadarApp() {
     const rows = buildExportRows(apartments, analyses);
     const stamp = new Date().toISOString().slice(0, 10);
     downloadBlob(
-      `perdizes-radar-${stamp}.json`,
+      `imoveis-radar-${stamp}.json`,
       JSON.stringify(
         { exportedAt: new Date().toISOString(), apartments: rows },
         null,

@@ -1,9 +1,21 @@
 import seedApartments from "../../data/apartments.json";
-import { STORAGE_KEY } from "./constants";
+import { LEGACY_STORAGE_KEY, STORAGE_KEY } from "./constants";
 import type { Apartment } from "./types";
 
 export function getSeedApartments(): Apartment[] {
   return seedApartments as Apartment[];
+}
+
+function readStoredRaw(): string | null {
+  const current = window.localStorage.getItem(STORAGE_KEY);
+  if (current) return current;
+  const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+  if (legacy) {
+    window.localStorage.setItem(STORAGE_KEY, legacy);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    return legacy;
+  }
+  return null;
 }
 
 export function loadApartments(): Apartment[] {
@@ -12,7 +24,7 @@ export function loadApartments(): Apartment[] {
   }
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = readStoredRaw();
     if (!raw) {
       const seed = getSeedApartments();
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));

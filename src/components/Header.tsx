@@ -24,7 +24,7 @@ export function Header({
         </div>
         <div className="min-w-0">
           <h1 className="font-display text-lg font-semibold tracking-tight sm:text-xl">
-            Perdizes Radar
+            Imóveis Radar
           </h1>
           <p className="truncate text-xs text-teal-50/85">
             Destino: {DESTINATION.name}

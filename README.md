@@ -1,4 +1,4 @@
-# Perdizes Radar
+# Imóveis Radar
 
 Aplicação web em **Next.js 14** (App Router, TypeScript, Tailwind CSS) para analisar apartamentos candidatos próximos ao destino fixo:
 

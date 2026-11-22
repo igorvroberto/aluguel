@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Atualiza Perdizes Radar em /opt/radar-imoveis (VPS Liganer, ao lado de /opt/imoveis).
+# Atualiza Imóveis Radar em /opt/radar-imoveis (VPS Liganer, ao lado de /opt/imoveis).
 set -euo pipefail
 
 ROOT="${RADAR_IMOVEIS_ROOT:-/opt/radar-imoveis}"
