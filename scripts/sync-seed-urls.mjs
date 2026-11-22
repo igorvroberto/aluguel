@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Preenche externalUrl vazios no volume a partir do seed da imagem.
- * Não sobrescreve URL já existente. Match por id, /imovel/:id ou endereço+preço.
+ * Volume antigo (seed manual sem links) vs seed da imagem (scrape com /imovel/…).
+ * Se o seed tiver bem mais anúncios reais, substitui o volume.
+ * Caso contrário, só preenche externalUrl vazio por id/endereço.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -31,6 +32,10 @@ function keyAddr(a) {
   ].join("|");
 }
 
+function countListingUrls(list) {
+  return list.filter((a) => /\/imovel\/\d+/i.test(String(a.externalUrl || ""))).length;
+}
+
 function load(p) {
   try {
     const raw = JSON.parse(fs.readFileSync(p, "utf8"));
@@ -46,7 +51,32 @@ if (!fs.existsSync(seedPath) || !fs.existsSync(targetPath)) {
 
 const seed = load(seedPath);
 const target = load(targetPath);
-if (!seed.length || !target.length) process.exit(0);
+if (!seed.length) process.exit(0);
+
+const seedUrls = countListingUrls(seed);
+const currentUrls = countListingUrls(target);
+
+if (seedUrls >= 20 && seedUrls > currentUrls + 5) {
+  const byAddr = new Map(
+    target.map((a) => [String(a.address || "").trim().toLowerCase(), a])
+  );
+  const merged = seed.map((s) => {
+    const prev = byAddr.get(String(s.address || "").trim().toLowerCase());
+    if (!prev) return s;
+    return {
+      ...s,
+      status: prev.status || s.status,
+      comments: prev.comments ?? s.comments,
+    };
+  });
+  fs.writeFileSync(targetPath, `${JSON.stringify(merged, null, 2)}\n`, "utf8");
+  console.log(
+    `seed-urls: volume atualizado com seed (${merged.length} imóveis, ${seedUrls} links)`
+  );
+  process.exit(0);
+}
+
+if (!target.length) process.exit(0);
 
 const byId = new Map(seed.map((a) => [a.id, a]));
 const byHouse = new Map();
