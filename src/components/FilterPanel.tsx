@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, Search, TrainFront, X } from "lucide-react";
+import { Search, TrainFront, X } from "lucide-react";
 import {
   DEFAULT_STATION_RADIUS_METERS,
   LINHA_LARANJA_ATIVAS,
@@ -9,7 +9,6 @@ import {
   LINHA_VERMELHA,
   LINHA_VERMELHA_COLOR,
   METRO_STATIONS,
-  STATION_RADIUS_OPTIONS,
   sortLinhaLaranjaForFilter,
   type MetroStation,
 } from "../../data/linhasMetro";
@@ -25,9 +24,6 @@ import {
 interface FilterPanelProps {
   filters: FiltersState;
   onChange: (next: FiltersState) => void;
-  onScrapeStations?: () => void;
-  scraping?: boolean;
-  scrapeMessage?: string | null;
 }
 
 const ROOM_OPTIONS: Array<{ value: 1 | 2 | 3; label: string }> = [
@@ -114,13 +110,7 @@ function StationChecklist({
   );
 }
 
-export function FilterPanel({
-  filters,
-  onChange,
-  onScrapeStations,
-  scraping,
-  scrapeMessage,
-}: FilterPanelProps) {
+export function FilterPanel({ filters, onChange }: FilterPanelProps) {
   const [stationQuery, setStationQuery] = useState("");
 
   const toggleRoom = (room: 1 | 2 | 3) => {
@@ -330,60 +320,10 @@ export function FilterPanel({
           </details>
         </div>
 
-        <div className="mt-2">
-          <p className="mb-1.5 text-[11px] font-medium text-slate-600">
-            Raio máximo até a estação
-          </p>
-          <div className="flex gap-1.5">
-            {STATION_RADIUS_OPTIONS.map((opt) => {
-              const active = filters.stationRadiusMeters === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() =>
-                    onChange({ ...filters, stationRadiusMeters: opt.value })
-                  }
-                  className={`flex-1 rounded-md border px-2 py-1.5 text-[11px] font-semibold transition ${
-                    active
-                      ? "border-slate-800 bg-slate-800 text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {onScrapeStations && (
-          <button
-            type="button"
-            disabled={scraping || selectedCount === 0}
-            onClick={onScrapeStations}
-            className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-orange-300 bg-orange-50 px-3 py-2.5 text-xs font-semibold text-orange-950 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {scraping ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-            ) : (
-              <span aria-hidden>🔍</span>
-            )}
-            {scraping
-              ? "Varrendo portais…"
-              : "Buscar Imóveis Reais nas Estações Selecionadas"}
-          </button>
-        )}
-        {scrapeMessage && (
-          <p className="mt-1.5 text-[11px] leading-snug text-slate-600">
-            {scrapeMessage}
-          </p>
-        )}
-
         <p className="mt-1.5 text-[10px] leading-snug text-slate-400">
-          Com estações marcadas, mostra imóveis a até o raio de{" "}
-          <strong>pelo menos uma</strong> delas. Padrão:{" "}
-          {DEFAULT_STATION_RADIUS_METERS} m · {METRO_STATIONS.length} estações.
+          Com estações marcadas, mostra imóveis perto de{" "}
+          <strong>pelo menos uma</strong> delas (até{" "}
+          {DEFAULT_STATION_RADIUS_METERS} m) · {METRO_STATIONS.length} estações.
         </p>
       </div>
 
