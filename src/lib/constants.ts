@@ -7,7 +7,7 @@ export const DESTINATION = {
 
 export const STORAGE_KEY = "perdizes-radar-apartments";
 
-export const DEFAULT_MAX_PACKAGE = 4000;
+export const DEFAULT_MAX_PACKAGE = 6000;
 
 export const GRADE_THRESHOLDS = {
   green: 4,

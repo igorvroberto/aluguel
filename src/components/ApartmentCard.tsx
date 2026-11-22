@@ -1,6 +1,14 @@
 "use client";
 
-import { ExternalLink, Footprints, Mountain, Shield } from "lucide-react";
+import { useState } from "react";
+import {
+  ExternalLink,
+  Footprints,
+  Link2,
+  MapPinned,
+  Mountain,
+  Shield,
+} from "lucide-react";
 import {
   formatBRL,
   formatDistance,
@@ -8,6 +16,10 @@ import {
   monthlyPackage,
   topographyBadgeClass,
 } from "@/lib/format";
+import {
+  isGenericOrEmptyListingUrl,
+  resolveListingUrl,
+} from "@/lib/listing-url";
 import type { Apartment, RouteAnalysis } from "@/lib/types";
 
 interface ApartmentCardProps {
@@ -16,6 +28,7 @@ interface ApartmentCardProps {
   selected: boolean;
   analyzing: boolean;
   onSelect: () => void;
+  onUpdateListingUrl?: (id: string, url: string) => void;
 }
 
 export function ApartmentCard({
@@ -24,12 +37,18 @@ export function ApartmentCard({
   selected,
   analyzing,
   onSelect,
+  onUpdateListingUrl,
 }: ApartmentCardProps) {
+  const [editingUrl, setEditingUrl] = useState(false);
+  const [urlDraft, setUrlDraft] = useState(apartment.externalUrl || "");
+
   const total = monthlyPackage(
     apartment.aluguel,
     apartment.condominio,
     apartment.iptu
   );
+  const listingHref = resolveListingUrl(apartment);
+  const usingFallback = isGenericOrEmptyListingUrl(apartment.externalUrl);
 
   return (
     <article
@@ -122,16 +141,82 @@ export function ApartmentCard({
         )}
       </div>
 
-      <a
-        href={apartment.externalUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-teal-700 hover:underline"
-      >
-        Ver anúncio / mapa
-        <ExternalLink className="h-3 w-3" aria-hidden />
-      </a>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect();
+          }}
+          className="inline-flex items-center gap-1 rounded-md bg-teal-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-teal-800"
+        >
+          <MapPinned className="h-3.5 w-3.5" aria-hidden />
+          Traçar Rota / Mapa
+        </button>
+        <a
+          href={listingHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+          title={
+            usingFallback
+              ? "Busca no QuintoAndar (sem link específico)"
+              : "Abrir anúncio"
+          }
+        >
+          Abrir Anúncio
+          <ExternalLink className="h-3 w-3" aria-hidden />
+        </a>
+        {onUpdateListingUrl && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setUrlDraft(apartment.externalUrl || "");
+              setEditingUrl((v) => !v);
+            }}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100"
+          >
+            <Link2 className="h-3 w-3" aria-hidden />
+            Link
+          </button>
+        )}
+      </div>
+
+      {editingUrl && onUpdateListingUrl && (
+        <div
+          className="mt-2 space-y-1.5"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <input
+            value={urlDraft}
+            onChange={(e) => setUrlDraft(e.target.value)}
+            placeholder="https://www.quintoandar.com.br/imovel/…"
+            className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-teal-600"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="rounded-md bg-teal-700 px-2 py-1 text-xs font-semibold text-white"
+              onClick={() => {
+                onUpdateListingUrl(apartment.id, urlDraft.trim());
+                setEditingUrl(false);
+              }}
+            >
+              Salvar link
+            </button>
+            <button
+              type="button"
+              className="rounded-md px-2 py-1 text-xs text-slate-500"
+              onClick={() => setEditingUrl(false)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </article>
   );
 }

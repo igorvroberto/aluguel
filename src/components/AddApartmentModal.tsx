@@ -11,6 +11,21 @@ interface AddApartmentModalProps {
   mapboxToken?: string;
   onClose: () => void;
   onSave: (input: NewApartmentInput) => void;
+  onSaveBatch?: (inputs: NewApartmentInput[]) => void;
+}
+
+function splitBatchBlocks(raw: string): string[] {
+  const normalized = raw.replace(/\r\n/g, "\n").trim();
+  if (!normalized) return [];
+  const byDash = normalized
+    .split(/\n\s*---+\s*\n/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+  if (byDash.length > 1) return byDash;
+  return normalized
+    .split(/\n\s*\n+/)
+    .map((b) => b.trim())
+    .filter((b) => b.length >= 20);
 }
 
 const emptyForm = {
@@ -57,14 +72,18 @@ export function AddApartmentModal({
   mapboxToken,
   onClose,
   onSave,
+  onSaveBatch,
 }: AddApartmentModalProps) {
+  const [tab, setTab] = useState<"single" | "batch">("single");
   const [form, setForm] = useState(emptyForm);
   const [listingUrl, setListingUrl] = useState("");
   const [pasteText, setPasteText] = useState("");
+  const [batchText, setBatchText] = useState("");
   const [showPaste, setShowPaste] = useState(false);
   const [suggestions, setSuggestions] = useState<GeocodeSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [batchBusy, setBatchBusy] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -73,9 +92,11 @@ export function AddApartmentModal({
 
   useEffect(() => {
     if (!open) {
+      setTab("single");
       setForm(emptyForm);
       setListingUrl("");
       setPasteText("");
+      setBatchText("");
       setShowPaste(false);
       setSuggestions([]);
       setError(null);
@@ -205,6 +226,105 @@ export function AddApartmentModal({
     }
   };
 
+  const runBatchImport = async () => {
+    if (!onSaveBatch) return;
+    setError(null);
+    setInfo(null);
+    const blocks = splitBatchBlocks(batchText);
+    if (blocks.length === 0) {
+      setError("Cole pelo menos um bloco de texto (separados por linha em branco ou ---).");
+      return;
+    }
+
+    setBatchBusy(true);
+    const inputs: NewApartmentInput[] = [];
+    let failed = 0;
+
+    try {
+      for (const block of blocks) {
+        const looksUrl = /^https?:\/\//i.test(block.trim().split("\n")[0] || "");
+        try {
+          const res = await fetch("/api/scrape-listing", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              looksUrl
+                ? { url: block.trim().split("\n")[0] }
+                : { text: block }
+            ),
+          });
+          const data = (await res.json()) as {
+            ok: boolean;
+            data?: ExtractedListing;
+          };
+          if (!data.ok || !data.data?.address) {
+            failed += 1;
+            continue;
+          }
+
+          let lat = 0;
+          let lng = 0;
+          if (mapboxToken && data.data.address) {
+            try {
+              const geo = await searchSaoPauloAddresses(
+                mapboxToken,
+                data.data.address
+              );
+              if (geo[0]) {
+                lat = geo[0].lat;
+                lng = geo[0].lng;
+              }
+            } catch {
+              // skip coords
+            }
+          }
+
+          if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
+            failed += 1;
+            continue;
+          }
+
+          inputs.push({
+            title:
+              data.data.title ||
+              `Apartamento — ${data.data.address.split(",")[0]}`,
+            address: data.data.address,
+            lat,
+            lng,
+            rooms: Math.max(1, data.data.rooms || 1),
+            aluguel: data.data.aluguel ?? 0,
+            condominio: data.data.condominio ?? 0,
+            iptu: data.data.iptu ?? 0,
+            areaM2: data.data.areaM2,
+            parkingSpots: data.data.parkingSpots,
+            portaria24h: false,
+            externalUrl: looksUrl ? block.trim().split("\n")[0] : "",
+            notes: data.data.description?.slice(0, 280),
+          });
+        } catch {
+          failed += 1;
+        }
+      }
+
+      if (inputs.length === 0) {
+        setError(
+          `Nenhum imóvel importado${failed ? ` (${failed} bloco(s) falharam)` : ""}.`
+        );
+        return;
+      }
+
+      onSaveBatch(inputs);
+      setInfo(
+        `${inputs.length} imóvel(is) adicionados` +
+          (failed ? ` · ${failed} ignorado(s)` : "") +
+          "."
+      );
+      onClose();
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -279,6 +399,76 @@ export function AddApartmentModal({
           </button>
         </div>
 
+        <div className="flex gap-1 border-b border-slate-100 px-5 pt-2">
+          <button
+            type="button"
+            onClick={() => setTab("single")}
+            className={`rounded-t-md px-3 py-2 text-sm font-semibold ${
+              tab === "single"
+                ? "border-b-2 border-teal-700 text-teal-800"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            Um imóvel
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("batch")}
+            className={`rounded-t-md px-3 py-2 text-sm font-semibold ${
+              tab === "batch"
+                ? "border-b-2 border-teal-700 text-teal-800"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            Importar em Lote
+          </button>
+        </div>
+
+        {tab === "batch" ? (
+          <div className="space-y-3 px-5 py-4">
+            <p className="text-sm text-slate-600">
+              Cole vários textos ou links do QuintoAndar/ZAP/VivaReal, separados
+              por linha em branco ou <code className="font-mono text-xs">---</code>.
+            </p>
+            <textarea
+              value={batchText}
+              onChange={(e) => setBatchText(e.target.value)}
+              rows={12}
+              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+              placeholder={`Apartamento 2 quartos Rua Turiassu 450...\nAluguel R$ 3.200...\n\n---\n\nhttps://www.quintoandar.com.br/imovel/...`}
+            />
+            {error && (
+              <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+                {error}
+              </p>
+            )}
+            {info && (
+              <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+                {info}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-md px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={batchBusy || !batchText.trim()}
+                onClick={() => void runBatchImport()}
+                className="inline-flex items-center gap-1.5 rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50"
+              >
+                {batchBusy && (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                )}
+                Importar todos
+              </button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-3 px-5 py-4">
           <div className="rounded-lg border border-teal-100 bg-teal-50/60 p-3">
             <label className="block text-sm">
@@ -549,6 +739,7 @@ export function AddApartmentModal({
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );
