@@ -229,18 +229,6 @@ export function RadarApp() {
     })();
   }, []);
 
-  const handleUpdateListingUrl = async (id: string, url: string) => {
-    try {
-      const result = await patchApartment(id, { externalUrl: url });
-      setApartments((prev) =>
-        prev.map((a) => (a.id === id ? result.apartment : a))
-      );
-      notePersist(result.meta);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const handleUpdateStatus = async (id: string, status: ApartmentStatus) => {
     try {
       const result = await patchApartment(id, { status });
@@ -296,7 +284,6 @@ export function RadarApp() {
               selected={selectedId === apt.id}
               analyzing={analyzingId === apt.id}
               onSelect={() => handleSelect(apt.id)}
-              onUpdateListingUrl={handleUpdateListingUrl}
               onUpdateStatus={handleUpdateStatus}
               onUpdateComments={handleUpdateComments}
             />
