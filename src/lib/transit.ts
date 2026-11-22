@@ -50,6 +50,11 @@ const WALK_METERS_PER_MIN = 80;
 /** ~28 km/h metrô médio + paradas */
 const METRO_METERS_PER_MIN = 470;
 const METRO_WAIT_MINUTES = 4;
+/**
+ * Trechos menores que isso (hub em cima do destino, Mapbox 0 m) não entram
+ * em elevação nem como passo Caminhe — evitam gráficos zerados.
+ */
+const MIN_MEANINGFUL_WALK_M = 50;
 
 function haversineMeters(
   lat1: number,
@@ -94,6 +99,19 @@ function formatWalkTo(place: string, minutes: number): string {
   return `Caminhe ${minutes} min até ${place}`;
 }
 
+function isDegenerateWalkCoords(
+  coords: [number, number][],
+  distanceMeters: number
+): boolean {
+  if (distanceMeters < MIN_MEANINGFUL_WALK_M) return true;
+  if (coords.length < 2) return true;
+  const a = coords[0];
+  const b = coords[coords.length - 1];
+  if (a[0] === b[0] && a[1] === b[1]) return true;
+  const span = haversineMeters(a[1], a[0], b[1], b[0]);
+  return span < MIN_MEANINGFUL_WALK_M * 0.5;
+}
+
 function extractWalkPaths(steps: TransitStep[]): {
   walkSegments: WalkPathSegment[];
   walkCoordinates: [number, number][];
@@ -110,9 +128,16 @@ function extractWalkPaths(steps: TransitStep[]): {
     const distanceMeters =
       step.distanceMeters ??
       Math.round(
-        haversineMeters(coords[0][1], coords[0][0], coords[coords.length - 1][1], coords[coords.length - 1][0]) *
-          WALK_DETOUR
+        haversineMeters(
+          coords[0][1],
+          coords[0][0],
+          coords[coords.length - 1][1],
+          coords[coords.length - 1][0]
+        ) * WALK_DETOUR
       );
+    // Não gera gráfico/segmento para “Caminhe 1 min” fantasma (0 m)
+    if (isDegenerateWalkCoords(coords, distanceMeters)) continue;
+
     walkDistanceMeters += distanceMeters;
     walkSegments.push({
       label: step.instruction,
@@ -147,19 +172,34 @@ function allHubs(): Hub[] {
     lineLabel: `${s.lineCode} ${s.name}`,
   }));
 
+  // Pontos de ônibus: extremos + meio, mas ignora vértices colados no destino
+  // (ex.: FACULDADE no traçado) — senão o “Caminhe até o destino” fica 0 m.
   const buses: Hub[] = BUS_LINES.flatMap((line) => {
-    const pts = [
-      line.coordinates[0],
-      line.coordinates[Math.floor(line.coordinates.length / 2)],
-      line.coordinates[line.coordinates.length - 1],
+    const idxs = [
+      0,
+      Math.floor(line.coordinates.length / 2),
+      line.coordinates.length - 1,
     ];
-    return pts.map((c, i) => ({
-      kind: "bus" as const,
-      name: `Ponto ${line.code}${i === 1 ? " (meio)" : ""}`,
-      lat: c[1],
-      lng: c[0],
-      lineLabel: `${line.code} (${line.name})`,
-    }));
+    const out: Hub[] = [];
+    for (const i of idxs) {
+      const c = line.coordinates[i];
+      const lat = c[1];
+      const lng = c[0];
+      if (
+        haversineMeters(lat, lng, DESTINATION.lat, DESTINATION.lng) <
+        MIN_MEANINGFUL_WALK_M
+      ) {
+        continue;
+      }
+      out.push({
+        kind: "bus" as const,
+        name: `Ponto ${line.code}${i === idxs[1] ? " (meio)" : ""}`,
+        lat,
+        lng,
+        lineLabel: `${line.code} (${line.name})`,
+      });
+    }
+    return out;
   });
 
   return [...metro, ...buses];
@@ -180,6 +220,21 @@ function nearestHub(
     }
   }
   return { hub: best, distanceM: bestD };
+}
+
+/**
+ * Hub de acesso: prefere metrô se estiver a até 1,2 km; senão o mais perto.
+ * Evita “ponto no meio do ônibus” colado na faculdade.
+ */
+function bestAccessHub(
+  lat: number,
+  lng: number
+): { hub: Hub; distanceM: number } {
+  const hubs = allHubs();
+  const stations = hubs.filter((h) => h.kind === "station");
+  const nearStation = nearestHub(lat, lng, stations);
+  if (nearStation.distanceM <= 1200) return nearStation;
+  return nearestHub(lat, lng, hubs);
 }
 
 function rideMinutesBetween(a: Hub, b: Hub): number {
@@ -250,9 +305,8 @@ export async function buildFallbackTransitRoute(
     directWalkMinutesOverride
   );
 
-  const hubs = allHubs();
-  const originHub = nearestHub(fromLat, fromLng, hubs);
-  const destHub = nearestHub(toLat, toLng, hubs);
+  const originHub = bestAccessHub(fromLat, fromLng);
+  const destHub = bestAccessHub(toLat, toLng);
 
   let walkToCoords: [number, number][];
   let walkFromCoords: [number, number][];
@@ -293,20 +347,31 @@ export async function buildFallbackTransitRoute(
     walkFromDist = destHub.distanceM;
   }
 
-  const walkToHubMin = walkMinutesFromMeters(walkToDist);
-  const walkFromHubMin = walkMinutesFromMeters(walkFromDist);
+  const walkToMeaningful = !isDegenerateWalkCoords(walkToCoords, walkToDist);
+  const walkFromMeaningful = !isDegenerateWalkCoords(
+    walkFromCoords,
+    walkFromDist
+  );
+
+  const walkToHubMin = walkToMeaningful
+    ? walkMinutesFromMeters(walkToDist)
+    : 0;
+  const walkFromHubMin = walkFromMeaningful
+    ? walkMinutesFromMeters(walkFromDist)
+    : 0;
   const rideMin = rideMinutesBetween(originHub.hub, destHub.hub);
   const transitTotal = walkToHubMin + rideMin + walkFromHubMin;
 
-  const walkSteps: TransitStep[] = [
-    {
+  const walkSteps: TransitStep[] = [];
+  if (walkToMeaningful) {
+    walkSteps.push({
       mode: "WALK",
       instruction: formatWalkTo(originHub.hub.name, walkToHubMin),
       durationMinutes: walkToHubMin,
       distanceMeters: Math.round(walkToDist),
       coordinates: walkToCoords,
-    },
-  ];
+    });
+  }
   if (rideMin > 0) {
     const mode: TransitStepMode =
       originHub.hub.kind === "station" || destHub.hub.kind === "station"
@@ -320,13 +385,15 @@ export async function buildFallbackTransitRoute(
       lineName: originHub.hub.lineLabel,
     });
   }
-  walkSteps.push({
-    mode: "WALK",
-    instruction: formatWalkTo(toLabel, walkFromHubMin),
-    durationMinutes: walkFromHubMin,
-    distanceMeters: Math.round(walkFromDist),
-    coordinates: walkFromCoords,
-  });
+  if (walkFromMeaningful) {
+    walkSteps.push({
+      mode: "WALK",
+      instruction: formatWalkTo(toLabel, walkFromHubMin),
+      durationMinutes: walkFromHubMin,
+      distanceMeters: Math.round(walkFromDist),
+      coordinates: walkFromCoords,
+    });
+  }
 
   const { walkSegments, walkCoordinates, walkDistanceMeters } =
     extractWalkPaths(walkSteps);

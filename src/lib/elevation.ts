@@ -171,17 +171,23 @@ export function legFromCoordinates(
   distanceMeters: number,
   durationSeconds: number
 ): WalkLegAnalysis {
-  if (coordinates.length < 2) {
-    return {
-      distanceMeters: 0,
-      durationMinutes: 0,
-      elevationGain: 0,
-      maxGrade: 0,
-      topography: "Plano",
-      coordinates: [],
-      elevationProfile: [],
-      segmentGrades: [],
-    };
+  const empty: WalkLegAnalysis = {
+    distanceMeters: 0,
+    durationMinutes: 0,
+    elevationGain: 0,
+    maxGrade: 0,
+    topography: "Plano",
+    coordinates: [],
+    elevationProfile: [],
+    segmentGrades: [],
+  };
+  if (coordinates.length < 2 || distanceMeters < 50) {
+    return empty;
+  }
+  const a = coordinates[0];
+  const b = coordinates[coordinates.length - 1];
+  if (a[0] === b[0] && a[1] === b[1]) {
+    return empty;
   }
   const sampled = resampleRoute(coordinates);
   const elevations = extractElevations(map, sampled);
