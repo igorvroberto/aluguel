@@ -17,6 +17,9 @@ interface ElevationChartProps {
   hoverDistance: number | null;
   onHoverDistance: (distance: number | null) => void;
   emptyMessage?: string;
+  title?: string;
+  /** Altura fixa do gráfico (px). Evita colapso com flex min-h-0. */
+  chartHeight?: number;
 }
 
 function ChartTooltip({
@@ -48,10 +51,15 @@ export function ElevationChart({
   hoverDistance,
   onHoverDistance,
   emptyMessage,
+  title = "Perfil de Elevação",
+  chartHeight = 200,
 }: ElevationChartProps) {
   if (!analysis) {
     return (
-      <div className="flex h-full items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100/80 px-6 text-center">
+      <div
+        className="flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100/80 px-6 text-center"
+        style={{ minHeight: chartHeight }}
+      >
         <p className="max-w-sm text-sm text-slate-500">
           {emptyMessage ||
             "Selecione um imóvel para ver o perfil de elevação do trajeto a pé até a R. Dr. Emílio Ribas, 89."}
@@ -71,13 +79,13 @@ export function ElevationChart({
             : best
         );
 
+  const gradientId = `elevFill-${title.replace(/\s+/g, "-").toLowerCase()}`;
+
   return (
-    <div className="flex h-full flex-col bg-gradient-to-b from-white to-slate-50">
+    <div className="flex flex-col bg-gradient-to-b from-white to-slate-50">
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
         <div>
-          <h3 className="text-sm font-semibold text-slate-800">
-            Perfil de Elevação
-          </h3>
+          <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
           <p className="text-[11px] text-slate-500">
             Subida acumulada +{Math.round(analysis.elevationGain)} m · máx.{" "}
             {Math.abs(analysis.maxGrade).toFixed(1)}% · {analysis.topography}
@@ -96,7 +104,7 @@ export function ElevationChart({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 px-2 pb-2 pt-1">
+      <div className="px-2 pb-2 pt-1" style={{ height: chartHeight }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={data}
@@ -114,7 +122,7 @@ export function ElevationChart({
             onMouseLeave={() => onHoverDistance(null)}
           >
             <defs>
-              <linearGradient id="elevFill" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#0f766e" stopOpacity={0.35} />
                 <stop offset="100%" stopColor="#0f766e" stopOpacity={0.02} />
               </linearGradient>
@@ -144,7 +152,7 @@ export function ElevationChart({
               dataKey="elevation"
               stroke="#0f766e"
               strokeWidth={2}
-              fill="url(#elevFill)"
+              fill={`url(#${gradientId})`}
               isAnimationActive={false}
               activeDot={{ r: 5, fill: "#f0b429", stroke: "#0f172a", strokeWidth: 1 }}
             />

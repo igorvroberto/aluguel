@@ -1,5 +1,6 @@
+import { METRO_STATIONS } from "../../data/linhasMetro";
 import { BUS_LINES } from "./bus-lines";
-import { DESTINATION, TRANSIT_STATIONS } from "./constants";
+import { DESTINATION } from "./constants";
 
 export type TransitStepMode = "WALK" | "BUS" | "SUBWAY" | "TRANSIT";
 
@@ -24,6 +25,14 @@ export interface TransitRouteResult {
 
 export type TripDirection = "ida" | "volta";
 
+/** Fator urbano: linha reta → caminhada real aproximada. */
+const WALK_DETOUR = 1.35;
+/** ~4.8 km/h a pé */
+const WALK_METERS_PER_MIN = 80;
+/** ~28 km/h metrô médio + paradas */
+const METRO_METERS_PER_MIN = 470;
+const METRO_WAIT_MINUTES = 4;
+
 function haversineMeters(
   lat1: number,
   lng1: number,
@@ -40,107 +49,138 @@ function haversineMeters(
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-function walkMinutes(meters: number): number {
-  // ~4.8 km/h
-  return Math.max(1, Math.round(meters / 80));
+function walkMinutesFromMeters(meters: number): number {
+  return Math.max(1, Math.round((meters * WALK_DETOUR) / WALK_METERS_PER_MIN));
+}
+
+function estimateDirectWalkMinutes(
+  fromLat: number,
+  fromLng: number,
+  toLat: number,
+  toLng: number,
+  overrideMinutes?: number
+): number {
+  if (
+    overrideMinutes != null &&
+    Number.isFinite(overrideMinutes) &&
+    overrideMinutes > 0
+  ) {
+    return Math.max(1, Math.round(overrideMinutes));
+  }
+  return walkMinutesFromMeters(
+    haversineMeters(fromLat, fromLng, toLat, toLng)
+  );
 }
 
 function formatWalkTo(place: string, minutes: number): string {
   return `Caminhe ${minutes} min até ${place}`;
 }
 
-function busHubsNearFaculty(): Array<{
+type Hub = {
+  kind: "station" | "bus";
   name: string;
   lat: number;
   lng: number;
   lineLabel: string;
-  rideMinutes: number;
-}> {
-  return BUS_LINES.map((line) => {
-    // ponto do itinerário mais próximo da faculdade
-    let best = line.coordinates[0];
-    let bestD = Number.POSITIVE_INFINITY;
-    for (const c of line.coordinates) {
-      const d = haversineMeters(DESTINATION.lat, DESTINATION.lng, c[1], c[0]);
-      if (d < bestD) {
-        bestD = d;
-        best = c;
-      }
-    }
-    return {
-      name: `Ponto ${line.code}`,
-      lat: best[1],
-      lng: best[0],
+};
+
+function allHubs(): Hub[] {
+  const metro: Hub[] = METRO_STATIONS.map((s) => ({
+    kind: "station" as const,
+    name: s.name,
+    lat: s.lat,
+    lng: s.lng,
+    lineLabel: `${s.lineCode} ${s.name}`,
+  }));
+
+  const buses: Hub[] = BUS_LINES.flatMap((line) => {
+    // extremos + meio do corredor
+    const pts = [
+      line.coordinates[0],
+      line.coordinates[Math.floor(line.coordinates.length / 2)],
+      line.coordinates[line.coordinates.length - 1],
+    ];
+    return pts.map((c, i) => ({
+      kind: "bus" as const,
+      name: `Ponto ${line.code}${i === 1 ? " (meio)" : ""}`,
+      lat: c[1],
+      lng: c[0],
       lineLabel: `${line.code} (${line.name})`,
-      rideMinutes: 10,
-    };
+    }));
   });
+
+  return [...metro, ...buses];
+}
+
+function nearestHub(
+  lat: number,
+  lng: number,
+  hubs: Hub[]
+): { hub: Hub; distanceM: number } {
+  let best = hubs[0];
+  let bestD = Number.POSITIVE_INFINITY;
+  for (const h of hubs) {
+    const d = haversineMeters(lat, lng, h.lat, h.lng);
+    if (d < bestD) {
+      bestD = d;
+      best = h;
+    }
+  }
+  return { hub: best, distanceM: bestD };
+}
+
+function rideMinutesBetween(a: Hub, b: Hub): number {
+  if (a.name === b.name && a.lat === b.lat && a.lng === b.lng) {
+    return 0;
+  }
+  const dist = haversineMeters(a.lat, a.lng, b.lat, b.lng);
+  const moving = Math.max(2, Math.round(dist / METRO_METERS_PER_MIN));
+  return moving + METRO_WAIT_MINUTES;
 }
 
 /**
- * Heurística: só sugere estação/ônibus se o tempo total multimodal
- * for menor que ir a pé direto até o destino.
+ * Heurística multimodal: estação/ponto perto da origem + perto do destino.
+ * Compara com tempo a pé real (Mapbox) quando informado.
  */
 export function buildFallbackTransitRoute(
   originLat: number,
   originLng: number,
-  direction: TripDirection = "ida"
+  direction: TripDirection = "ida",
+  directWalkMinutesOverride?: number
 ): TransitRouteResult {
-  // Ida: imóvel → destino; Volta: destino → imóvel (espelha origem/destino)
   const fromLat = direction === "ida" ? originLat : DESTINATION.lat;
   const fromLng = direction === "ida" ? originLng : DESTINATION.lng;
   const toLat = direction === "ida" ? DESTINATION.lat : originLat;
   const toLng = direction === "ida" ? DESTINATION.lng : originLng;
-  const toLabel =
-    direction === "ida" ? DESTINATION.name : "o imóvel";
+  const toLabel = direction === "ida" ? DESTINATION.name : "o imóvel";
 
-  const directMeters = haversineMeters(fromLat, fromLng, toLat, toLng);
-  const directWalkMin = walkMinutes(directMeters);
+  const directWalkMin = estimateDirectWalkMinutes(
+    fromLat,
+    fromLng,
+    toLat,
+    toLng,
+    directWalkMinutesOverride
+  );
 
-  type Hub = {
-    kind: "station" | "bus";
-    name: string;
-    lat: number;
-    lng: number;
-    lineLabel: string;
-    rideMinutes: number;
-  };
+  const hubs = allHubs();
+  const originHub = nearestHub(fromLat, fromLng, hubs);
+  const destHub = nearestHub(toLat, toLng, hubs);
 
-  const hubs: Hub[] = [
-    ...TRANSIT_STATIONS.map((s) => ({
-      kind: "station" as const,
-      name: s.name,
-      lat: s.lat,
-      lng: s.lng,
-      lineLabel: s.line,
-      rideMinutes: 8,
-    })),
-    ...busHubsNearFaculty().map((b) => ({
-      kind: "bus" as const,
-      ...b,
-    })),
-  ];
+  const walkToHubMin = walkMinutesFromMeters(originHub.distanceM);
+  const walkFromHubMin = walkMinutesFromMeters(destHub.distanceM);
+  const rideMin = rideMinutesBetween(originHub.hub, destHub.hub);
+  const transitTotal = walkToHubMin + rideMin + walkFromHubMin;
 
-  const scored = hubs
-    .map((h) => {
-      const toHub = haversineMeters(fromLat, fromLng, h.lat, h.lng);
-      const toDest = haversineMeters(h.lat, h.lng, toLat, toLng);
-      const walkMin = walkMinutes(toHub) + walkMinutes(toDest);
-      const total = walkMin + h.rideMinutes;
-      return { hub: h, toHub, toDest, walkMin, total };
-    })
-    .sort((a, b) => a.total - b.total);
-
-  const best = scored[0];
-
-  // Transporte só vale se for mais rápido que a pé direto
-  if (directWalkMin <= best.total) {
+  // Só prefere a pé se claramente mais rápido (margem 2 min evita empate injusto)
+  if (directWalkMin + 2 < transitTotal) {
     const steps: TransitStep[] = [
       {
         mode: "WALK",
         instruction: `Vá a pé direto até ${toLabel} (${directWalkMin} min) — mais rápido que metrô/ônibus neste caso`,
         durationMinutes: directWalkMin,
-        distanceMeters: Math.round(directMeters),
+        distanceMeters: Math.round(
+          haversineMeters(fromLat, fromLng, toLat, toLng) * WALK_DETOUR
+        ),
       },
     ];
     return {
@@ -154,38 +194,42 @@ export function buildFallbackTransitRoute(
     };
   }
 
-  const walkToHub = walkMinutes(best.toHub);
-  const walkToDest = walkMinutes(best.toDest);
-  const mode: TransitStepMode = best.hub.kind === "station" ? "SUBWAY" : "BUS";
-  const rideVerb = best.hub.kind === "station" ? "Metrô/CPTM" : "Ônibus";
+  const mode: TransitStepMode =
+    originHub.hub.kind === "station" || destHub.hub.kind === "station"
+      ? "SUBWAY"
+      : "BUS";
+  const rideVerb = mode === "SUBWAY" ? "Metrô/ônibus" : "Ônibus";
 
   const steps: TransitStep[] = [
     {
       mode: "WALK",
-      instruction: formatWalkTo(best.hub.name, walkToHub),
-      durationMinutes: walkToHub,
-      distanceMeters: Math.round(best.toHub),
-    },
-    {
-      mode,
-      instruction: `${rideVerb} ${best.hub.lineLabel} (${best.hub.rideMinutes} min)`,
-      durationMinutes: best.hub.rideMinutes,
-      lineName: best.hub.lineLabel,
-    },
-    {
-      mode: "WALK",
-      instruction: formatWalkTo(toLabel, walkToDest),
-      durationMinutes: walkToDest,
-      distanceMeters: Math.round(best.toDest),
+      instruction: formatWalkTo(originHub.hub.name, walkToHubMin),
+      durationMinutes: walkToHubMin,
+      distanceMeters: Math.round(originHub.distanceM),
     },
   ];
 
-  const walkDurationMinutes = walkToHub + walkToDest;
-  const totalDurationMinutes = walkDurationMinutes + best.hub.rideMinutes;
+  if (rideMin > 0) {
+    steps.push({
+      mode,
+      instruction: `${rideVerb} ${originHub.hub.lineLabel} → ${destHub.hub.name} (${rideMin} min)`,
+      durationMinutes: rideMin,
+      lineName: originHub.hub.lineLabel,
+    });
+  }
+
+  steps.push({
+    mode: "WALK",
+    instruction: formatWalkTo(toLabel, walkFromHubMin),
+    durationMinutes: walkFromHubMin,
+    distanceMeters: Math.round(destHub.distanceM),
+  });
+
+  const walkDurationMinutes = walkToHubMin + walkFromHubMin;
 
   return {
     source: "fallback",
-    totalDurationMinutes,
+    totalDurationMinutes: transitTotal,
     walkDurationMinutes,
     steps,
     summary: steps.map((s) => s.instruction).join(" → "),
@@ -243,7 +287,8 @@ export async function fetchGoogleTransitRoute(
   apiKey: string,
   originLat: number,
   originLng: number,
-  direction: TripDirection = "ida"
+  direction: TripDirection = "ida",
+  directWalkMinutesOverride?: number
 ): Promise<TransitRouteResult> {
   const from =
     direction === "ida"
@@ -254,8 +299,12 @@ export async function fetchGoogleTransitRoute(
       ? { lat: DESTINATION.lat, lng: DESTINATION.lng }
       : { lat: originLat, lng: originLng };
 
-  const directWalkMin = walkMinutes(
-    haversineMeters(from.lat, from.lng, to.lat, to.lng)
+  const directWalkMin = estimateDirectWalkMinutes(
+    from.lat,
+    from.lng,
+    to.lat,
+    to.lng,
+    directWalkMinutesOverride
   );
 
   const res = await fetch(
@@ -340,9 +389,8 @@ export async function fetchGoogleTransitRoute(
     .filter((s) => s.mode === "WALK")
     .reduce((sum, s) => sum + s.durationMinutes, 0);
 
-  if (directWalkMin <= totalDurationMinutes) {
-    const toLabel =
-      direction === "ida" ? DESTINATION.name : "o imóvel";
+  if (directWalkMin + 2 < totalDurationMinutes) {
+    const toLabel = direction === "ida" ? DESTINATION.name : "o imóvel";
     return {
       source: "walk-preferred",
       totalDurationMinutes: directWalkMin,

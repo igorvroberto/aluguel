@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Bus, Footprints, Loader2 } from "lucide-react";
 import { ElevationChart } from "@/components/ElevationChart";
 import type { TransitRouteResult } from "@/lib/transit";
@@ -17,7 +17,7 @@ interface RoutePanelProps {
   analysis: RouteAnalysis | null;
   hoverDistance: number | null;
   onHoverDistance: (distance: number | null) => void;
-  /** Qual perna a pé desenhar no mapa (ida/volta). */
+  /** Qual perna a pé desenhar no mapa (ida/volta) — sync ao focar o gráfico. */
   walkDirection: TripDirection;
   onWalkDirectionChange: (dir: TripDirection) => void;
 }
@@ -34,6 +34,92 @@ function WalkLegSummary({ leg, label }: { leg: WalkLegAnalysis; label: string })
   );
 }
 
+function legAsChartAnalysis(
+  analysis: RouteAnalysis,
+  leg: WalkLegAnalysis
+): RouteAnalysis {
+  return {
+    ...analysis,
+    distanceMeters: leg.distanceMeters,
+    elevationGain: leg.elevationGain,
+    maxGrade: leg.maxGrade,
+    topography: leg.topography,
+    coordinates: leg.coordinates,
+    elevationProfile: leg.elevationProfile,
+    segmentGrades: leg.segmentGrades,
+  };
+}
+
+function TransitLegBlock({
+  label,
+  route,
+}: {
+  label: string;
+  route: TransitRouteResult;
+}) {
+  return (
+    <div className="space-y-2 rounded-md border border-slate-100 bg-white px-3 py-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-sm font-semibold text-slate-800">{label}</p>
+        <p className="text-xs text-slate-600">
+          porta a porta:{" "}
+          <span className="font-semibold text-slate-900">
+            {route.totalDurationMinutes} min
+          </span>
+          {route.directWalkMinutes != null && !route.preferDirectWalk ? (
+            <span className="text-slate-400">
+              {" "}
+              · a pé direto ~{route.directWalkMinutes} min
+            </span>
+          ) : null}
+        </p>
+      </div>
+
+      {route.preferDirectWalk ? (
+        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-950">
+          A pé direto (~{route.directWalkMinutes} min) é mais rápido que
+          metrô/ônibus + caminhadas neste trajeto.
+        </p>
+      ) : (
+        <p className="text-[11px] text-slate-500">
+          Caminhada no trajeto: {route.walkDurationMinutes} min
+        </p>
+      )}
+
+      <p className="text-sm leading-relaxed text-slate-700">{route.summary}</p>
+
+      <ol className="space-y-2">
+        {route.steps.map((step, idx) => (
+          <li
+            key={`${label}-${step.instruction}-${idx}`}
+            className="flex gap-3 rounded-md border border-slate-100 bg-slate-50/80 px-3 py-2 text-sm"
+          >
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+              {idx + 1}
+            </span>
+            <div className="min-w-0">
+              <p className="font-medium text-slate-800">{step.instruction}</p>
+              <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                {step.mode === "WALK"
+                  ? "A pé"
+                  : step.mode === "BUS"
+                    ? "Ônibus"
+                    : step.mode === "SUBWAY"
+                      ? "Metrô"
+                      : "Transporte"}{" "}
+                · {step.durationMinutes} min
+                {step.distanceMeters
+                  ? ` · ${Math.round(step.distanceMeters)} m`
+                  : ""}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 export function RoutePanel({
   apartment,
   analysis,
@@ -43,7 +129,6 @@ export function RoutePanel({
   onWalkDirectionChange,
 }: RoutePanelProps) {
   const [mode, setMode] = useState<TravelMode>("walk");
-  const [transitDir, setTransitDir] = useState<TripDirection>("ida");
   const [transitIda, setTransitIda] = useState<TransitRouteResult | null>(null);
   const [transitVolta, setTransitVolta] = useState<TransitRouteResult | null>(
     null
@@ -54,7 +139,6 @@ export function RoutePanel({
 
   useEffect(() => {
     setMode("walk");
-    setTransitDir("ida");
     setTransitIda(null);
     setTransitVolta(null);
     setTransitWarning(null);
@@ -63,10 +147,11 @@ export function RoutePanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apartment?.id]);
 
+  const walkIdaMin = analysis?.ida.durationMinutes;
+  const walkVoltaMin = analysis?.volta.durationMinutes;
+
   useEffect(() => {
     if (mode !== "transit" || !apartment) return;
-    const cached = transitDir === "ida" ? transitIda : transitVolta;
-    if (cached) return;
 
     let cancelled = false;
     setLoadingTransit(true);
@@ -74,32 +159,50 @@ export function RoutePanel({
 
     void (async () => {
       try {
-        const res = await fetch("/api/transit-route", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            lat: apartment.lat,
-            lng: apartment.lng,
-            direction: transitDir,
-          }),
-        });
-        const data = (await res.json()) as {
-          ok: boolean;
-          route?: TransitRouteResult;
-          warning?: string;
-          error?: string;
+        const fetchDir = async (
+          direction: TripDirection,
+          directWalkMinutes?: number
+        ) => {
+          const res = await fetch("/api/transit-route", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              lat: apartment.lat,
+              lng: apartment.lng,
+              direction,
+              directWalkMinutes,
+            }),
+          });
+          const data = (await res.json()) as {
+            ok: boolean;
+            route?: TransitRouteResult;
+            warning?: string;
+            error?: string;
+          };
+          if (!data.ok || !data.route) {
+            throw new Error(
+              data.error || "Não foi possível calcular o trajeto."
+            );
+          }
+          return { route: data.route, warning: data.warning };
         };
+
+        const [idaRes, voltaRes] = await Promise.all([
+          fetchDir("ida", walkIdaMin),
+          fetchDir("volta", walkVoltaMin),
+        ]);
+
         if (cancelled) return;
-        if (!data.ok || !data.route) {
-          setTransitError(data.error || "Não foi possível calcular o trajeto.");
-          return;
-        }
-        if (transitDir === "ida") setTransitIda(data.route);
-        else setTransitVolta(data.route);
-        setTransitWarning(data.warning || null);
-      } catch {
+        setTransitIda(idaRes.route);
+        setTransitVolta(voltaRes.route);
+        setTransitWarning(idaRes.warning || voltaRes.warning || null);
+      } catch (err) {
         if (!cancelled) {
-          setTransitError("Falha de rede ao consultar transporte público.");
+          setTransitError(
+            err instanceof Error
+              ? err.message
+              : "Falha de rede ao consultar transporte público."
+          );
         }
       } finally {
         if (!cancelled) setLoadingTransit(false);
@@ -109,29 +212,7 @@ export function RoutePanel({
     return () => {
       cancelled = true;
     };
-  }, [mode, apartment, transitDir, transitIda, transitVolta]);
-
-  const activeWalkLeg: WalkLegAnalysis | null = useMemo(() => {
-    if (!analysis) return null;
-    return walkDirection === "ida" ? analysis.ida : analysis.volta;
-  }, [analysis, walkDirection]);
-
-  const chartAnalysis = useMemo(() => {
-    if (!analysis || !activeWalkLeg) return null;
-    return {
-      ...analysis,
-      distanceMeters: activeWalkLeg.distanceMeters,
-      elevationGain: activeWalkLeg.elevationGain,
-      maxGrade: activeWalkLeg.maxGrade,
-      topography: activeWalkLeg.topography,
-      coordinates: activeWalkLeg.coordinates,
-      elevationProfile: activeWalkLeg.elevationProfile,
-      segmentGrades: activeWalkLeg.segmentGrades,
-    };
-  }, [analysis, activeWalkLeg]);
-
-  const transit =
-    transitDir === "ida" ? transitIda : transitVolta;
+  }, [mode, apartment, walkIdaMin, walkVoltaMin]);
 
   if (!apartment) {
     return (
@@ -173,140 +254,110 @@ export function RoutePanel({
             Transporte Público
           </button>
         </div>
-
-        <div className="flex rounded-md border border-slate-200 p-0.5">
-          {(["ida", "volta"] as TripDirection[]).map((dir) => {
-            const active =
-              mode === "walk" ? walkDirection === dir : transitDir === dir;
-            return (
-              <button
-                key={dir}
-                type="button"
-                onClick={() => {
-                  if (mode === "walk") onWalkDirectionChange(dir);
-                  else setTransitDir(dir);
-                }}
-                className={`rounded px-3 py-1.5 text-xs font-semibold capitalize transition ${
-                  active
-                    ? "bg-slate-800 text-white"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                {dir}
-              </button>
-            );
-          })}
-        </div>
+        <p className="text-[10px] text-slate-400">
+          Ida e volta na mesma vista
+          {mode === "walk" ? (
+            <>
+              {" "}
+              · mapa: <span className="font-semibold">{walkDirection}</span>
+            </>
+          ) : null}
+        </p>
       </div>
 
       {mode === "walk" ? (
-        <div className="flex min-h-0 flex-1 flex-col">
-          {analysis && (
-            <div className="grid grid-cols-2 gap-2 border-b border-slate-100 px-4 py-2">
-              <WalkLegSummary leg={analysis.ida} label="Ida (imóvel → faculdade)" />
-              <WalkLegSummary
-                leg={analysis.volta}
-                label="Volta (faculdade → imóvel)"
-              />
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {analysis ? (
+            <>
+              <div className="grid grid-cols-1 gap-2 border-b border-slate-100 px-4 py-2 sm:grid-cols-2">
+                <WalkLegSummary
+                  leg={analysis.ida}
+                  label="Ida (imóvel → faculdade)"
+                />
+                <WalkLegSummary
+                  leg={analysis.volta}
+                  label="Volta (faculdade → imóvel)"
+                />
+              </div>
+
+              <div
+                className="border-b border-slate-100"
+                onMouseEnter={() => onWalkDirectionChange("ida")}
+              >
+                <ElevationChart
+                  analysis={legAsChartAnalysis(analysis, analysis.ida)}
+                  hoverDistance={
+                    walkDirection === "ida" ? hoverDistance : null
+                  }
+                  onHoverDistance={(d) => {
+                    onWalkDirectionChange("ida");
+                    onHoverDistance(d);
+                  }}
+                  title="Perfil de Elevação — Ida"
+                  chartHeight={200}
+                  emptyMessage="Perfil de elevação (ida) indisponível."
+                />
+              </div>
+
+              <div
+                onMouseEnter={() => onWalkDirectionChange("volta")}
+              >
+                <ElevationChart
+                  analysis={legAsChartAnalysis(analysis, analysis.volta)}
+                  hoverDistance={
+                    walkDirection === "volta" ? hoverDistance : null
+                  }
+                  onHoverDistance={(d) => {
+                    onWalkDirectionChange("volta");
+                    onHoverDistance(d);
+                  }}
+                  title="Perfil de Elevação — Volta"
+                  chartHeight={200}
+                  emptyMessage="Perfil de elevação (volta) indisponível."
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex h-[220px] items-center justify-center px-6 text-center text-sm text-slate-500">
+              Calculando trajeto a pé e perfil de elevação…
             </div>
           )}
-          <div className="min-h-0 flex-1">
-            <ElevationChart
-              analysis={chartAnalysis}
-              hoverDistance={hoverDistance}
-              onHoverDistance={onHoverDistance}
-              emptyMessage={
-                apartment
-                  ? "Perfil de elevação a pé indisponível (configure NEXT_PUBLIC_MAPBOX_TOKEN ou aguarde o cálculo)."
-                  : undefined
-              }
-            />
-          </div>
-          <p className="border-t border-slate-100 px-4 py-1.5 text-[10px] text-slate-400">
-            Perfil de elevação considera apenas o trecho a pé da{" "}
-            <strong>{walkDirection}</strong>.
-          </p>
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
           {loadingTransit && (
-            <p className="inline-flex items-center gap-2 text-sm text-slate-500">
+            <p className="mb-3 inline-flex items-center gap-2 text-sm text-slate-500">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Calculando transporte público ({transitDir})…
+              Calculando transporte público (ida e volta)…
             </p>
           )}
 
           {transitError && (
-            <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+            <p className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
               {transitError}
             </p>
           )}
 
-          {transit && (
-            <div className="space-y-3">
-              {transit.preferDirectWalk && (
-                <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-950">
-                  A pé direto (~{transit.directWalkMinutes} min) é mais rápido
-                  que metrô/ônibus + caminhadas neste trajeto. Não vale desviar
-                  para estação ou ponto.
-                </p>
-              )}
-
-              {transitWarning && !transit.preferDirectWalk && (
-                <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                  {transitWarning}
-                </p>
-              )}
-
-              <div className="text-xs text-slate-600">
-                <p className="font-semibold text-slate-800">
-                  {transitDir === "ida" ? "Ida" : "Volta"} · porta a porta:{" "}
-                  {transit.totalDurationMinutes} min
-                </p>
-                <p className="text-[11px] text-slate-500">
-                  Caminhada no trajeto: {transit.walkDurationMinutes} min
-                  {activeWalkLeg && transit.preferDirectWalk
-                    ? ` · altimetria a pé (${walkDirection}) +${Math.round(activeWalkLeg.elevationGain)} m`
-                    : ""}
-                </p>
-              </div>
-
-              <p className="text-sm leading-relaxed text-slate-700">
-                {transit.summary}
-              </p>
-
-              <ol className="space-y-2">
-                {transit.steps.map((step, idx) => (
-                  <li
-                    key={`${step.instruction}-${idx}`}
-                    className="flex gap-3 rounded-md border border-slate-100 bg-white px-3 py-2 text-sm"
-                  >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
-                      {idx + 1}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-medium text-slate-800">
-                        {step.instruction}
-                      </p>
-                      <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                        {step.mode === "WALK"
-                          ? "A pé"
-                          : step.mode === "BUS"
-                            ? "Ônibus"
-                            : step.mode === "SUBWAY"
-                              ? "Metrô"
-                              : "Transporte"}{" "}
-                        · {step.durationMinutes} min
-                        {step.distanceMeters
-                          ? ` · ${Math.round(step.distanceMeters)} m`
-                          : ""}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
+          {transitWarning && (
+            <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              {transitWarning}
+            </p>
           )}
+
+          <div className="space-y-4">
+            {transitIda && (
+              <TransitLegBlock
+                label="Ida (imóvel → faculdade)"
+                route={transitIda}
+              />
+            )}
+            {transitVolta && (
+              <TransitLegBlock
+                label="Volta (faculdade → imóvel)"
+                route={transitVolta}
+              />
+            )}
+          </div>
         </div>
       )}
     </div>
