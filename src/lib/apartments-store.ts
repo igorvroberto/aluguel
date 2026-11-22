@@ -73,6 +73,17 @@ export function getApartmentsDataPath(): string {
   return resolveDataPath();
 }
 
+function countListingUrls(apartments: Apartment[]): number {
+  return apartments.filter((a) =>
+    /\/imovel\/\d+/i.test(a.externalUrl.trim())
+  ).length;
+}
+
+/**
+ * Volume antigo (seed manual sem links) vs seed da imagem (scrape com /imovel/…).
+ * Se o seed tiver bem mais anúncios reais, substitui o volume — preserva
+ * status/comentários quando o endereço bater.
+ */
 async function hydrateEmptyUrlsFromSeed(
   apartments: Apartment[]
 ): Promise<Apartment[]> {
@@ -88,8 +99,30 @@ async function hydrateEmptyUrlsFromSeed(
     const seedList = seed.map((item) =>
       normalizeApartment(item as Partial<Apartment>)
     );
+    const seedUrls = countListingUrls(seedList);
+    const currentUrls = countListingUrls(apartments);
+
+    // Seed do scrape é claramente melhor → adota o seed
+    if (seedUrls >= 20 && seedUrls > currentUrls + 5) {
+      const byAddr = new Map(
+        apartments.map((a) => [a.address.trim().toLowerCase(), a])
+      );
+      const merged = seedList.map((s) => {
+        const prev = byAddr.get(s.address.trim().toLowerCase());
+        if (!prev) return s;
+        return normalizeApartment({
+          ...s,
+          status: prev.status || s.status,
+          comments: prev.comments ?? s.comments,
+        });
+      });
+      memoryCache = merged;
+      await writeToDisk(merged);
+      return merged;
+    }
+
     const byId = new Map(seedList.map((a) => [a.id, a]));
-    const byAddr = new Map(
+    const byAddrPrice = new Map(
       seedList.map((a) => [
         `${a.address.trim().toLowerCase()}|${a.aluguel}|${a.rooms}`,
         a,
@@ -102,7 +135,7 @@ async function hydrateEmptyUrlsFromSeed(
       if (url && /\/imovel\/\d+/i.test(url)) return apt;
       const donor =
         byId.get(apt.id) ||
-        byAddr.get(
+        byAddrPrice.get(
           `${apt.address.trim().toLowerCase()}|${apt.aluguel}|${apt.rooms}`
         );
       const donorUrl = donor?.externalUrl.trim() || "";
