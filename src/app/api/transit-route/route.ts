@@ -13,12 +13,18 @@ export async function POST(req: NextRequest) {
       lat?: number;
       lng?: number;
       direction?: TripDirection;
+      /** Tempo a pé real (Mapbox) para comparar com TRANSIT. */
+      directWalkMinutes?: number;
     };
 
     const lat = Number(body.lat);
     const lng = Number(body.lng);
     const direction: TripDirection =
       body.direction === "volta" ? "volta" : "ida";
+    const directWalkMinutes =
+      body.directWalkMinutes != null && Number.isFinite(Number(body.directWalkMinutes))
+        ? Number(body.directWalkMinutes)
+        : undefined;
 
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       return NextResponse.json(
@@ -35,7 +41,8 @@ export async function POST(req: NextRequest) {
           apiKey,
           lat,
           lng,
-          direction
+          direction,
+          directWalkMinutes
         );
         return NextResponse.json({
           ok: true,
@@ -47,25 +54,35 @@ export async function POST(req: NextRequest) {
         });
       } catch (err) {
         console.warn("Google TRANSIT fallback:", err);
-        const route = buildFallbackTransitRoute(lat, lng, direction);
+        const route = buildFallbackTransitRoute(
+          lat,
+          lng,
+          direction,
+          directWalkMinutes
+        );
         return NextResponse.json({
           ok: true,
           route,
           direction,
           warning:
-            "Estimativa local — Google Routes indisponível no momento. Transporte só é sugerido se for mais rápido que a pé direto.",
+            "Estimativa local — Google Routes indisponível. Comparação usa tempo a pé real quando disponível.",
           source: "local-fallback",
         });
       }
     }
 
-    const route = buildFallbackTransitRoute(lat, lng, direction);
+    const route = buildFallbackTransitRoute(
+      lat,
+      lng,
+      direction,
+      directWalkMinutes
+    );
     return NextResponse.json({
       ok: true,
       route,
       direction,
       warning:
-        "Estimativa local. Transporte público só entra se for mais rápido que ir a pé direto até o destino. Configure GOOGLE_MAPS_API_KEY para rotas oficiais.",
+        "Estimativa local. Transporte só é sugerido se for mais rápido que a pé (tempo Mapbox quando houver).",
       source: "local",
     });
   } catch (err) {

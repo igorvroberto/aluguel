@@ -328,7 +328,7 @@ export function RadarApp() {
           onSelectApartment={handleSelect}
         />
       </div>
-      <div className="min-h-[220px] lg:min-h-[240px]">
+      <div className="min-h-[420px] lg:min-h-[480px]">
         <RoutePanel
           apartment={selectedApartment}
           analysis={selectedFullAnalysis}
