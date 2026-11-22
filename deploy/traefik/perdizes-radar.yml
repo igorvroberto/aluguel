@@ -1,0 +1,19 @@
+# Roteado pelo Traefik em host network → 127.0.0.1:18090.
+# Não usa redes chatwoot_* / web. Copiar para:
+#   /opt/traefik/dynamic/perdizes-radar.yml
+http:
+  routers:
+    perdizes-radar:
+      rule: Host(`radar.liganer.com.br`)
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - liganer-compress@file
+      service: perdizes-radar
+  services:
+    perdizes-radar:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:18090

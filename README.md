@@ -38,3 +38,36 @@ Sem o token Mapbox, a interface continua funcional e a área do mapa exibe um av
 - `npm run build` — build de produção
 - `npm run start` — servidor de produção
 - `npm run lint` — ESLint
+
+## Deploy VPS (Liganer — mesma máquina do `/opt/imoveis`)
+
+Stack isolada: **sem** redes/volumes `chatwoot_*`.
+
+| Item | Valor |
+| --- | --- |
+| Raiz | `/opt/perdizes-radar` |
+| Porta host | `127.0.0.1:18090` |
+| Traefik | `/opt/traefik/dynamic/perdizes-radar.yml` |
+| Domínio | `https://radar.liganer.com.br` |
+
+### Primeira subida (na VPS)
+
+```bash
+sudo mkdir -p /opt/perdizes-radar
+sudo git clone https://github.com/igorvroberto/aluguel.git /opt/perdizes-radar
+cd /opt/perdizes-radar
+sudo cp .env.example .env
+sudo nano .env   # NEXT_PUBLIC_MAPBOX_TOKEN (+ GOOGLE_MAPS_API_KEY opcional)
+
+# DNS: A/AAAA radar.liganer.com.br → IP da VPS
+sudo bash tools/deploy.sh
+```
+
+Atualizações:
+
+```bash
+cd /opt/perdizes-radar
+sudo bash tools/deploy.sh
+```
+
+Health local: `curl -fsS http://127.0.0.1:18090/`
