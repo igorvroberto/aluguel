@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
-import { Bus, TrainFront } from "lucide-react";
 import {
   LINHA_VERMELHA,
   LINHA_VERMELHA_COLOR,
@@ -18,6 +17,7 @@ import {
   BUS_LINE_WIDTH,
   buildBusLinesGeoJSON,
 } from "@/lib/bus-lines";
+import type { MapLayersState } from "@/components/MapLayersPanel";
 import { gradeBucket } from "@/lib/elevation";
 import { gradeColor } from "@/lib/format";
 import {
@@ -37,6 +37,7 @@ interface MapViewProps {
   stationIds?: string[];
   stationRadiusMeters?: number;
   focusStationsToken?: number;
+  layers: MapLayersState;
   onMapReady: (map: mapboxgl.Map) => void;
   onSelectApartment: (id: string) => void;
 }
@@ -126,6 +127,7 @@ export function MapView({
   stationIds = [],
   stationRadiusMeters = 800,
   focusStationsToken = 0,
+  layers,
   onMapReady,
   onSelectApartment,
 }: MapViewProps) {
@@ -134,12 +136,6 @@ export function MapView({
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const destMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
-  const [showTransit, setShowTransit] = useState(false);
-  const [showLinhaVermelha, setShowLinhaVermelha] = useState(true);
-  const [showBusLines, setShowBusLines] = useState(true);
-  const [enabledLines, setEnabledLines] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(BUS_LINES.map((l) => [l.id, true]))
-  );
   const [terrainReady, setTerrainReady] = useState(false);
   const onMapReadyRef = useRef(onMapReady);
   onMapReadyRef.current = onMapReady;
@@ -521,20 +517,20 @@ export function MapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.getLayer("bus-corridors")) return;
-    const visibility = showTransit ? "visible" : "none";
+    const visibility = layers.showTransit ? "visible" : "none";
     map.setLayoutProperty("bus-corridors", "visibility", visibility);
     map.setLayoutProperty("transit-stations", "visibility", visibility);
     map.setLayoutProperty("transit-station-labels", "visibility", visibility);
-  }, [showTransit]);
+  }, [layers.showTransit, terrainReady]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.getLayer("l3-line")) return;
-    const visibility = showLinhaVermelha ? "visible" : "none";
+    const visibility = layers.showLinhaVermelha ? "visible" : "none";
     map.setLayoutProperty("l3-line", "visibility", visibility);
     map.setLayoutProperty("l3-stations", "visibility", visibility);
     map.setLayoutProperty("l3-station-labels", "visibility", visibility);
-  }, [showLinhaVermelha, terrainReady]);
+  }, [layers.showLinhaVermelha, terrainReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -574,10 +570,11 @@ export function MapView({
     BUS_LINES.forEach((line) => {
       const layerId = busLayerId(line.id);
       if (!map.getLayer(layerId)) return;
-      const on = showBusLines && enabledLines[line.id] !== false;
+      const on =
+        layers.showBusLines && layers.enabledLines[line.id] !== false;
       map.setLayoutProperty(layerId, "visibility", on ? "visible" : "none");
     });
-  }, [showBusLines, enabledLines, terrainReady]);
+  }, [layers.showBusLines, layers.enabledLines, terrainReady]);
 
   if (!token) {
     return (
@@ -601,150 +598,6 @@ export function MapView({
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
-
-      <div className="absolute left-3 top-3 z-10 flex max-h-[calc(100%-1.5rem)] flex-col gap-2 overflow-y-auto">
-        <button
-          type="button"
-          onClick={() => setShowBusLines((v) => !v)}
-          className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold shadow-md backdrop-blur transition ${
-            showBusLines
-              ? "border-teal-700 bg-teal-700 text-white"
-              : "border-white/70 bg-white/90 text-slate-700 hover:bg-white"
-          }`}
-        >
-          <Bus className="h-3.5 w-3.5" aria-hidden />
-          {showBusLines ? "Ocultar linhas de ônibus" : "Linhas Barra Funda"}
-        </button>
-
-        {showBusLines && (
-          <div className="max-w-[260px] rounded-md border border-white/70 bg-white/95 p-3 text-[11px] text-slate-600 shadow-md">
-            <p className="mb-2 font-semibold text-slate-800">
-              Linhas (trilho paralelo · sem sobreposição)
-            </p>
-            <ul className="space-y-2">
-              {BUS_LINES.map((line) => {
-                const on = enabledLines[line.id] !== false;
-                return (
-                  <li key={line.id}>
-                    <label className="flex cursor-pointer gap-2">
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        onChange={() =>
-                          setEnabledLines((prev) => ({
-                            ...prev,
-                            [line.id]: !on,
-                          }))
-                        }
-                        className="mt-0.5 accent-teal-700"
-                      />
-                      <span className="min-w-0">
-                        <span className="flex items-center gap-1.5 font-semibold text-slate-800">
-                          <span
-                            className="inline-block h-1.5 w-5 rounded-full"
-                            style={{ backgroundColor: line.color }}
-                          />
-                          {line.code}
-                        </span>
-                        <span className="block text-[10px] leading-snug text-slate-500">
-                          {line.name}
-                        </span>
-                        <span className="block text-[10px] leading-snug text-slate-400">
-                          {line.itinerary}
-                        </span>
-                      </span>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={() => setShowLinhaVermelha((v) => !v)}
-          className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold shadow-md backdrop-blur transition ${
-            showLinhaVermelha
-              ? "border-[#EE352E] bg-[#EE352E] text-white"
-              : "border-white/70 bg-white/90 text-slate-700 hover:bg-white"
-          }`}
-        >
-          <TrainFront className="h-3.5 w-3.5" aria-hidden />
-          {showLinhaVermelha ? "Ocultar Linha 3-Vermelha" : "Linha 3-Vermelha"}
-        </button>
-
-        {showLinhaVermelha && (
-          <div className="max-w-[240px] rounded-md border border-white/70 bg-white/95 p-3 text-[11px] text-slate-600 shadow-md">
-            <p className="mb-1 font-semibold text-slate-800">
-              18 estações · traçado oficial
-            </p>
-            <p className="mb-2 text-[10px] leading-snug text-slate-500">
-              Palmeiras–Barra Funda → Corinthians–Itaquera
-              {stationIds.length > 0
-                ? ` · raio ${stationRadiusMeters} m em ${stationIds.length} selecionada(s)`
-                : ""}
-            </p>
-            <ul className="max-h-36 space-y-0.5 overflow-y-auto">
-              {LINHA_VERMELHA.map((s) => {
-                const on = stationIds.includes(s.id);
-                return (
-                  <li
-                    key={s.id}
-                    className={`flex items-center gap-1.5 ${
-                      on ? "font-semibold text-rose-800" : ""
-                    }`}
-                  >
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: LINHA_VERMELHA_COLOR }}
-                    />
-                    <span className="truncate">{s.name}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={() => setShowTransit((v) => !v)}
-          className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold shadow-md backdrop-blur transition ${
-            showTransit
-              ? "border-blue-600 bg-blue-600 text-white"
-              : "border-white/70 bg-white/90 text-slate-700 hover:bg-white"
-          }`}
-        >
-          <TrainFront className="h-3.5 w-3.5" aria-hidden />
-          {showTransit ? "Ocultar outras estações" : "Outras estações / corredores"}
-        </button>
-
-        {showTransit && (
-          <div className="max-w-[220px] rounded-md border border-white/70 bg-white/95 p-3 text-[11px] text-slate-600 shadow-md">
-            <p className="mb-1 font-semibold text-slate-800">Estações</p>
-            <ul className="mb-2 space-y-0.5">
-              {TRANSIT_STATIONS.map((s) => (
-                <li key={s.id} className="flex items-center gap-1.5">
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: s.color }}
-                  />
-                  {s.name}
-                </li>
-              ))}
-            </ul>
-            <p className="mb-1 font-semibold text-slate-800">Corredores</p>
-            <ul className="space-y-0.5">
-              {BUS_CORRIDORS.map((c) => (
-                <li key={c.id}>
-                  {c.name}: {c.lines.join(", ")}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
