@@ -46,6 +46,10 @@ export interface FiltersState {
   onlyFlat: boolean;
   portaria24h: boolean;
   sortBy: SortOption;
+  /** IDs das estações Linha 3-Vermelha selecionadas (multi). */
+  stationIds: string[];
+  /** Raio máximo até a estação (metros). */
+  stationRadiusMeters: number;
 }
 
 export interface NewApartmentInput {

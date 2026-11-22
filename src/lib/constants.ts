@@ -28,10 +28,10 @@ export const SAMPLE_INTERVAL_METERS = 25;
 export const TRANSIT_STATIONS = [
   {
     id: "barra-funda",
-    name: "Palmeiras-Barra Funda",
+    name: "Palmeiras–Barra Funda",
     line: "Linha 3-Vermelha / CPTM",
-    color: "#E30613",
-    lng: -46.6675,
+    color: "#EE352E",
+    lng: -46.6674,
     lat: -23.5255,
   },
   {
