@@ -1,6 +1,10 @@
+import { BUS_STOPS } from "../../data/busStops";
 import { METRO_STATIONS } from "../../data/linhasMetro";
-import { BUS_LINES } from "./bus-lines";
 import { DESTINATION } from "./constants";
+import {
+  fetchNearbyTransitPlaces,
+  type PlaceTransitHub,
+} from "./googlePlaces";
 import { decodeGooglePolyline } from "./polyline";
 
 export type TransitStepMode = "WALK" | "BUS" | "SUBWAY" | "TRANSIT";
@@ -136,33 +140,78 @@ type Hub = {
   lat: number;
   lng: number;
   lineLabel: string;
+  /** Códigos SPTrans / labels para preferir mesma linha na ida/volta */
+  lineCodes: string[];
 };
 
-function allHubs(): Hub[] {
+function staticHubs(): Hub[] {
   const metro: Hub[] = METRO_STATIONS.map((s) => ({
     kind: "station" as const,
     name: s.name,
     lat: s.lat,
     lng: s.lng,
     lineLabel: `${s.lineCode} ${s.name}`,
+    lineCodes: [s.lineCode],
   }));
 
-  const buses: Hub[] = BUS_LINES.flatMap((line) => {
-    const pts = [
-      line.coordinates[0],
-      line.coordinates[Math.floor(line.coordinates.length / 2)],
-      line.coordinates[line.coordinates.length - 1],
-    ];
-    return pts.map((c, i) => ({
-      kind: "bus" as const,
-      name: `Ponto ${line.code}${i === 1 ? " (meio)" : ""}`,
-      lat: c[1],
-      lng: c[0],
-      lineLabel: `${line.code} (${line.name})`,
-    }));
-  });
+  // Paradas reais (Google/Moovit), NÃO vértices do traçado aproximado
+  const buses: Hub[] = BUS_STOPS.map((stop) => ({
+    kind: "bus" as const,
+    name: stop.name,
+    lat: stop.lat,
+    lng: stop.lng,
+    lineLabel: stop.lines.join(" / "),
+    lineCodes: stop.lines,
+  }));
 
   return [...metro, ...buses];
+}
+
+function placeToHub(place: PlaceTransitHub): Hub {
+  const types = place.kinds.map((t) => t.toLowerCase());
+  const isStation =
+    types.some((t) => t.includes("subway") || t.includes("light_rail")) ||
+    /metr[oô]|estação/i.test(place.name);
+  return {
+    kind: isStation ? "station" : "bus",
+    name: place.name,
+    lat: place.lat,
+    lng: place.lng,
+    lineLabel: place.name,
+    lineCodes: [],
+  };
+}
+
+function mergeHubs(base: Hub[], extra: Hub[]): Hub[] {
+  const out = [...base];
+  for (const h of extra) {
+    const dup = out.some(
+      (x) =>
+        Math.abs(x.lat - h.lat) < 1e-4 && Math.abs(x.lng - h.lng) < 1e-4
+    );
+    if (!dup) out.push(h);
+  }
+  return out;
+}
+
+async function resolveHubs(googleApiKey?: string, samples?: Array<{ lat: number; lng: number }>): Promise<Hub[]> {
+  let hubs = staticHubs();
+  if (!googleApiKey || !samples?.length) return hubs;
+
+  try {
+    const batches = await Promise.all(
+      samples.map((p) =>
+        fetchNearbyTransitPlaces(googleApiKey, p.lat, p.lng, 1000).catch(
+          () => [] as PlaceTransitHub[]
+        )
+      )
+    );
+    const fromPlaces = batches.flat().map(placeToHub);
+    hubs = mergeHubs(hubs, fromPlaces);
+  } catch (err) {
+    console.warn("Não foi possível enriquecer hubs via Places:", err);
+  }
+  return hubs;
 }
 
 function nearestHub(
@@ -180,6 +229,48 @@ function nearestHub(
     }
   }
   return { hub: best, distanceM: bestD };
+}
+
+function sharesLine(a: Hub, b: Hub): boolean {
+  if (!a.lineCodes.length || !b.lineCodes.length) return false;
+  return a.lineCodes.some((c) => b.lineCodes.includes(c));
+}
+
+/**
+ * Origem: hub mais perto. Destino: prefere parada da mesma linha
+ * (trajeto Google-like), senão o hub mais perto do destino.
+ */
+function pickAccessHubs(
+  fromLat: number,
+  fromLng: number,
+  toLat: number,
+  toLng: number,
+  hubs: Hub[]
+): {
+  originHub: { hub: Hub; distanceM: number };
+  destHub: { hub: Hub; distanceM: number };
+} {
+  const originHub = nearestHub(fromLat, fromLng, hubs);
+  const sameLine = hubs.filter(
+    (h) =>
+      sharesLine(h, originHub.hub) &&
+      (h.lat !== originHub.hub.lat || h.lng !== originHub.hub.lng)
+  );
+  const destPool = sameLine.length > 0 ? sameLine : hubs;
+  let destHub = nearestHub(toLat, toLng, destPool);
+
+  // Evita “embarque = desembarque” (antes: FACULDADE como meio do traçado)
+  if (
+    destHub.hub.lat === originHub.hub.lat &&
+    destHub.hub.lng === originHub.hub.lng
+  ) {
+    const others = hubs.filter(
+      (h) => h.lat !== originHub.hub.lat || h.lng !== originHub.hub.lng
+    );
+    if (others.length) destHub = nearestHub(toLat, toLng, others);
+  }
+
+  return { originHub, destHub };
 }
 
 function rideMinutesBetween(a: Hub, b: Hub): number {
@@ -234,7 +325,8 @@ export async function buildFallbackTransitRoute(
   originLng: number,
   direction: TripDirection = "ida",
   directWalkMinutesOverride?: number,
-  mapboxToken?: string
+  mapboxToken?: string,
+  googleApiKey?: string
 ): Promise<TransitRouteResult> {
   const fromLat = direction === "ida" ? originLat : DESTINATION.lat;
   const fromLng = direction === "ida" ? originLng : DESTINATION.lng;
@@ -250,9 +342,17 @@ export async function buildFallbackTransitRoute(
     directWalkMinutesOverride
   );
 
-  const hubs = allHubs();
-  const originHub = nearestHub(fromLat, fromLng, hubs);
-  const destHub = nearestHub(toLat, toLng, hubs);
+  const hubs = await resolveHubs(googleApiKey, [
+    { lat: fromLat, lng: fromLng },
+    { lat: toLat, lng: toLng },
+  ]);
+  const { originHub, destHub } = pickAccessHubs(
+    fromLat,
+    fromLng,
+    toLat,
+    toLng,
+    hubs
+  );
 
   let walkToCoords: [number, number][];
   let walkFromCoords: [number, number][];

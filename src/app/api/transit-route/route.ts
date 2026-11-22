@@ -62,14 +62,15 @@ export async function POST(req: NextRequest) {
           lng,
           direction,
           directWalkMinutes,
-          mapboxToken
+          mapboxToken,
+          apiKey
         );
         return NextResponse.json({
           ok: true,
           route,
           direction,
           warning:
-            "Estimativa local — Google Routes indisponível. Elevação só nos trechos a pé até/da estação.",
+            "Estimativa local — Google Routes indisponível. Paradas via Places/seed (Maps); elevação só nos Caminhe.",
           source: "local-fallback",
         });
       }
@@ -80,14 +81,15 @@ export async function POST(req: NextRequest) {
       lng,
       direction,
       directWalkMinutes,
-      mapboxToken
+      mapboxToken,
+      undefined
     );
     return NextResponse.json({
       ok: true,
       route,
       direction,
       warning:
-        "Estimativa local. Elevação só nos trechos a pé (Caminhe) — sem metrô/ônibus.",
+        "Estimativa local com paradas reais (seed Maps). Sem GOOGLE_MAPS_API_KEY o Google Routes/Places não roda.",
       source: "local",
     });
   } catch (err) {
