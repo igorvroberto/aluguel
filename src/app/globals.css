@@ -10,12 +10,16 @@
   --accent: #f0b429;
 }
 
-html,
-body {
-  height: 100%;
+html {
+  height: auto;
+  min-height: 100%;
+  overflow-y: auto;
 }
 
 body {
+  min-height: 100%;
+  height: auto;
+  overflow-y: auto;
   color: var(--foreground);
   background:
     radial-gradient(1200px 600px at 10% -10%, rgba(20, 92, 94, 0.12), transparent 55%),

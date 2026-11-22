@@ -10,10 +10,9 @@ import {
   Shield,
   TrainFront,
 } from "lucide-react";
-import { LINHA_VERMELHA_COLOR } from "../../data/linhaVermelha";
 import {
-  formatMetroDistance,
-  nearestLinhaVermelhaStation,
+  formatMetroBadgeLabel,
+  nearestMetroStation,
 } from "@/lib/geo";
 import {
   formatBRL,
@@ -55,7 +54,7 @@ export function ApartmentCard({
   );
   const listingHref = resolveListingUrl(apartment);
   const usingFallback = isGenericOrEmptyListingUrl(apartment.externalUrl);
-  const nearestMetro = nearestLinhaVermelhaStation(apartment);
+  const nearestMetro = nearestMetroStation(apartment);
 
   return (
     <article
@@ -126,15 +125,17 @@ export function ApartmentCard({
         <span
           className="inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 font-medium text-white"
           style={{
-            backgroundColor: LINHA_VERMELHA_COLOR,
-            borderColor: LINHA_VERMELHA_COLOR,
+            backgroundColor: nearestMetro.station.color,
+            borderColor: nearestMetro.station.color,
           }}
-          title={`Estação mais próxima da Linha 3-Vermelha`}
+          title={`Estação de metrô mais próxima (${nearestMetro.station.lineCode})`}
         >
           <TrainFront className="h-3 w-3 shrink-0" aria-hidden />
           <span className="truncate">
-            Metrô {nearestMetro.station.name} •{" "}
-            {formatMetroDistance(nearestMetro.distanceMeters)}
+            {formatMetroBadgeLabel(
+              nearestMetro.station,
+              nearestMetro.distanceMeters
+            )}
           </span>
         </span>
         {analysis ? (

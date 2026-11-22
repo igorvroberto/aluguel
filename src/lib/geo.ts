@@ -1,9 +1,12 @@
 import * as turf from "@turf/turf";
 import {
+  LINHA_LARANJA_ATIVAS,
+  LINHA_LARANJA_COLOR,
   LINHA_VERMELHA,
   LINHA_VERMELHA_COLOR,
-  type LinhaVermelhaStation,
-} from "../../data/linhaVermelha";
+  METRO_STATIONS,
+  type MetroStation,
+} from "../../data/linhasMetro";
 
 export interface LatLng {
   lat: number;
@@ -11,7 +14,7 @@ export interface LatLng {
 }
 
 export interface NearestStationResult {
-  station: LinhaVermelhaStation;
+  station: MetroStation;
   distanceMeters: number;
 }
 
@@ -23,11 +26,10 @@ export function distanceMeters(a: LatLng, b: LatLng): number {
   );
 }
 
-export function nearestLinhaVermelhaStation(
-  point: LatLng
-): NearestStationResult {
+/** Estação mais próxima entre L3 + L6 ativas. */
+export function nearestMetroStation(point: LatLng): NearestStationResult {
   let best: NearestStationResult | null = null;
-  for (const station of LINHA_VERMELHA) {
+  for (const station of METRO_STATIONS) {
     const d = distanceMeters(point, station);
     if (!best || d < best.distanceMeters) {
       best = { station, distanceMeters: d };
@@ -36,20 +38,13 @@ export function nearestLinhaVermelhaStation(
   return best!;
 }
 
-/** Distância até cada estação (útil para filtros e debug). */
-export function distancesToLinhaVermelha(
+/** @deprecated use nearestMetroStation */
+export function nearestLinhaVermelhaStation(
   point: LatLng
-): Array<{ station: LinhaVermelhaStation; distanceMeters: number }> {
-  return LINHA_VERMELHA.map((station) => ({
-    station,
-    distanceMeters: distanceMeters(point, station),
-  }));
+): NearestStationResult {
+  return nearestMetroStation(point);
 }
 
-/**
- * true se nenhuma estação filtrada OU o ponto está a ≤ radius de
- * pelo menos uma das estações selecionadas.
- */
 export function isWithinSelectedStations(
   point: LatLng,
   stationIds: string[],
@@ -57,41 +52,46 @@ export function isWithinSelectedStations(
 ): boolean {
   if (stationIds.length === 0) return true;
   const idSet = new Set(stationIds);
-  return LINHA_VERMELHA.some(
+  return METRO_STATIONS.some(
     (s) => idSet.has(s.id) && distanceMeters(point, s) <= radiusMeters
   );
 }
 
-export function buildLinhaVermelhaLineGeoJSON(): GeoJSON.FeatureCollection {
+function buildLineGeoJSON(
+  stations: MetroStation[],
+  name: string,
+  color: string
+): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
     features: [
       {
         type: "Feature",
-        properties: {
-          name: "Linha 3-Vermelha",
-          color: LINHA_VERMELHA_COLOR,
-        },
+        properties: { name, color },
         geometry: {
           type: "LineString",
-          coordinates: LINHA_VERMELHA.map((s) => [s.lng, s.lat]),
+          coordinates: stations.map((s) => [s.lng, s.lat]),
         },
       },
     ],
   };
 }
 
-export function buildLinhaVermelhaStationsGeoJSON(): GeoJSON.FeatureCollection {
+function buildStationsGeoJSON(
+  stations: MetroStation[]
+): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
-    features: LINHA_VERMELHA.map((s) => ({
+    features: stations.map((s) => ({
       type: "Feature" as const,
       properties: {
         id: s.id,
         name: s.name,
         order: s.order,
+        line: s.line,
+        lineCode: s.lineCode,
         integration: s.integration ?? "",
-        color: LINHA_VERMELHA_COLOR,
+        color: s.color,
       },
       geometry: {
         type: "Point" as const,
@@ -101,13 +101,37 @@ export function buildLinhaVermelhaStationsGeoJSON(): GeoJSON.FeatureCollection {
   };
 }
 
-/** Círculos (polígonos) de raio caminhável ao redor das estações selecionadas. */
+export function buildLinhaVermelhaLineGeoJSON(): GeoJSON.FeatureCollection {
+  return buildLineGeoJSON(
+    LINHA_VERMELHA,
+    "Linha 3-Vermelha",
+    LINHA_VERMELHA_COLOR
+  );
+}
+
+export function buildLinhaVermelhaStationsGeoJSON(): GeoJSON.FeatureCollection {
+  return buildStationsGeoJSON(LINHA_VERMELHA);
+}
+
+export function buildLinhaLaranjaLineGeoJSON(): GeoJSON.FeatureCollection {
+  return buildLineGeoJSON(
+    LINHA_LARANJA_ATIVAS,
+    "Linha 6-Laranja (ativas)",
+    LINHA_LARANJA_COLOR
+  );
+}
+
+export function buildLinhaLaranjaStationsGeoJSON(): GeoJSON.FeatureCollection {
+  return buildStationsGeoJSON(LINHA_LARANJA_ATIVAS);
+}
+
+/** Círculos de raio na cor da linha de cada estação selecionada. */
 export function buildStationRadiusGeoJSON(
   stationIds: string[],
   radiusMeters: number
 ): GeoJSON.FeatureCollection {
   const idSet = new Set(stationIds);
-  const features: GeoJSON.Feature[] = LINHA_VERMELHA.filter((s) =>
+  const features: GeoJSON.Feature[] = METRO_STATIONS.filter((s) =>
     idSet.has(s.id)
   ).map((s) => {
     const circle = turf.circle([s.lng, s.lat], radiusMeters, {
@@ -117,7 +141,8 @@ export function buildStationRadiusGeoJSON(
         id: s.id,
         name: s.name,
         radiusMeters,
-        color: LINHA_VERMELHA_COLOR,
+        color: s.color,
+        line: s.line,
       },
     });
     return circle as GeoJSON.Feature;
@@ -129,4 +154,13 @@ export function buildStationRadiusGeoJSON(
 export function formatMetroDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)}m`;
   return `${(meters / 1000).toFixed(1).replace(".", ",")}km`;
+}
+
+export function formatMetroBadgeLabel(
+  station: MetroStation,
+  distanceMeters: number
+): string {
+  return `Metrô ${station.name} (${station.lineCode}) • ${formatMetroDistance(
+    distanceMeters
+  )}`;
 }

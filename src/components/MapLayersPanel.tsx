@@ -2,9 +2,11 @@
 
 import { Bus, ChevronDown, TrainFront } from "lucide-react";
 import {
+  LINHA_LARANJA_ATIVAS,
+  LINHA_LARANJA_COLOR,
   LINHA_VERMELHA,
   LINHA_VERMELHA_COLOR,
-} from "../../data/linhaVermelha";
+} from "../../data/linhasMetro";
 import { BUS_CORRIDORS, TRANSIT_STATIONS } from "@/lib/constants";
 import { BUS_LINES } from "@/lib/bus-lines";
 
@@ -12,6 +14,7 @@ export interface MapLayersState {
   showBusLines: boolean;
   enabledLines: Record<string, boolean>;
   showLinhaVermelha: boolean;
+  showLinhaLaranja: boolean;
   showTransit: boolean;
 }
 
@@ -117,30 +120,73 @@ export function MapLayersPanel({
             />
             Mostrar traçado e estações
           </label>
+          <ul className="max-h-36 space-y-0.5 overflow-y-auto">
+            {LINHA_VERMELHA.map((s) => (
+              <li
+                key={s.id}
+                className={`flex items-center gap-1.5 ${
+                  stationIds.includes(s.id) ? "font-semibold text-rose-800" : ""
+                }`}
+              >
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: LINHA_VERMELHA_COLOR }}
+                />
+                <span className="truncate">{s.name}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </details>
+
+      <details className="group min-w-[200px] max-w-[280px] rounded-md border border-slate-200 bg-white open:shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 [&::-webkit-details-marker]:hidden">
+          <TrainFront
+            className="h-3.5 w-3.5"
+            style={{ color: LINHA_LARANJA_COLOR }}
+            aria-hidden
+          />
+          Linha 6-Laranja
+          <span className="ml-auto text-[10px] font-medium text-slate-400">
+            {layers.showLinhaLaranja ? "visível" : "oculto"}
+          </span>
+          <ChevronDown className="h-3.5 w-3.5 text-slate-400 transition group-open:rotate-180" />
+        </summary>
+        <div className="space-y-2 border-t border-slate-100 px-3 py-2 text-[11px] text-slate-600">
+          <label className="flex cursor-pointer items-center gap-2 font-medium text-slate-800">
+            <input
+              type="checkbox"
+              checked={layers.showLinhaLaranja}
+              onChange={() =>
+                patch({ showLinhaLaranja: !layers.showLinhaLaranja })
+              }
+              className="accent-[#FF6B00]"
+            />
+            Mostrar trecho ativo
+          </label>
           <p className="text-[10px] leading-snug text-slate-500">
-            Palmeiras–Barra Funda → Corinthians–Itaquera
+            João Paulo I → Perdizes
             {stationIds.length > 0
-              ? ` · raio ${stationRadiusMeters} m em ${stationIds.length} selecionada(s)`
+              ? ` · raio ${stationRadiusMeters} m`
               : ""}
           </p>
           <ul className="max-h-36 space-y-0.5 overflow-y-auto">
-            {LINHA_VERMELHA.map((s) => {
-              const on = stationIds.includes(s.id);
-              return (
-                <li
-                  key={s.id}
-                  className={`flex items-center gap-1.5 ${
-                    on ? "font-semibold text-rose-800" : ""
-                  }`}
-                >
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: LINHA_VERMELHA_COLOR }}
-                  />
-                  <span className="truncate">{s.name}</span>
-                </li>
-              );
-            })}
+            {LINHA_LARANJA_ATIVAS.map((s) => (
+              <li
+                key={s.id}
+                className={`flex items-center gap-1.5 ${
+                  stationIds.includes(s.id)
+                    ? "font-semibold text-orange-800"
+                    : ""
+                }`}
+              >
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: LINHA_LARANJA_COLOR }}
+                />
+                <span className="truncate">{s.name}</span>
+              </li>
+            ))}
           </ul>
         </div>
       </details>
