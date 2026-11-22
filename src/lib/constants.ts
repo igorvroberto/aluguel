@@ -1,8 +1,9 @@
 export const DESTINATION = {
   name: "R. Dr. Emílio Ribas, 89",
   fullAddress: "R. Dr. Emílio Ribas, 89 - Perdizes, São Paulo - SP, 05006-020",
-  lat: -23.53231,
-  lng: -46.66692,
+  // Faculdade Santa Marcelina (OSM / CEP 05006-020) — NÃO confundir com Lincoln de Albuquerque
+  lat: -23.5363756,
+  lng: -46.6654622,
 } as const;
 
 export const DEFAULT_MAX_PACKAGE = 6000;

@@ -2,7 +2,7 @@
 
 Aplicação web em **Next.js 14** (App Router, TypeScript, Tailwind CSS) para analisar apartamentos candidatos próximos ao destino fixo:
 
-**R. Dr. Emílio Ribas, 89 — Perdizes, São Paulo — SP** (`-23.53231`, `-46.66692`).
+**R. Dr. Emílio Ribas, 89 — Perdizes, São Paulo — SP** (`-23.5363756`, `-46.6654622`).
 
 ## Funcionalidades
 
