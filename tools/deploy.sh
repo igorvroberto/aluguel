@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Atualiza Perdizes Radar em /opt/perdizes-radar (VPS Liganer, ao lado de /opt/imoveis).
+# Atualiza Perdizes Radar em /opt/radar-imoveis (VPS Liganer, ao lado de /opt/imoveis).
 set -euo pipefail
 
-ROOT="${PERDIZES_ROOT:-/opt/perdizes-radar}"
-REF="${PERDIZES_REF:-main}"
+ROOT="${RADAR_IMOVEIS_ROOT:-/opt/radar-imoveis}"
+REF="${RADAR_IMOVEIS_REF:-main}"
 
 if [[ ! -w "${ROOT}/.git" || ! -w "${ROOT}" ]] && [[ "$(id -u)" -ne 0 ]]; then
-  exec sudo -n env PERDIZES_ROOT="$ROOT" PERDIZES_REF="$REF" "$0"
+  exec sudo -n env RADAR_IMOVEIS_ROOT="$ROOT" RADAR_IMOVEIS_REF="$REF" "$0"
 fi
 
 cd "$ROOT"
@@ -16,14 +16,14 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
-echo "=== perdizes-radar deploy ref=${REF} ==="
+echo "=== radar-imoveis deploy ref=${REF} ==="
 git fetch origin "$REF"
 git checkout "$REF"
 git pull --ff-only origin "$REF"
 
 # Garante Traefik dinâmico (idempotente)
 if [[ -d /opt/traefik/dynamic ]]; then
-  install -m 0644 deploy/traefik/perdizes-radar.yml /opt/traefik/dynamic/perdizes-radar.yml
+  install -m 0644 deploy/traefik/radar-imoveis.yml /opt/traefik/dynamic/radar-imoveis.yml
   echo "=== traefik dynamic atualizado ==="
 else
   echo "WARN: /opt/traefik/dynamic não encontrado — configure o proxy manualmente"

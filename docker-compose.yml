@@ -1,9 +1,10 @@
 # Stack isolado na VPS Liganer (mesma máquina do /opt/imoveis).
 # PROIBIDO: volumes, env ou networks de /opt/chatwoot*, chatwoot_*.
-# Traefik: /opt/traefik/dynamic/perdizes-radar.yml → 127.0.0.1:18090
+# Raiz: /opt/radar-imoveis
+# Traefik: /opt/traefik/dynamic/radar-imoveis.yml → 127.0.0.1:18090
 # Domínio sugerido: radar.liganer.com.br
 
-name: perdizes-radar
+name: radar-imoveis
 
 x-logging: &default-logging
   driver: json-file
@@ -19,8 +20,8 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
-    image: perdizes-radar:v0.1
-    container_name: perdizes-radar-web
+    image: radar-imoveis:v0.1
+    container_name: radar-imoveis-web
     restart: unless-stopped
     env_file: .env
     environment:
@@ -39,5 +40,5 @@ services:
 
 networks:
   internal:
-    name: perdizes_radar_internal
+    name: radar_imoveis_internal
     driver: bridge

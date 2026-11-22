@@ -45,17 +45,17 @@ Stack isolada: **sem** redes/volumes `chatwoot_*`.
 
 | Item | Valor |
 | --- | --- |
-| Raiz | `/opt/perdizes-radar` |
+| Raiz | `/opt/radar-imoveis` |
 | Porta host | `127.0.0.1:18090` |
-| Traefik | `/opt/traefik/dynamic/perdizes-radar.yml` |
+| Traefik | `/opt/traefik/dynamic/radar-imoveis.yml` |
 | Domínio | `https://radar.liganer.com.br` |
 
 ### Primeira subida (na VPS)
 
 ```bash
-sudo mkdir -p /opt/perdizes-radar
-sudo git clone https://github.com/igorvroberto/aluguel.git /opt/perdizes-radar
-cd /opt/perdizes-radar
+sudo mkdir -p /opt/radar-imoveis
+sudo git clone https://github.com/igorvroberto/aluguel.git /opt/radar-imoveis
+cd /opt/radar-imoveis
 sudo cp .env.example .env
 sudo nano .env   # NEXT_PUBLIC_MAPBOX_TOKEN (+ GOOGLE_MAPS_API_KEY opcional)
 
@@ -66,7 +66,7 @@ sudo bash tools/deploy.sh
 Atualizações:
 
 ```bash
-cd /opt/perdizes-radar
+cd /opt/radar-imoveis
 sudo bash tools/deploy.sh
 ```
 
