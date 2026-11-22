@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MapPinned, Search, TrainFront, X } from "lucide-react";
+import { Loader2, MapPinned, Search, TrainFront, X } from "lucide-react";
 import {
   DEFAULT_STATION_RADIUS_METERS,
   LINHA_LARANJA_ATIVAS,
@@ -17,12 +17,20 @@ import {
 } from "../../data/linhasMetro";
 import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
 import { formatBRL } from "@/lib/format";
-import type { FiltersState, SortOption } from "@/lib/types";
+import {
+  APARTMENT_STATUSES,
+  type ApartmentStatus,
+  type FiltersState,
+  type SortOption,
+} from "@/lib/types";
 
 interface FilterPanelProps {
   filters: FiltersState;
   onChange: (next: FiltersState) => void;
   onFocusStations?: () => void;
+  onScrapeStations?: () => void;
+  scraping?: boolean;
+  scrapeMessage?: string | null;
 }
 
 const ROOM_OPTIONS: Array<{ value: 1 | 2 | 3; label: string }> = [
@@ -102,6 +110,9 @@ export function FilterPanel({
   filters,
   onChange,
   onFocusStations,
+  onScrapeStations,
+  scraping,
+  scrapeMessage,
 }: FilterPanelProps) {
   const [stationQuery, setStationQuery] = useState("");
 
@@ -111,6 +122,15 @@ export function FilterPanel({
       ? filters.rooms.filter((r) => r !== room)
       : [...filters.rooms, room];
     onChange({ ...filters, rooms: rooms.sort() as Array<1 | 2 | 3> });
+  };
+
+  const toggleStatus = (status: ApartmentStatus) => {
+    const current = filters.statuses ?? [...APARTMENT_STATUSES];
+    const exists = current.includes(status);
+    const statuses = exists
+      ? current.filter((s) => s !== status)
+      : [...current, status];
+    onChange({ ...filters, statuses });
   };
 
   const q = stationQuery.trim().toLowerCase();
@@ -408,12 +428,60 @@ export function FilterPanel({
           </button>
         )}
 
+        {onScrapeStations && (
+          <button
+            type="button"
+            disabled={scraping || selectedCount === 0}
+            onClick={onScrapeStations}
+            className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-orange-300 bg-orange-50 px-3 py-2.5 text-xs font-semibold text-orange-950 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {scraping ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            ) : (
+              <span aria-hidden>🔍</span>
+            )}
+            {scraping
+              ? "Varrendo portais…"
+              : "Buscar Imóveis Reais nas Estações Selecionadas"}
+          </button>
+        )}
+        {scrapeMessage && (
+          <p className="mt-1.5 text-[11px] leading-snug text-slate-600">
+            {scrapeMessage}
+          </p>
+        )}
+
         <p className="mt-1.5 text-[10px] leading-snug text-slate-400">
           Com estações marcadas, mostra imóveis a até o raio de{" "}
           <strong>pelo menos uma</strong> delas (L3 ou L6). Padrão:{" "}
           {DEFAULT_STATION_RADIUS_METERS} m · {METRO_STATIONS.length} estações
           no total.
         </p>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-medium text-slate-700">Status</p>
+        <div className="flex flex-wrap gap-1.5">
+          {APARTMENT_STATUSES.map((status) => {
+            const active = (filters.statuses ?? APARTMENT_STATUSES).includes(
+              status
+            );
+            return (
+              <button
+                key={status}
+                type="button"
+                onClick={() => toggleStatus(status)}
+                className={`rounded-md border px-2 py-1 text-[10px] font-semibold transition ${
+                  active
+                    ? "border-slate-800 bg-slate-800 text-white"
+                    : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                }`}
+              >
+                {status}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div>

@@ -30,13 +30,22 @@ services:
       PORT: 3000
       HOSTNAME: 0.0.0.0
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      APARTMENTS_DATA_PATH: /app/data/apartments.json
+      ENABLE_PLAYWRIGHT_SCRAPE: ${ENABLE_PLAYWRIGHT_SCRAPE:-0}
     ports:
       - "127.0.0.1:18090:3000"
+    volumes:
+      # Persistência de imóveis entre deploys (seed inicial vem da imagem)
+      - radar_apartments_data:/app/data
     networks:
       - internal
     mem_limit: 512m
     cpus: 0.75
     logging: *default-logging
+
+volumes:
+  radar_apartments_data:
+    name: radar_imoveis_apartments_data
 
 networks:
   internal:

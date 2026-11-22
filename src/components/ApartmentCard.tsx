@@ -8,6 +8,7 @@ import {
   MapPinned,
   Mountain,
   Shield,
+  Trash2,
   TrainFront,
 } from "lucide-react";
 import {
@@ -25,7 +26,12 @@ import {
   isGenericOrEmptyListingUrl,
   resolveListingUrl,
 } from "@/lib/listing-url";
-import type { Apartment, RouteAnalysis } from "@/lib/types";
+import {
+  APARTMENT_STATUSES,
+  type Apartment,
+  type ApartmentStatus,
+  type RouteAnalysis,
+} from "@/lib/types";
 
 interface ApartmentCardProps {
   apartment: Apartment;
@@ -34,7 +40,17 @@ interface ApartmentCardProps {
   analyzing: boolean;
   onSelect: () => void;
   onUpdateListingUrl?: (id: string, url: string) => void;
+  onUpdateStatus?: (id: string, status: ApartmentStatus) => void;
+  onUpdateComments?: (id: string, comments: string) => void;
+  onDelete?: (id: string) => void;
 }
+
+const STATUS_STYLES: Record<ApartmentStatus, string> = {
+  Candidato: "border-slate-300 bg-slate-50 text-slate-700",
+  Favorito: "border-amber-300 bg-amber-50 text-amber-900",
+  "Visita Agendada": "border-sky-300 bg-sky-50 text-sky-900",
+  Descartado: "border-rose-200 bg-rose-50 text-rose-800",
+};
 
 export function ApartmentCard({
   apartment,
@@ -43,9 +59,13 @@ export function ApartmentCard({
   analyzing,
   onSelect,
   onUpdateListingUrl,
+  onUpdateStatus,
+  onUpdateComments,
+  onDelete,
 }: ApartmentCardProps) {
   const [editingUrl, setEditingUrl] = useState(false);
   const [urlDraft, setUrlDraft] = useState(apartment.externalUrl || "");
+  const [commentsDraft, setCommentsDraft] = useState(apartment.comments || "");
 
   const total = monthlyPackage(
     apartment.aluguel,
@@ -55,6 +75,7 @@ export function ApartmentCard({
   const listingHref = resolveListingUrl(apartment);
   const usingFallback = isGenericOrEmptyListingUrl(apartment.externalUrl);
   const nearestMetro = nearestMetroStation(apartment);
+  const status = apartment.status || "Candidato";
 
   return (
     <article
@@ -123,6 +144,11 @@ export function ApartmentCard({
           </span>
         )}
         <span
+          className={`inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-semibold ${STATUS_STYLES[status]}`}
+        >
+          {status}
+        </span>
+        <span
           className="inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 font-medium text-white"
           style={{
             backgroundColor: nearestMetro.station.color,
@@ -163,6 +189,49 @@ export function ApartmentCard({
         )}
       </div>
 
+      {(onUpdateStatus || onUpdateComments) && (
+        <div
+          className="mt-3 space-y-2"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          {onUpdateStatus && (
+            <select
+              value={status}
+              onChange={(e) =>
+                onUpdateStatus(apartment.id, e.target.value as ApartmentStatus)
+              }
+              className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 outline-none focus:border-teal-600"
+            >
+              {APARTMENT_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          )}
+          {onUpdateComments && (
+            <div className="flex gap-1.5">
+              <input
+                value={commentsDraft}
+                onChange={(e) => setCommentsDraft(e.target.value)}
+                placeholder="Comentários / notas da visita…"
+                className="min-w-0 flex-1 rounded-md border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-teal-600"
+              />
+              <button
+                type="button"
+                className="shrink-0 rounded-md bg-slate-800 px-2 py-1.5 text-[10px] font-semibold text-white"
+                onClick={() =>
+                  onUpdateComments(apartment.id, commentsDraft.trim())
+                }
+              >
+                Salvar
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
@@ -202,6 +271,21 @@ export function ApartmentCard({
           >
             <Link2 className="h-3 w-3" aria-hidden />
             Link
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm("Remover este imóvel do servidor?")) {
+                onDelete(apartment.id);
+              }
+            }}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50"
+          >
+            <Trash2 className="h-3 w-3" aria-hidden />
+            Remover
           </button>
         )}
       </div>

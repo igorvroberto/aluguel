@@ -5,10 +5,6 @@ export const DESTINATION = {
   lng: -46.66692,
 } as const;
 
-export const STORAGE_KEY = "imoveis-radar-apartments";
-/** Chave antiga — migrada uma vez para STORAGE_KEY. */
-export const LEGACY_STORAGE_KEY = "perdizes-radar-apartments";
-
 export const DEFAULT_MAX_PACKAGE = 6000;
 
 export const GRADE_THRESHOLDS = {

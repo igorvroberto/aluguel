@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MapboxMap } from "mapbox-gl";
-import { RefreshCw } from "lucide-react";
 import { AddApartmentModal } from "@/components/AddApartmentModal";
 import { ApartmentCard } from "@/components/ApartmentCard";
 import { FilterPanel } from "@/components/FilterPanel";
@@ -14,23 +13,26 @@ import {
 import { MapView } from "@/components/MapView";
 import { RoutePanel } from "@/components/RoutePanel";
 import { DEFAULT_STATION_RADIUS_METERS } from "../../data/linhasMetro";
+import {
+  createApartments,
+  downloadApartmentsJsonFile,
+  fetchApartments,
+  patchApartment,
+  removeApartment,
+  scrapeStations,
+} from "@/lib/apartments-api";
 import { BUS_LINES } from "@/lib/bus-lines";
 import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
 import { analyzeRoute } from "@/lib/elevation";
 import { buildExportRows, downloadBlob, toCsv } from "@/lib/export";
 import { getVisibleApartments } from "@/lib/filters";
 import {
-  getSeedApartments,
-  loadApartments,
-  mergeWithSeedBase,
-  needsSeedRestore,
-  saveApartments,
-} from "@/lib/storage";
-import type {
-  Apartment,
-  FiltersState,
-  NewApartmentInput,
-  RouteAnalysis,
+  APARTMENT_STATUSES,
+  type Apartment,
+  type ApartmentStatus,
+  type FiltersState,
+  type NewApartmentInput,
+  type RouteAnalysis,
 } from "@/lib/types";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -48,6 +50,7 @@ function initialMapLayers(): MapLayersState {
 export function RadarApp() {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [persistHint, setPersistHint] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [analyses, setAnalyses] = useState<Record<string, RouteAnalysis>>({});
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
@@ -56,6 +59,8 @@ export function RadarApp() {
   const [mapInstance, setMapInstance] = useState<MapboxMap | null>(null);
   const [focusStationsToken, setFocusStationsToken] = useState(0);
   const [mapLayers, setMapLayers] = useState<MapLayersState>(initialMapLayers);
+  const [scraping, setScraping] = useState(false);
+  const [scrapeMessage, setScrapeMessage] = useState<string | null>(null);
   const [filters, setFilters] = useState<FiltersState>({
     maxPackage: DEFAULT_MAX_PACKAGE,
     rooms: [1, 2, 3],
@@ -64,22 +69,55 @@ export function RadarApp() {
     sortBy: "pacote",
     stationIds: [],
     stationRadiusMeters: DEFAULT_STATION_RADIUS_METERS,
+    statuses: [...APARTMENT_STATUSES],
   });
   const analyzingRef = useRef<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
+  const apartmentsRef = useRef<Apartment[]>([]);
 
   useEffect(() => {
-    setApartments(loadApartments());
-    setHydrated(true);
+    apartmentsRef.current = apartments;
+  }, [apartments]);
+
+  const notePersist = useCallback((meta?: { persisted?: boolean; persistError?: string }) => {
+    if (meta?.persisted === false) {
+      setPersistHint(
+        meta.persistError
+          ? `FS read-only — alterações só em memória. Baixe o JSON. (${meta.persistError})`
+          : "FS read-only — use “Baixar JSON Atualizado” para commit local."
+      );
+    } else {
+      setPersistHint(null);
+    }
+  }, []);
+
+  const refreshApartments = useCallback(async () => {
+    const list = await fetchApartments();
+    setApartments(list);
+    return list;
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    saveApartments(apartments);
-  }, [apartments, hydrated]);
-
-  const showRestore = hydrated && needsSeedRestore(apartments);
-  const seedCount = getSeedApartments().length;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const list = await fetchApartments();
+        if (!cancelled) {
+          setApartments(list);
+          setHydrated(true);
+        }
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setHydrated(true);
+          setPersistHint("Falha ao carregar imóveis do servidor.");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const visible = useMemo(() => {
     const list = getVisibleApartments(apartments, filters, analyses);
@@ -152,8 +190,8 @@ export function RadarApp() {
   const handleMapReady = useCallback((map: MapboxMap) => {
     setMapInstance(map);
     if (!MAPBOX_TOKEN) return;
-    const queue = loadApartments();
     void (async () => {
+      const queue = apartmentsRef.current;
       for (const apt of queue) {
         if (analyzingRef.current.has(apt.id)) continue;
         analyzingRef.current.add(apt.id);
@@ -179,41 +217,140 @@ export function RadarApp() {
     })();
   }, []);
 
-  const handleAdd = (input: NewApartmentInput) => {
-    const apt: Apartment = {
-      id: `apt-${Date.now()}`,
-      ...input,
-    };
-    setApartments((prev) => [apt, ...prev]);
-    setSelectedId(apt.id);
-    if (mapInstance && MAPBOX_TOKEN) {
-      void runAnalysis(apt, mapInstance);
-    }
-  };
-
-  const handleAddBatch = (inputs: NewApartmentInput[]) => {
-    const stamped = Date.now();
-    const apts: Apartment[] = inputs.map((input, i) => ({
-      id: `apt-${stamped}-${i}`,
-      ...input,
-    }));
-    setApartments((prev) => [...apts, ...prev]);
-    if (apts[0]) {
-      setSelectedId(apts[0].id);
-      if (mapInstance && MAPBOX_TOKEN) {
-        void runAnalysis(apts[0], mapInstance);
+  const handleAdd = async (input: NewApartmentInput) => {
+    try {
+      const result = await createApartments({
+        ...input,
+        status: input.status || "Candidato",
+      });
+      setApartments(result.apartments);
+      notePersist(result.meta);
+      const created = result.apartments.find(
+        (a) => a.externalUrl === input.externalUrl && a.address === input.address
+      );
+      if (created) {
+        setSelectedId(created.id);
+        if (mapInstance && MAPBOX_TOKEN) {
+          void runAnalysis(created, mapInstance);
+        }
       }
+    } catch (err) {
+      console.error(err);
+      setPersistHint(
+        err instanceof Error ? err.message : "Falha ao salvar imóvel."
+      );
     }
   };
 
-  const handleRestoreBase = () => {
-    setApartments((prev) => mergeWithSeedBase(prev));
+  const handleAddBatch = async (inputs: NewApartmentInput[]) => {
+    try {
+      const result = await createApartments(
+        inputs.map((input) => ({
+          ...input,
+          status: input.status || "Candidato",
+        }))
+      );
+      setApartments(result.apartments);
+      notePersist(result.meta);
+      if (result.apartments[0] && mapInstance && MAPBOX_TOKEN) {
+        setSelectedId(result.apartments[0].id);
+        void runAnalysis(result.apartments[0], mapInstance);
+      }
+    } catch (err) {
+      console.error(err);
+      setPersistHint(
+        err instanceof Error ? err.message : "Falha ao salvar lote."
+      );
+    }
   };
 
-  const handleUpdateListingUrl = (id: string, url: string) => {
-    setApartments((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, externalUrl: url } : a))
-    );
+  const handleUpdateListingUrl = async (id: string, url: string) => {
+    try {
+      const result = await patchApartment(id, { externalUrl: url });
+      setApartments((prev) =>
+        prev.map((a) => (a.id === id ? result.apartment : a))
+      );
+      notePersist(result.meta);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateStatus = async (id: string, status: ApartmentStatus) => {
+    try {
+      const result = await patchApartment(id, { status });
+      setApartments((prev) =>
+        prev.map((a) => (a.id === id ? result.apartment : a))
+      );
+      notePersist(result.meta);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateComments = async (id: string, comments: string) => {
+    try {
+      const result = await patchApartment(id, { comments });
+      setApartments((prev) =>
+        prev.map((a) => (a.id === id ? result.apartment : a))
+      );
+      notePersist(result.meta);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const result = await removeApartment(id);
+      setApartments((prev) => prev.filter((a) => a.id !== id));
+      if (selectedId === id) setSelectedId(null);
+      notePersist(result.meta);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleScrapeStations = async () => {
+    if (filters.stationIds.length === 0) {
+      setScrapeMessage("Selecione ao menos uma estação.");
+      return;
+    }
+    setScraping(true);
+    setScrapeMessage("Varrendo QuintoAndar, Viva Real, Imovelweb e Chaves na Mão…");
+    try {
+      const result = await scrapeStations({
+        stationIds: filters.stationIds,
+        radiusMeters: filters.stationRadiusMeters,
+        maxPackage: filters.maxPackage,
+        rooms: filters.rooms,
+      });
+      if (result.apartments?.length) {
+        setApartments(result.apartments);
+      } else {
+        await refreshApartments();
+      }
+      notePersist({
+        persisted: result.persisted,
+        persistError: result.persistError,
+      });
+      const warn =
+        result.warnings?.length > 0
+          ? ` Avisos: ${result.warnings.slice(0, 2).join(" · ")}`
+          : "";
+      setScrapeMessage(
+        (result.message ||
+          `${result.added} novos · ${result.skipped} duplicados · ${result.scanned} páginas`) +
+          warn
+      );
+    } catch (err) {
+      console.error(err);
+      setScrapeMessage(
+        err instanceof Error ? err.message : "Falha na varredura."
+      );
+    } finally {
+      setScraping(false);
+    }
   };
 
   const handleExportCsv = () => {
@@ -240,6 +377,13 @@ export function RadarApp() {
     );
   };
 
+  const handleDownloadServerJson = () => {
+    void downloadApartmentsJsonFile().catch((err) => {
+      console.error(err);
+      setPersistHint("Falha ao baixar JSON do servidor.");
+    });
+  };
+
   const selectedApartment =
     apartments.find((a) => a.id === selectedId) ?? null;
 
@@ -250,6 +394,7 @@ export function RadarApp() {
         onAdd={() => setModalOpen(true)}
         onExportCsv={handleExportCsv}
         onExportJson={handleExportJson}
+        onDownloadServerJson={handleDownloadServerJson}
       />
 
       <div className="flex flex-1 flex-col lg:flex-row">
@@ -258,23 +403,16 @@ export function RadarApp() {
             filters={filters}
             onChange={setFilters}
             onFocusStations={() => setFocusStationsToken((n) => n + 1)}
+            onScrapeStations={handleScrapeStations}
+            scraping={scraping}
+            scrapeMessage={scrapeMessage}
           />
 
-          <div className="border-b border-amber-100 bg-amber-50/90 px-4 py-2.5">
-            <button
-              type="button"
-              onClick={handleRestoreBase}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-950 hover:bg-amber-50"
-            >
-              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-              Restaurar / Carregar Base Completa ({seedCount} imóveis)
-            </button>
-            <p className="mt-1 text-[10px] text-amber-900/80">
-              {showRestore
-                ? "Há imóveis novos na base — sincroniza sem apagar cadastros manuais."
-                : "Atualiza a base sem apagar imóveis que você cadastrou."}
-            </p>
-          </div>
+          {persistHint && (
+            <div className="border-b border-amber-100 bg-amber-50/90 px-4 py-2 text-[11px] text-amber-950">
+              {persistHint}
+            </div>
+          )}
 
           <div ref={listRef} className="lg:max-h-[70vh] lg:overflow-y-auto">
             {!hydrated ? (
@@ -293,6 +431,9 @@ export function RadarApp() {
                     analyzing={analyzingId === apt.id}
                     onSelect={() => handleSelect(apt.id)}
                     onUpdateListingUrl={handleUpdateListingUrl}
+                    onUpdateStatus={handleUpdateStatus}
+                    onUpdateComments={handleUpdateComments}
+                    onDelete={handleDelete}
                   />
                 </div>
               ))
@@ -337,8 +478,12 @@ export function RadarApp() {
         open={modalOpen}
         mapboxToken={MAPBOX_TOKEN}
         onClose={() => setModalOpen(false)}
-        onSave={handleAdd}
-        onSaveBatch={handleAddBatch}
+        onSave={(input) => {
+          void handleAdd(input);
+        }}
+        onSaveBatch={(inputs) => {
+          void handleAddBatch(inputs);
+        }}
       />
     </div>
   );

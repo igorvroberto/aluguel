@@ -31,16 +31,25 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
 RUN addgroup --system --gid 1001 nodejs \
-  && adduser --system --uid 1001 nextjs
+  && adduser --system --uid 1001 nextjs \
+  && apk add --no-cache su-exec
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Seed (volume /app/data pode nascer vazio — entrypoint copia se faltar)
+COPY --from=builder --chown=nextjs:nodejs /app/data ./data-seed
+COPY --chmod=755 scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
 
-USER nextjs
+ENV APARTMENTS_DATA_PATH=/app/data/apartments.json
+ENV APARTMENTS_SEED_DIR=/app/data-seed
+
+# Entrypoint roda como root só para seed/chown do volume; depois su-exec nextjs
+USER root
 EXPOSE 3000
 
 HEALTHCHECK --interval=20s --timeout=5s --retries=5 \
   CMD wget -q -O /dev/null http://127.0.0.1:3000/ || exit 1
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "server.js"]
