@@ -58,7 +58,10 @@ else
 fi
 
 if [[ "$need_build" == "1" ]]; then
-  echo "=== docker compose build ==="
+  echo "=== docker compose build (BuildKit + cache Next/npm) ==="
+  # Cache de camadas/npm/.next entre deploys — app igual, rebuild bem mais rápido.
+  export DOCKER_BUILDKIT=1
+  export COMPOSE_DOCKER_CLI_BUILD=1
   docker compose build web
   echo "=== docker compose up ==="
   docker compose up -d web
