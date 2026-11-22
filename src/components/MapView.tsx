@@ -9,6 +9,11 @@ import {
   MAPBOX_STYLE,
   TRANSIT_STATIONS,
 } from "@/lib/constants";
+import {
+  BUS_LINES,
+  BUS_LINE_WIDTH,
+  buildBusLinesGeoJSON,
+} from "@/lib/bus-lines";
 import { gradeBucket } from "@/lib/elevation";
 import { gradeColor } from "@/lib/format";
 import type { Apartment, RouteAnalysis } from "@/lib/types";
@@ -27,6 +32,7 @@ interface MapViewProps {
 const DEM_SOURCE = "mapbox-dem";
 const ROUTE_SOURCE = "route-segments";
 const TRANSIT_SOURCE = "transit-overlay";
+const BUS_LINES_SOURCE = "bus-lines-dedicated";
 const HOVER_SOURCE = "hover-point";
 
 function buildSegmentFeatures(analysis: RouteAnalysis) {
@@ -92,6 +98,10 @@ function buildTransitGeoJSON(): GeoJSON.FeatureCollection {
   };
 }
 
+function busLayerId(lineId: string) {
+  return `bus-line-${lineId}`;
+}
+
 export function MapView({
   token,
   apartments,
@@ -105,7 +115,12 @@ export function MapView({
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const destMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const popupRef = useRef<mapboxgl.Popup | null>(null);
   const [showTransit, setShowTransit] = useState(false);
+  const [showBusLines, setShowBusLines] = useState(true);
+  const [enabledLines, setEnabledLines] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(BUS_LINES.map((l) => [l.id, true]))
+  );
   const [terrainReady, setTerrainReady] = useState(false);
   const onMapReadyRef = useRef(onMapReady);
   onMapReadyRef.current = onMapReady;
@@ -126,6 +141,12 @@ export function MapView({
 
     map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
     mapRef.current = map;
+    popupRef.current = new mapboxgl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 8,
+      className: "bus-line-popup",
+    });
 
     const setupTerrainAndLayers = () => {
       if (!map.getSource(DEM_SOURCE)) {
@@ -177,6 +198,59 @@ export function MapView({
         });
       }
 
+      if (!map.getSource(BUS_LINES_SOURCE)) {
+        map.addSource(BUS_LINES_SOURCE, {
+          type: "geojson",
+          data: buildBusLinesGeoJSON(),
+        });
+
+        BUS_LINES.forEach((line) => {
+          const layerId = busLayerId(line.id);
+          if (map.getLayer(layerId)) return;
+          map.addLayer({
+            id: layerId,
+            type: "line",
+            source: BUS_LINES_SOURCE,
+            filter: ["==", ["get", "id"], line.id],
+            layout: {
+              "line-join": "round",
+              "line-cap": "round",
+              visibility: "visible",
+            },
+            paint: {
+              "line-color": line.color,
+              "line-width": BUS_LINE_WIDTH,
+              "line-opacity": 0.92,
+              "line-offset": line.offset,
+            },
+          });
+
+          map.on("mouseenter", layerId, (e) => {
+            map.getCanvas().style.cursor = "pointer";
+            const feat = e.features?.[0];
+            if (!feat || !e.lngLat || !popupRef.current) return;
+            const p = feat.properties || {};
+            popupRef.current
+              .setLngLat(e.lngLat)
+              .setHTML(
+                `<strong style="color:${p.color}">${p.code}</strong><br/>` +
+                  `<span>${p.name}</span><br/>` +
+                  `<span style="opacity:.8">${p.itinerary}</span>`
+              )
+              .addTo(map);
+          });
+          map.on("mousemove", layerId, (e) => {
+            if (e.lngLat && popupRef.current?.isOpen()) {
+              popupRef.current.setLngLat(e.lngLat);
+            }
+          });
+          map.on("mouseleave", layerId, () => {
+            map.getCanvas().style.cursor = "";
+            popupRef.current?.remove();
+          });
+        });
+      }
+
       if (!map.getSource(TRANSIT_SOURCE)) {
         map.addSource(TRANSIT_SOURCE, {
           type: "geojson",
@@ -193,9 +267,9 @@ export function MapView({
             visibility: "none",
           },
           paint: {
-            "line-color": "#2563eb",
-            "line-width": 4,
-            "line-opacity": 0.65,
+            "line-color": "#64748b",
+            "line-width": 3,
+            "line-opacity": 0.35,
             "line-dasharray": [2, 1.5],
           },
         });
@@ -256,6 +330,7 @@ export function MapView({
       markersRef.current = [];
       destMarkerRef.current?.remove();
       destMarkerRef.current = null;
+      popupRef.current?.remove();
       map.remove();
       mapRef.current = null;
       setTerrainReady(false);
@@ -347,6 +422,17 @@ export function MapView({
     map.setLayoutProperty("transit-station-labels", "visibility", visibility);
   }, [showTransit]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    BUS_LINES.forEach((line) => {
+      const layerId = busLayerId(line.id);
+      if (!map.getLayer(layerId)) return;
+      const on = showBusLines && enabledLines[line.id] !== false;
+      map.setLayoutProperty(layerId, "visibility", on ? "visible" : "none");
+    });
+  }, [showBusLines, enabledLines, terrainReady]);
+
   if (!token) {
     return (
       <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_top,_#d8ebe8_0%,_#e8eef2_45%,_#dce3ea_100%)]">
@@ -357,9 +443,9 @@ export function MapView({
           </p>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
             Defina <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">NEXT_PUBLIC_MAPBOX_TOKEN</code>{" "}
-            em <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">.env.local</code>{" "}
-            para ativar o mapa 3D, rotas a pé e geocodificação. O restante da
-            interface continua funcional.
+            em <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">.env</code>{" "}
+            (VPS) ou <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">.env.local</code>{" "}
+            (local) e faça rebuild. O restante da interface continua funcional.
           </p>
         </div>
       </div>
@@ -370,7 +456,65 @@ export function MapView({
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
 
-      <div className="absolute left-3 top-3 z-10 flex flex-col gap-2">
+      <div className="absolute left-3 top-3 z-10 flex max-h-[calc(100%-1.5rem)] flex-col gap-2 overflow-y-auto">
+        <button
+          type="button"
+          onClick={() => setShowBusLines((v) => !v)}
+          className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold shadow-md backdrop-blur transition ${
+            showBusLines
+              ? "border-teal-700 bg-teal-700 text-white"
+              : "border-white/70 bg-white/90 text-slate-700 hover:bg-white"
+          }`}
+        >
+          <Bus className="h-3.5 w-3.5" aria-hidden />
+          {showBusLines ? "Ocultar linhas de ônibus" : "Linhas Barra Funda"}
+        </button>
+
+        {showBusLines && (
+          <div className="max-w-[260px] rounded-md border border-white/70 bg-white/95 p-3 text-[11px] text-slate-600 shadow-md">
+            <p className="mb-2 font-semibold text-slate-800">
+              Linhas (trilho paralelo · sem sobreposição)
+            </p>
+            <ul className="space-y-2">
+              {BUS_LINES.map((line) => {
+                const on = enabledLines[line.id] !== false;
+                return (
+                  <li key={line.id}>
+                    <label className="flex cursor-pointer gap-2">
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() =>
+                          setEnabledLines((prev) => ({
+                            ...prev,
+                            [line.id]: !on,
+                          }))
+                        }
+                        className="mt-0.5 accent-teal-700"
+                      />
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-1.5 font-semibold text-slate-800">
+                          <span
+                            className="inline-block h-1.5 w-5 rounded-full"
+                            style={{ backgroundColor: line.color }}
+                          />
+                          {line.code}
+                        </span>
+                        <span className="block text-[10px] leading-snug text-slate-500">
+                          {line.name}
+                        </span>
+                        <span className="block text-[10px] leading-snug text-slate-400">
+                          {line.itinerary}
+                        </span>
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         <button
           type="button"
           onClick={() => setShowTransit((v) => !v)}
@@ -381,8 +525,7 @@ export function MapView({
           }`}
         >
           <TrainFront className="h-3.5 w-3.5" aria-hidden />
-          <Bus className="h-3.5 w-3.5" aria-hidden />
-          {showTransit ? "Ocultar transporte" : "Transporte público"}
+          {showTransit ? "Ocultar estações" : "Estações / corredores"}
         </button>
 
         {showTransit && (
