@@ -15,7 +15,7 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Perdizes Radar",
+  title: "Imóveis Radar",
   description:
     "Analise apartamentos candidatos próximos à R. Dr. Emílio Ribas, 89 — Perdizes, São Paulo.",
 };

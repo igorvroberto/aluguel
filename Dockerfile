@@ -1,4 +1,4 @@
-# Perdizes Radar — Next.js 14 standalone (mesmo padrão isolado da VPS Liganer).
+# Imóveis Radar — Next.js 14 standalone (mesmo padrão isolado da VPS Liganer).
 # PROIBIDO: redes/volumes chatwoot_*.
 
 FROM node:22-alpine AS deps

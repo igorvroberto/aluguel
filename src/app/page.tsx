@@ -6,7 +6,7 @@ const RadarApp = dynamic(
     ssr: false,
     loading: () => (
       <div className="flex h-screen items-center justify-center bg-[#eef3f4] text-slate-600">
-        <p className="font-display text-lg">Carregando Perdizes Radar…</p>
+        <p className="font-display text-lg">Carregando Imóveis Radar…</p>
       </div>
     ),
   }
