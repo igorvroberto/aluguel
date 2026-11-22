@@ -1,3 +1,4 @@
+import { isWithinSelectedStations } from "./geo";
 import { monthlyPackage } from "./format";
 import type { Apartment, FiltersState, RouteAnalysis } from "./types";
 
@@ -20,6 +21,16 @@ export function getVisibleApartments(
     if (filters.onlyFlat) {
       const analysis = analyses[apt.id];
       if (!analysis || analysis.topography !== "Plano") return false;
+    }
+
+    if (
+      !isWithinSelectedStations(
+        apt,
+        filters.stationIds,
+        filters.stationRadiusMeters
+      )
+    ) {
+      return false;
     }
 
     return true;

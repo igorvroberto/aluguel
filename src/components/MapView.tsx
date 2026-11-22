@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import { Bus, TrainFront } from "lucide-react";
 import {
+  LINHA_VERMELHA,
+  LINHA_VERMELHA_COLOR,
+} from "../../data/linhaVermelha";
+import {
   BUS_CORRIDORS,
   DESTINATION,
   MAPBOX_STYLE,
@@ -16,6 +20,11 @@ import {
 } from "@/lib/bus-lines";
 import { gradeBucket } from "@/lib/elevation";
 import { gradeColor } from "@/lib/format";
+import {
+  buildLinhaVermelhaLineGeoJSON,
+  buildLinhaVermelhaStationsGeoJSON,
+  buildStationRadiusGeoJSON,
+} from "@/lib/geo";
 import type { Apartment, RouteAnalysis } from "@/lib/types";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -25,6 +34,9 @@ interface MapViewProps {
   selectedId: string | null;
   analysis: RouteAnalysis | null;
   hoverDistance: number | null;
+  stationIds?: string[];
+  stationRadiusMeters?: number;
+  focusStationsToken?: number;
   onMapReady: (map: mapboxgl.Map) => void;
   onSelectApartment: (id: string) => void;
 }
@@ -34,6 +46,9 @@ const ROUTE_SOURCE = "route-segments";
 const TRANSIT_SOURCE = "transit-overlay";
 const BUS_LINES_SOURCE = "bus-lines-dedicated";
 const HOVER_SOURCE = "hover-point";
+const L3_LINE_SOURCE = "linha-vermelha-line";
+const L3_STATIONS_SOURCE = "linha-vermelha-stations";
+const L3_RADIUS_SOURCE = "linha-vermelha-radii";
 
 function buildSegmentFeatures(analysis: RouteAnalysis) {
   const features: GeoJSON.Feature[] = [];
@@ -108,6 +123,9 @@ export function MapView({
   selectedId,
   analysis,
   hoverDistance,
+  stationIds = [],
+  stationRadiusMeters = 800,
+  focusStationsToken = 0,
   onMapReady,
   onSelectApartment,
 }: MapViewProps) {
@@ -117,6 +135,7 @@ export function MapView({
   const destMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
   const [showTransit, setShowTransit] = useState(false);
+  const [showLinhaVermelha, setShowLinhaVermelha] = useState(true);
   const [showBusLines, setShowBusLines] = useState(true);
   const [enabledLines, setEnabledLines] = useState<Record<string, boolean>>(
     () => Object.fromEntries(BUS_LINES.map((l) => [l.id, true]))
@@ -307,6 +326,92 @@ export function MapView({
         });
       }
 
+      if (!map.getSource(L3_LINE_SOURCE)) {
+        map.addSource(L3_LINE_SOURCE, {
+          type: "geojson",
+          data: buildLinhaVermelhaLineGeoJSON(),
+        });
+        map.addLayer({
+          id: "l3-line",
+          type: "line",
+          source: L3_LINE_SOURCE,
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+            visibility: "visible",
+          },
+          paint: {
+            "line-color": LINHA_VERMELHA_COLOR,
+            "line-width": 3.5,
+            "line-opacity": 0.92,
+          },
+        });
+      }
+
+      if (!map.getSource(L3_STATIONS_SOURCE)) {
+        map.addSource(L3_STATIONS_SOURCE, {
+          type: "geojson",
+          data: buildLinhaVermelhaStationsGeoJSON(),
+        });
+        map.addLayer({
+          id: "l3-stations",
+          type: "circle",
+          source: L3_STATIONS_SOURCE,
+          layout: { visibility: "visible" },
+          paint: {
+            "circle-radius": 6.5,
+            "circle-color": LINHA_VERMELHA_COLOR,
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#ffffff",
+          },
+        });
+        map.addLayer({
+          id: "l3-station-labels",
+          type: "symbol",
+          source: L3_STATIONS_SOURCE,
+          layout: {
+            visibility: "visible",
+            "text-field": ["get", "name"],
+            "text-size": 10,
+            "text-offset": [0, 1.15],
+            "text-anchor": "top",
+            "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+            "text-optional": true,
+          },
+          paint: {
+            "text-color": "#7f1d1d",
+            "text-halo-color": "#ffffff",
+            "text-halo-width": 1.4,
+          },
+        });
+      }
+
+      if (!map.getSource(L3_RADIUS_SOURCE)) {
+        map.addSource(L3_RADIUS_SOURCE, {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+        map.addLayer({
+          id: "l3-radius-fill",
+          type: "fill",
+          source: L3_RADIUS_SOURCE,
+          paint: {
+            "fill-color": LINHA_VERMELHA_COLOR,
+            "fill-opacity": 0.12,
+          },
+        });
+        map.addLayer({
+          id: "l3-radius-outline",
+          type: "line",
+          source: L3_RADIUS_SOURCE,
+          paint: {
+            "line-color": LINHA_VERMELHA_COLOR,
+            "line-width": 1.5,
+            "line-opacity": 0.55,
+          },
+        });
+      }
+
       setTerrainReady(true);
       onMapReadyRef.current(map);
     };
@@ -424,6 +529,47 @@ export function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !map.getLayer("l3-line")) return;
+    const visibility = showLinhaVermelha ? "visible" : "none";
+    map.setLayoutProperty("l3-line", "visibility", visibility);
+    map.setLayoutProperty("l3-stations", "visibility", visibility);
+    map.setLayoutProperty("l3-station-labels", "visibility", visibility);
+  }, [showLinhaVermelha, terrainReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.getSource(L3_RADIUS_SOURCE)) return;
+    const source = map.getSource(L3_RADIUS_SOURCE) as mapboxgl.GeoJSONSource;
+    source.setData(
+      buildStationRadiusGeoJSON(stationIds, stationRadiusMeters)
+    );
+  }, [stationIds, stationRadiusMeters, terrainReady]);
+
+  useEffect(() => {
+    if (!focusStationsToken) return;
+    const map = mapRef.current;
+    if (!map || stationIds.length === 0) return;
+
+    const selected = LINHA_VERMELHA.filter((s) => stationIds.includes(s.id));
+    if (selected.length === 0) return;
+
+    const bounds = new mapboxgl.LngLatBounds();
+    // ~1° lat ≈ 111 km; padding roughly by radius in degrees
+    const padDeg = stationRadiusMeters / 111_000;
+    selected.forEach((s) => {
+      bounds.extend([s.lng - padDeg, s.lat - padDeg]);
+      bounds.extend([s.lng + padDeg, s.lat + padDeg]);
+    });
+    map.fitBounds(bounds, {
+      padding: 72,
+      duration: 900,
+      maxZoom: 15,
+      pitch: 40,
+    });
+  }, [focusStationsToken, stationIds, stationRadiusMeters]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map) return;
     BUS_LINES.forEach((line) => {
       const layerId = busLayerId(line.id);
@@ -517,6 +663,52 @@ export function MapView({
 
         <button
           type="button"
+          onClick={() => setShowLinhaVermelha((v) => !v)}
+          className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold shadow-md backdrop-blur transition ${
+            showLinhaVermelha
+              ? "border-[#EE352E] bg-[#EE352E] text-white"
+              : "border-white/70 bg-white/90 text-slate-700 hover:bg-white"
+          }`}
+        >
+          <TrainFront className="h-3.5 w-3.5" aria-hidden />
+          {showLinhaVermelha ? "Ocultar Linha 3-Vermelha" : "Linha 3-Vermelha"}
+        </button>
+
+        {showLinhaVermelha && (
+          <div className="max-w-[240px] rounded-md border border-white/70 bg-white/95 p-3 text-[11px] text-slate-600 shadow-md">
+            <p className="mb-1 font-semibold text-slate-800">
+              18 estações · traçado oficial
+            </p>
+            <p className="mb-2 text-[10px] leading-snug text-slate-500">
+              Palmeiras–Barra Funda → Corinthians–Itaquera
+              {stationIds.length > 0
+                ? ` · raio ${stationRadiusMeters} m em ${stationIds.length} selecionada(s)`
+                : ""}
+            </p>
+            <ul className="max-h-36 space-y-0.5 overflow-y-auto">
+              {LINHA_VERMELHA.map((s) => {
+                const on = stationIds.includes(s.id);
+                return (
+                  <li
+                    key={s.id}
+                    className={`flex items-center gap-1.5 ${
+                      on ? "font-semibold text-rose-800" : ""
+                    }`}
+                  >
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: LINHA_VERMELHA_COLOR }}
+                    />
+                    <span className="truncate">{s.name}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        <button
+          type="button"
           onClick={() => setShowTransit((v) => !v)}
           className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold shadow-md backdrop-blur transition ${
             showTransit
@@ -525,7 +717,7 @@ export function MapView({
           }`}
         >
           <TrainFront className="h-3.5 w-3.5" aria-hidden />
-          {showTransit ? "Ocultar estações" : "Estações / corredores"}
+          {showTransit ? "Ocultar outras estações" : "Outras estações / corredores"}
         </button>
 
         {showTransit && (
