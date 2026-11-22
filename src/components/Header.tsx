@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileJson, MapPinned, Plus } from "lucide-react";
+import { Download, FileJson, HardDriveDownload, MapPinned, Plus } from "lucide-react";
 import { DESTINATION } from "@/lib/constants";
 
 interface HeaderProps {
@@ -8,6 +8,7 @@ interface HeaderProps {
   onAdd: () => void;
   onExportCsv: () => void;
   onExportJson: () => void;
+  onDownloadServerJson?: () => void;
 }
 
 export function Header({
@@ -15,6 +16,7 @@ export function Header({
   onAdd,
   onExportCsv,
   onExportJson,
+  onDownloadServerJson,
 }: HeaderProps) {
   return (
     <header className="flex h-[60px] shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-gradient-to-r from-[#0f3d3e] via-[#145c5e] to-[#1a6b5c] px-4 text-white shadow-sm">
@@ -52,12 +54,24 @@ export function Header({
         <button
           type="button"
           onClick={onExportJson}
-          title="Exportar JSON"
+          title="Exportar JSON (com métricas)"
           className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-2 text-xs font-semibold text-white ring-1 ring-white/15 transition hover:bg-white/20"
         >
           <FileJson className="h-3.5 w-3.5" aria-hidden />
           <span className="hidden sm:inline">JSON</span>
         </button>
+        {onDownloadServerJson && (
+          <button
+            type="button"
+            onClick={onDownloadServerJson}
+            title="Baixar data/apartments.json atual do servidor"
+            className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-2 text-xs font-semibold text-white ring-1 ring-white/15 transition hover:bg-white/20"
+          >
+            <HardDriveDownload className="h-3.5 w-3.5" aria-hidden />
+            <span className="hidden lg:inline">Baixar JSON Atualizado</span>
+            <span className="lg:hidden">Repo</span>
+          </button>
+        )}
 
         <button
           type="button"

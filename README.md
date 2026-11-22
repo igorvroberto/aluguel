@@ -13,7 +13,10 @@ Aplicação web em **Next.js 14** (App Router, TypeScript, Tailwind CSS) para an
 - Importação por URL de anúncio (`/api/scrape-listing`) com fallback “colar texto”
 - Segmentos coloridos por inclinação e classificação Plano / Moderada / Íngreme
 - Camada de transporte público (estações e corredores de ônibus)
-- Persistência em `localStorage` a partir de `data/apartments.json`
+- Persistência centralizada em `data/apartments.json` via `/api/apartments` (sem `localStorage`)
+- Status (`Candidato` / `Favorito` / `Visita Agendada` / `Descartado`) e comentários no servidor
+- Varredura nativa `/api/scrape-stations` (cheerio + Playwright opcional) nas estações L3/L6
+- Botão **Baixar JSON Atualizado** para sincronizar o arquivo do servidor com o repositório
 - Exportação CSV / JSON no header (com métricas de distância e elevação)
 - Modal de cadastro com geocodificação Mapbox restrita a São Paulo
 

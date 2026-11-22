@@ -18,6 +18,11 @@ export function getVisibleApartments(
 
     if (filters.portaria24h && !apt.portaria24h) return false;
 
+    if (filters.statuses && filters.statuses.length > 0) {
+      const status = apt.status || "Candidato";
+      if (!filters.statuses.includes(status)) return false;
+    }
+
     if (filters.onlyFlat) {
       const analysis = analyses[apt.id];
       if (!analysis || analysis.topography !== "Plano") return false;

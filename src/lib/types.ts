@@ -2,6 +2,19 @@ export type TopographyClass = "Plano" | "Inclinação Moderada" | "Ladeira Íngr
 
 export type SortOption = "pacote" | "distancia" | "subida";
 
+export type ApartmentStatus =
+  | "Candidato"
+  | "Favorito"
+  | "Visita Agendada"
+  | "Descartado";
+
+export const APARTMENT_STATUSES: ApartmentStatus[] = [
+  "Candidato",
+  "Favorito",
+  "Visita Agendada",
+  "Descartado",
+];
+
 export interface Apartment {
   id: string;
   title: string;
@@ -17,6 +30,10 @@ export interface Apartment {
   areaM2?: number;
   parkingSpots?: number;
   notes?: string;
+  status?: ApartmentStatus;
+  comments?: string;
+  source?: string;
+  scrapedAt?: string;
 }
 
 export type TravelMode = "walk" | "transit";
@@ -46,10 +63,9 @@ export interface FiltersState {
   onlyFlat: boolean;
   portaria24h: boolean;
   sortBy: SortOption;
-  /** IDs das estações Linha 3-Vermelha selecionadas (multi). */
   stationIds: string[];
-  /** Raio máximo até a estação (metros). */
   stationRadiusMeters: number;
+  statuses: ApartmentStatus[];
 }
 
 export interface NewApartmentInput {
@@ -66,4 +82,7 @@ export interface NewApartmentInput {
   areaM2?: number;
   parkingSpots?: number;
   notes?: string;
+  status?: ApartmentStatus;
+  comments?: string;
+  source?: string;
 }
