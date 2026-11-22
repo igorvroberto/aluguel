@@ -81,6 +81,7 @@ export function RadarApp() {
   });
   const analyzingRef = useRef<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
+  const mapSectionRef = useRef<HTMLDivElement>(null);
   const apartmentsRef = useRef<Apartment[]>([]);
 
   useEffect(() => {
@@ -199,6 +200,21 @@ export function RadarApp() {
     [apartments, mapInstance, runAnalysis]
   );
 
+  /** Seleciona, analisa e rola até o mapa (não até o painel a pé/transit). */
+  const handleTraceRoute = useCallback(
+    (id: string) => {
+      handleSelect(id);
+      // rAF: espera o layout do mapa no mobile (order-1) antes de rolar
+      requestAnimationFrame(() => {
+        mapSectionRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    },
+    [handleSelect]
+  );
+
   const handleMapReady = useCallback((map: MapboxMap) => {
     setMapInstance(map);
     if (!MAPBOX_TOKEN) return;
@@ -284,6 +300,7 @@ export function RadarApp() {
               selected={selectedId === apt.id}
               analyzing={analyzingId === apt.id}
               onSelect={() => handleSelect(apt.id)}
+              onTraceRoute={() => handleTraceRoute(apt.id)}
               onUpdateStatus={handleUpdateStatus}
               onUpdateComments={handleUpdateComments}
             />
@@ -295,25 +312,27 @@ export function RadarApp() {
 
   const mapBlock = (
     <section className="flex min-w-0 flex-1 flex-col">
-      <MapLayersPanel
-        layers={mapLayers}
-        onChange={setMapLayers}
-        stationIds={filters.stationIds}
-        stationRadiusMeters={filters.stationRadiusMeters}
-      />
-      <div className="h-[45vh] min-h-[280px] border-b border-slate-200 lg:h-[70vh]">
-        <MapView
-          token={MAPBOX_TOKEN}
-          apartments={visible}
-          selectedId={selectedId}
-          analysis={selectedAnalysis}
-          hoverDistance={hoverDistance}
+      <div ref={mapSectionRef} className="scroll-mt-2">
+        <MapLayersPanel
+          layers={mapLayers}
+          onChange={setMapLayers}
           stationIds={filters.stationIds}
           stationRadiusMeters={filters.stationRadiusMeters}
-          layers={mapLayers}
-          onMapReady={handleMapReady}
-          onSelectApartment={handleSelect}
         />
+        <div className="h-[45vh] min-h-[280px] border-b border-slate-200 lg:h-[70vh]">
+          <MapView
+            token={MAPBOX_TOKEN}
+            apartments={visible}
+            selectedId={selectedId}
+            analysis={selectedAnalysis}
+            hoverDistance={hoverDistance}
+            stationIds={filters.stationIds}
+            stationRadiusMeters={filters.stationRadiusMeters}
+            layers={mapLayers}
+            onMapReady={handleMapReady}
+            onSelectApartment={handleSelect}
+          />
+        </div>
       </div>
       <div className="min-h-[420px] lg:min-h-[480px]">
         <RoutePanel

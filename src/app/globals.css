@@ -54,11 +54,16 @@ body {
   transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
-.perdizes-apt-marker:hover,
-.perdizes-apt-marker.is-selected {
-  transform: scale(1.35);
+.perdizes-apt-marker:hover {
+  transform: scale(1.2);
   background: #0f3d3e;
-  box-shadow: 0 0 0 4px rgba(20, 92, 94, 0.25), 0 2px 8px rgba(15, 23, 42, 0.35);
+}
+
+.perdizes-apt-marker.is-selected {
+  transform: scale(1.45);
+  background: #d97706;
+  border-color: #0f172a;
+  box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.35), 0 2px 8px rgba(15, 23, 42, 0.35);
 }
 
 @keyframes pulse-dest {

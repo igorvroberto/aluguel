@@ -73,9 +73,59 @@ export function getApartmentsDataPath(): string {
   return resolveDataPath();
 }
 
+async function hydrateEmptyUrlsFromSeed(
+  apartments: Apartment[]
+): Promise<Apartment[]> {
+  const seedDir =
+    process.env.APARTMENTS_SEED_DIR ||
+    path.join(process.cwd(), "data-seed");
+  const seedPath = path.join(seedDir, "apartments.json");
+  try {
+    const raw = await fs.readFile(seedPath, "utf8");
+    const seed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(seed) || seed.length === 0) return apartments;
+
+    const seedList = seed.map((item) =>
+      normalizeApartment(item as Partial<Apartment>)
+    );
+    const byId = new Map(seedList.map((a) => [a.id, a]));
+    const byAddr = new Map(
+      seedList.map((a) => [
+        `${a.address.trim().toLowerCase()}|${a.aluguel}|${a.rooms}`,
+        a,
+      ])
+    );
+
+    let changed = false;
+    const next = apartments.map((apt) => {
+      const url = apt.externalUrl.trim();
+      if (url && /\/imovel\/\d+/i.test(url)) return apt;
+      const donor =
+        byId.get(apt.id) ||
+        byAddr.get(
+          `${apt.address.trim().toLowerCase()}|${apt.aluguel}|${apt.rooms}`
+        );
+      const donorUrl = donor?.externalUrl.trim() || "";
+      if (!donorUrl || !/\/imovel\/\d+/i.test(donorUrl)) return apt;
+      changed = true;
+      return { ...apt, externalUrl: donorUrl };
+    });
+
+    if (changed) {
+      memoryCache = next;
+      await writeToDisk(next);
+      return next;
+    }
+  } catch {
+    // seed ausente — ok
+  }
+  return apartments;
+}
+
 export async function listApartments(): Promise<Apartment[]> {
   if (!memoryCache) {
     memoryCache = await readFromDisk();
+    memoryCache = await hydrateEmptyUrlsFromSeed(memoryCache);
   }
   return memoryCache.map((a) => ({ ...a }));
 }

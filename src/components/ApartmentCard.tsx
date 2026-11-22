@@ -34,6 +34,8 @@ interface ApartmentCardProps {
   selected: boolean;
   analyzing: boolean;
   onSelect: () => void;
+  /** Traçar rota: seleciona e rola até o mapa (não até o painel de detalhe). */
+  onTraceRoute?: () => void;
   onUpdateStatus?: (id: string, status: ApartmentStatus) => void;
   onUpdateComments?: (id: string, comments: string) => void;
 }
@@ -51,6 +53,7 @@ export function ApartmentCard({
   selected,
   analyzing,
   onSelect,
+  onTraceRoute,
   onUpdateStatus,
   onUpdateComments,
 }: ApartmentCardProps) {
@@ -78,7 +81,7 @@ export function ApartmentCard({
       }}
       className={`cursor-pointer border-b border-slate-100 px-4 py-3 transition ${
         selected
-          ? "bg-teal-50/90 ring-1 ring-inset ring-teal-600/30"
+          ? "bg-amber-50 ring-2 ring-inset ring-amber-500/70 shadow-[inset_3px_0_0_0_#d97706]"
           : "bg-white hover:bg-slate-50/80"
       }`}
     >
@@ -225,9 +228,9 @@ export function ApartmentCard({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            onSelect();
+            (onTraceRoute ?? onSelect)();
           }}
-          className="inline-flex items-center gap-1 rounded-md bg-teal-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-teal-800"
+          className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-900"
         >
           <MapPinned className="h-3.5 w-3.5" aria-hidden />
           Traçar Rota / Mapa

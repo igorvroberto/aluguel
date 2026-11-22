@@ -39,6 +39,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Seed (volume /app/data pode nascer vazio — entrypoint copia se faltar)
 COPY --from=builder --chown=nextjs:nodejs /app/data ./data-seed
+COPY --from=builder --chmod=755 /app/scripts/sync-seed-urls.mjs /app/scripts/sync-seed-urls.mjs
 COPY --chmod=755 scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
 
 ENV APARTMENTS_DATA_PATH=/app/data/apartments.json
