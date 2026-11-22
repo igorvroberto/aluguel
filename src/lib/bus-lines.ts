@@ -15,7 +15,7 @@ export interface BusLineDef {
 }
 
 /** Faculdade Santa Marcelina / R. Dr. Emílio Ribas, 89 */
-export const FACULDADE: [number, number] = [-46.66692, -23.53231];
+export const FACULDADE: [number, number] = [-46.6654622, -23.5363756];
 
 export const BUS_LINES: BusLineDef[] = [
   {
