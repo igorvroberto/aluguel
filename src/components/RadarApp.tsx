@@ -128,16 +128,11 @@ export function RadarApp() {
     };
   }, []);
 
-  const visible = useMemo(() => {
-    const list = getVisibleApartments(apartments, filters, analyses);
-    if (!selectedId) return list;
-    const idx = list.findIndex((a) => a.id === selectedId);
-    if (idx <= 0) return list;
-    const next = [...list];
-    const [picked] = next.splice(idx, 1);
-    next.unshift(picked);
-    return next;
-  }, [apartments, filters, analyses, selectedId]);
+  // Ordem só dos filtros — não puxar o selecionado para o topo (quebrava a ordenação).
+  const visible = useMemo(
+    () => getVisibleApartments(apartments, filters, analyses),
+    [apartments, filters, analyses]
+  );
 
   useEffect(() => {
     if (!selectedId || !listRef.current) return;
