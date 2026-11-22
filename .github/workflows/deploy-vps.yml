@@ -10,11 +10,10 @@ on:
 
 jobs:
   deploy:
-    # Runner self-hosted na VPS (/opt/radar-imoveis). Sem SSH externo.
+    # Runner self-hosted na VPS (/opt/radar-imoveis).
+    # Chama o script VIA sudo (casa com /etc/sudoers.d/radar-imoveis-runner-deploy).
+    # Assim roda como root de cara — não depende da elevação interna do deploy.sh local.
     runs-on: [self-hosted, radar-imoveis]
     steps:
       - name: Deploy Imóveis Radar
-        run: bash /opt/radar-imoveis/tools/deploy.sh
-        env:
-          RADAR_IMOVEIS_ROOT: /opt/radar-imoveis
-          RADAR_IMOVEIS_REF: main
+        run: sudo -n /opt/radar-imoveis/tools/deploy.sh
