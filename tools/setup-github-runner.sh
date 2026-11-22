@@ -16,7 +16,7 @@ RUNNER_DIR="${ROOT}/actions-runner"
 RUNNER_USER="${RUNNER_USER:-radar-imoveis-runner}"
 RUNNER_NAME="${RUNNER_NAME:-radar-imoveis-vps}"
 RUNNER_LABELS="${RUNNER_LABELS:-radar-imoveis,self-hosted,Linux,X64}"
-RUNNER_VERSION="${RUNNER_VERSION:-2.323.0}"
+RUNNER_VERSION="${RUNNER_VERSION:-2.329.0}"
 SUDOERS="/etc/sudoers.d/radar-imoveis-runner-deploy"
 REPO_URL="https://github.com/igorvroberto/aluguel"
 
