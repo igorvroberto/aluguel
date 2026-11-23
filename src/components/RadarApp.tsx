@@ -107,8 +107,25 @@ export function RadarApp() {
     [apartments, filters]
   );
 
+  const scrollMapIntoView = useCallback(() => {
+    requestAnimationFrame(() => {
+      mapSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }, []);
+
+  // No desktop (lista ao lado), mantém o card visível na coluna.
+  // No mobile o card do pin fica acima do mapa — não rola a lista pra baixo.
   useEffect(() => {
     if (!selectedId || !listRef.current) return;
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 1023px)").matches
+    ) {
+      return;
+    }
     const el = listRef.current.querySelector<HTMLElement>(
       `[data-apartment-id="${selectedId}"]`
     );
@@ -120,17 +137,20 @@ export function RadarApp() {
     setGoogleTransitRoute(null);
   }, []);
 
+  const handleSelectFromMap = useCallback(
+    (id: string) => {
+      handleSelect(id);
+      scrollMapIntoView();
+    },
+    [handleSelect, scrollMapIntoView]
+  );
+
   const handleTraceRoute = useCallback(
     (id: string) => {
       handleSelect(id);
-      requestAnimationFrame(() => {
-        mapSectionRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      });
+      scrollMapIntoView();
     },
-    [handleSelect]
+    [handleSelect, scrollMapIntoView]
   );
 
   const handleUpdateStatus = async (id: string, status: ApartmentStatus) => {
@@ -199,6 +219,22 @@ export function RadarApp() {
   const mapBlock = (
     <section className="flex min-w-0 flex-1 flex-col">
       <div ref={mapSectionRef} className="scroll-mt-2">
+        {/* Mobile: card do pin acima do mapa (evita rolar até a lista). */}
+        {selectedApartment ? (
+          <div className="border-b border-slate-200 bg-white lg:hidden">
+            <div className="border-b border-teal-100 bg-teal-50/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-teal-900">
+              Imóvel selecionado no mapa
+            </div>
+            <ApartmentCard
+              apartment={selectedApartment}
+              selected
+              onSelect={() => handleSelect(selectedApartment.id)}
+              onTraceRoute={() => handleTraceRoute(selectedApartment.id)}
+              onUpdateStatus={handleUpdateStatus}
+              onUpdateComments={handleUpdateComments}
+            />
+          </div>
+        ) : null}
         <div className="h-[45vh] min-h-[280px] border-b border-slate-200 lg:h-[70vh]">
           <MapView
             apiKey={mapsApiKey}
@@ -207,7 +243,7 @@ export function RadarApp() {
             googleTransitRoute={googleTransitRoute}
             stationIds={filters.stationIds}
             stationRadiusMeters={filters.stationRadiusMeters}
-            onSelectApartment={handleSelect}
+            onSelectApartment={handleSelectFromMap}
           />
         </div>
       </div>
