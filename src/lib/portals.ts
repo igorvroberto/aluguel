@@ -20,12 +20,13 @@ export const PORTAL_LABELS: Record<PortalId, string> = {
 
 /**
  * Portais que o scrape tenta de verdade.
- * ZAP / Viva Real / Imovelweb caem em Cloudflare (ERROR_PAGE / Turnstile)
- * neste ambiente e só gastam tempo — ficam fora até haver bypass estável.
+ * - Viva Real: Firefox headless passa o Cloudflare e lê cards HTML (Nov/2026).
+ * - ZAP / Imovelweb: ainda bloqueados (ERROR_PAGE / Attention Required) — fora.
  */
 export const SCRAPE_ACTIVE_PORTALS: readonly PortalId[] = [
   "quintoandar",
   "chavesnamao",
+  "vivareal",
 ] as const;
 
 /** Opções do filtro de portal na UI (só portais ativos no scrape). */

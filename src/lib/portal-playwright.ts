@@ -1,8 +1,10 @@
 /**
  * Scraping Playwright: ZAP/Viva (intercept Glue JSON) + HTML portals (JSON-LD/DOM).
+ * Viva Real: Chromium cai no Cloudflare; Firefox headless costuma passar e
+ * expor cards/links de /imovel/… (teste Nov/2026).
  */
 import * as cheerio from "cheerio";
-import { chromium, type Browser, type Page } from "playwright";
+import { chromium, firefox, type Browser, type Page } from "playwright";
 import {
   isGlueListingsUrl,
   parseGlueListings,
@@ -23,6 +25,7 @@ const UA =
 export type PlaywrightMode = "headed" | "headless";
 
 let sharedBrowser: Promise<Browser> | null = null;
+let sharedFirefox: Promise<Browser> | null = null;
 
 export async function getSharedBrowser(
   mode: PlaywrightMode = "headed"
@@ -41,15 +44,26 @@ export async function getSharedBrowser(
   return sharedBrowser;
 }
 
+/** Firefox: melhor taxa contra Cloudflare do Viva Real neste ambiente. */
+export async function getSharedFirefoxBrowser(): Promise<Browser> {
+  if (!sharedFirefox) {
+    sharedFirefox = firefox.launch({ headless: true });
+  }
+  return sharedFirefox;
+}
+
 export async function closeSharedBrowser(): Promise<void> {
-  if (!sharedBrowser) return;
-  try {
-    const b = await sharedBrowser;
-    await b.close();
-  } catch {
-    // ignore
-  } finally {
-    sharedBrowser = null;
+  const jobs: Array<Promise<Browser> | null> = [sharedBrowser, sharedFirefox];
+  sharedBrowser = null;
+  sharedFirefox = null;
+  for (const job of jobs) {
+    if (!job) continue;
+    try {
+      const b = await job;
+      await b.close();
+    } catch {
+      // ignore
+    }
   }
 }
 
@@ -408,6 +422,118 @@ export async function scrapeHtmlSearchPage(
   }
 }
 
+/**
+ * Extrai anúncios do HTML do Viva Real a partir dos links /imovel/…-aluguel-RS…-id-….
+ * Funciona mesmo sem Glue /v2/listings (bloqueado pelo CF no Chromium).
+ */
+export function extractVivaListingsFromHtml(
+  html: string,
+  pageUrl: string
+): PortalListing[] {
+  const $ = cheerio.load(html);
+  const out: PortalListing[] = [];
+  const seen = new Set<string>();
+
+  $('a[href*="/imovel/"][href*="-id-"]').each((_, el) => {
+    const href = String($(el).attr("href") || "");
+    const link = absUrl(href, pageUrl).split("?")[0];
+    if (!/\/imovel\/.+-id-\d+/i.test(link)) return;
+    const k = link.toLowerCase();
+    if (seen.has(k)) return;
+
+    const slug = link.split("/imovel/")[1] || "";
+    const roomsMatch = slug.match(/(\d+)-quartos?/i);
+    const areaMatch = slug.match(/(\d+)m2/i);
+    const rentMatch = slug.match(/aluguel-RS(\d+)/i);
+    const idMatch = slug.match(/id-(\d+)/i);
+    const aluguel = rentMatch ? Number(rentMatch[1]) : 0;
+    if (!aluguel || !idMatch) return;
+
+    const bairroMatch = slug.match(
+      /quartos?-([a-z0-9-]+?)-(?:zona-|sao-paulo|com-garagem|\d+m2)/i
+    );
+    const bairro = (bairroMatch?.[1] || "")
+      .split("-")
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+
+    const card = $(el).closest(
+      "article, li, [data-type], .property-card, .listing-card, div"
+    );
+    const cardText = card.text().replace(/\s+/g, " ").trim();
+    const prices = Array.from(cardText.matchAll(/R\$\s*([\d.]+)/g)).map((m) =>
+      parseBRLNumber(m[1])
+    );
+    const nums = prices.filter((n): n is number => n != null && n > 0);
+    // Heurística: 1º = aluguel (já temos), 2º condomínio, 3º IPTU mensal
+    let condominio = 0;
+    let iptu = 0;
+    if (nums.length >= 2) condominio = nums[1] || 0;
+    if (nums.length >= 3) iptu = nums[2] || 0;
+
+    seen.add(k);
+    out.push({
+      id: idMatch[1],
+      titulo:
+        card.find("h2, h3, [class*='title']").first().text().trim() ||
+        `Apartamento ${roomsMatch?.[1] || "?"} qtos — ${bairro || "SP"}`,
+      endereco: bairro
+        ? `${bairro}, São Paulo - SP`
+        : "Perdizes, São Paulo - SP",
+      bairro: bairro || "Perdizes",
+      aluguel,
+      condominio,
+      iptu,
+      quartos: roomsMatch ? Number(roomsMatch[1]) : 0,
+      vagas: /com-garagem/i.test(slug) ? 1 : undefined,
+      areaM2: areaMatch ? Number(areaMatch[1]) : undefined,
+      portaria24h: false,
+      linkAnuncio: link.startsWith("http")
+        ? link
+        : `https://www.vivareal.com.br${link}`,
+      portal: "vivareal",
+      portalLabel: PORTAL_LABELS.vivareal,
+    });
+  });
+
+  return out;
+}
+
+/**
+ * Viva Real via Firefox (Chromium recebe Attention Required / sem cards).
+ */
+export async function scrapeVivaRealFirefox(
+  url: string,
+  opts?: { browser?: Browser; scrollSteps?: number }
+): Promise<PortalListing[]> {
+  const browser = opts?.browser || (await getSharedFirefoxBrowser());
+  const page = await browser.newPage({
+    locale: "pt-BR",
+    viewport: { width: 1440, height: 900 },
+  });
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.waitForTimeout(6000);
+    const steps = opts?.scrollSteps ?? 6;
+    for (let i = 0; i < steps; i++) {
+      await page.mouse.wheel(0, 1600);
+      await page.waitForTimeout(550);
+    }
+    await page.waitForTimeout(1500);
+    const title = await page.title().catch(() => "");
+    if (/attention required|just a moment|um momento/i.test(title)) {
+      return [];
+    }
+    const html = await page.content();
+    return extractVivaListingsFromHtml(html, url);
+  } catch {
+    return [];
+  } finally {
+    await page.close().catch(() => undefined);
+  }
+}
+
 export function buildPortalSearchUrls(
   neigh: string,
   opts: { rooms: number; priceBand: SearchPriceBand }
@@ -427,6 +553,12 @@ export function buildPortalSearchUrls(
       url:
         `https://www.chavesnamao.com.br/apartamentos-para-alugar/sp-sao-paulo/${neigh}/` +
         `?valorMin=${min}&valorMax=${max}&quartos=${rooms}`,
+    },
+    {
+      portal: "vivareal",
+      url:
+        `https://www.vivareal.com.br/aluguel/sp/sao-paulo/zona-oeste/${neigh}/apartamento_residencial/` +
+        `?precoMaximo=${max}&precoMinimo=${min}&quartos=${rooms}`,
     },
   ];
   const active = new Set<PortalId>(SCRAPE_ACTIVE_PORTALS);

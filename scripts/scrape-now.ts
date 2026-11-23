@@ -30,6 +30,7 @@ import {
   getSharedBrowser,
   scrapeChavesPaginated,
   scrapeQuintoAndarPaginated,
+  scrapeVivaRealFirefox,
 } from "../src/lib/portal-playwright";
 
 loadEnv({ path: path.join(process.cwd(), ".env.local") });
@@ -241,6 +242,9 @@ async function scrapeSlice(
       mode: "headed",
       maxClicks: MAX_VER_MAIS_CNM,
     });
+  }
+  if (portal === "vivareal") {
+    return scrapeVivaRealFirefox(url);
   }
   return [];
 }

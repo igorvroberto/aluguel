@@ -14,6 +14,7 @@ import {
   getSharedBrowser,
   scrapeChavesPaginated,
   scrapeQuintoAndarPaginated,
+  scrapeVivaRealFirefox,
 } from "./portal-playwright";
 import type { Apartment, ApartmentStatus } from "./types";
 
@@ -57,6 +58,23 @@ function slugify(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+/** Path de zona do Viva Real a partir do slug do bairro/estação. */
+function vivaZonaForNeighborhood(neigh: string): string {
+  const n = neigh.toLowerCase();
+  if (
+    /perdizes|pompeia|sumare|vila-madalena|pinheiros|alto-de-pinheiros|lapa|agua-branca|barra-funda|santa-cecilia|higienopolis|consolacao|bela-vista/.test(
+      n
+    )
+  ) {
+    return "zona-oeste";
+  }
+  if (/tatuape|belem|mooca|bras|penha/.test(n)) return "zona-leste";
+  if (/santana|tucuruvi|casa-verde|freguesia/.test(n)) return "zona-norte";
+  if (/saude|vila-mariana|ipiranga|jabaquara/.test(n)) return "zona-sul";
+  if (/republica|se|centro|luz|anhangabau/.test(n)) return "centro";
+  return "zona-oeste";
 }
 
 async function fetchHtml(
@@ -435,6 +453,16 @@ function buildSearchUrls(
           `?valorMin=${band.min}&valorMax=${max}&quartos=${roomMin}`,
       });
     }
+    if (active.has("vivareal")) {
+      // Zona heurística — Perdizes/Pompéia/etc. caem em zona-oeste.
+      const zona = vivaZonaForNeighborhood(neigh);
+      out.push({
+        source: "vivareal",
+        url:
+          `https://www.vivareal.com.br/aluguel/sp/sao-paulo/${zona}/${neigh}/apartamento_residencial/` +
+          `#quartos=${roomMin}&preco-ate=${max}&preco-desde=${band.min}`,
+      });
+    }
   }
   return out;
 }
@@ -483,6 +511,28 @@ async function scrapePage(
   allowPlaywright: boolean
 ): Promise<{ listings: RawListingCandidate[]; warning?: string }> {
   const portal = normalizePortalId(source) as PortalId | undefined;
+
+  // Viva Real: Firefox (Chromium é bloqueado pelo Cloudflare)
+  if (allowPlaywright && portal === "vivareal") {
+    try {
+      const items = await scrapeVivaRealFirefox(url);
+      if (items.length > 0) {
+        return { listings: portalListingsToCandidates(source, items) };
+      }
+      return {
+        listings: [],
+        warning: "Viva Real: Firefox não retornou cards (CF?).",
+      };
+    } catch (err) {
+      return {
+        listings: [],
+        warning:
+          err instanceof Error
+            ? `Viva Real: ${err.message}`
+            : "Viva Real: falha no Firefox.",
+      };
+    }
+  }
 
   // QuintoAndar / Chaves: paginação real quando Playwright liberado
   if (
