@@ -116,16 +116,9 @@ export function RadarApp() {
     });
   }, []);
 
-  // No desktop (lista ao lado), mantém o card visível na coluna.
-  // No mobile o card do pin fica acima do mapa — não rola a lista pra baixo.
+  // Card do pin fica acima do mapa; não força scroll da lista.
   useEffect(() => {
     if (!selectedId || !listRef.current) return;
-    if (
-      typeof window !== "undefined" &&
-      window.matchMedia("(max-width: 1023px)").matches
-    ) {
-      return;
-    }
     const el = listRef.current.querySelector<HTMLElement>(
       `[data-apartment-id="${selectedId}"]`
     );
@@ -219,9 +212,9 @@ export function RadarApp() {
   const mapBlock = (
     <section className="flex min-w-0 flex-1 flex-col">
       <div ref={mapSectionRef} className="scroll-mt-2">
-        {/* Mobile: card do pin acima do mapa (evita rolar até a lista). */}
+        {/* Card do pin acima do mapa (mobile e desktop). */}
         {selectedApartment ? (
-          <div className="border-b border-slate-200 bg-white lg:hidden">
+          <div className="border-b border-slate-200 bg-white">
             <div className="border-b border-teal-100 bg-teal-50/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-teal-900">
               Imóvel selecionado no mapa
             </div>
