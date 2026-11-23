@@ -56,9 +56,22 @@ if (!seed.length) process.exit(0);
 const seedUrls = countListingUrls(seed);
 const currentUrls = countListingUrls(target);
 
+function isHandEntered(a) {
+  const status = String(a.status || "");
+  const source = String(a.source || "").toLowerCase();
+  const portal = String(a.portal || "").toLowerCase();
+  return status === "Manual" || source === "manual" || portal === "manual";
+}
+
 if (seedUrls >= 20 && seedUrls > currentUrls + 5) {
   const byAddr = new Map(
     target.map((a) => [String(a.address || "").trim().toLowerCase(), a])
+  );
+  const seedIds = new Set(seed.map((s) => s.id));
+  const seedAddrs = new Set(
+    seed
+      .map((s) => String(s.address || "").trim().toLowerCase())
+      .filter(Boolean)
   );
   const merged = seed.map((s) => {
     const prev = byAddr.get(String(s.address || "").trim().toLowerCase());
@@ -69,9 +82,19 @@ if (seedUrls >= 20 && seedUrls > currentUrls + 5) {
       comments: prev.comments ?? s.comments,
     };
   });
+  // Preserva imóveis inseridos à mão que não estão no seed do scrape.
+  let keptManual = 0;
+  for (const prev of target) {
+    if (!isHandEntered(prev)) continue;
+    const addr = String(prev.address || "").trim().toLowerCase();
+    if (seedIds.has(prev.id)) continue;
+    if (addr && seedAddrs.has(addr)) continue;
+    merged.push(prev);
+    keptManual += 1;
+  }
   fs.writeFileSync(targetPath, `${JSON.stringify(merged, null, 2)}\n`, "utf8");
   console.log(
-    `seed-urls: volume atualizado com seed (${merged.length} imóveis, ${seedUrls} links)`
+    `seed-urls: volume atualizado com seed (${merged.length} imóveis, ${seedUrls} links, ${keptManual} manuais preservados)`
   );
   process.exit(0);
 }

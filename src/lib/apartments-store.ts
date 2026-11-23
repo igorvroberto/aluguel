@@ -80,10 +80,18 @@ function countListingUrls(apartments: Apartment[]): number {
   ).length;
 }
 
+function isHandEnteredApartment(apt: Apartment): boolean {
+  if (apt.status === "Manual") return true;
+  if ((apt.source || "").toLowerCase() === "manual") return true;
+  if ((apt.portal || "").toLowerCase() === "manual") return true;
+  return false;
+}
+
 /**
  * Volume antigo (seed manual sem links) vs seed da imagem (scrape com /imovel/…).
  * Se o seed tiver bem mais anúncios reais, substitui o volume — preserva
- * status/comentários quando o endereço bater.
+ * status/comentários quando o endereço bater e **sempre** mantém imóveis
+ * inseridos à mão (status/source/portal Manual).
  */
 async function hydrateEmptyUrlsFromSeed(
   apartments: Apartment[]
@@ -108,6 +116,10 @@ async function hydrateEmptyUrlsFromSeed(
       const byAddr = new Map(
         apartments.map((a) => [a.address.trim().toLowerCase(), a])
       );
+      const seedIds = new Set(seedList.map((s) => s.id));
+      const seedAddrs = new Set(
+        seedList.map((s) => s.address.trim().toLowerCase()).filter(Boolean)
+      );
       const merged = seedList.map((s) => {
         const prev = byAddr.get(s.address.trim().toLowerCase());
         if (!prev) return s;
@@ -117,6 +129,14 @@ async function hydrateEmptyUrlsFromSeed(
           comments: prev.comments ?? s.comments,
         });
       });
+      // Não apagar cadastros manuais do volume em deploys/restarts.
+      for (const prev of apartments) {
+        if (!isHandEnteredApartment(prev)) continue;
+        const addr = prev.address.trim().toLowerCase();
+        if (seedIds.has(prev.id)) continue;
+        if (addr && seedAddrs.has(addr)) continue;
+        merged.push(prev);
+      }
       memoryCache = merged;
       await writeToDisk(merged);
       return merged;
