@@ -26,12 +26,28 @@ export function transitModeMapColor(mode: TransitStepMode): string {
       return "#0f766e";
     case "BUS":
       return "#2563eb";
+    // Roxo — distinto da Linha 3-Vermelha (#EE352E) e da L6-Laranja
     case "SUBWAY":
-      return "#dc2626";
+      return "#7c3aed";
     default:
       return "#64748b";
   }
 }
+
+/** Itens da legenda do mapa (trajeto). */
+export const TRANSIT_ROUTE_LEGEND: ReadonlyArray<{
+  mode: TransitStepMode;
+  label: string;
+  color: string;
+}> = [
+  { mode: "WALK", label: "A pé", color: transitModeMapColor("WALK") },
+  { mode: "BUS", label: "Ônibus", color: transitModeMapColor("BUS") },
+  {
+    mode: "SUBWAY",
+    label: "Metrô (trajeto)",
+    color: transitModeMapColor("SUBWAY"),
+  },
+];
 
 /** Um trecho contínuo a pé (Caminhe) — nunca inclui metrô/ônibus. */
 export interface WalkPathSegment {

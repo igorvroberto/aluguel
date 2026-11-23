@@ -34,3 +34,10 @@ export function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(1).replace(".", ",")} km`;
 }
+
+/** Distância sempre em Km (pt-BR), ex.: 994 → "0,99 Km". */
+export function formatDistanceKm(meters: number): string {
+  const km = meters / 1000;
+  const digits = km < 10 ? 2 : 1;
+  return `${km.toFixed(digits).replace(".", ",")} Km`;
+}
