@@ -72,6 +72,18 @@ export function MapView({
       .then(() => {
         if (cancelled || !containerRef.current) return;
 
+        // Se a key for rejeitada depois do load, o Google chama gm_authFailure.
+        const prevAuth = window.gm_authFailure;
+        window.gm_authFailure = () => {
+          prevAuth?.();
+          if (!cancelled) {
+            setLoadError(
+              "Autenticação Google Maps falhou. Ative Maps JavaScript API, faturamento, e libere este domínio nas restrições HTTP referrer da chave."
+            );
+            setMapReady(false);
+          }
+        };
+
         const map = new google.maps.Map(containerRef.current, {
           center: { lat: DESTINATION.lat, lng: DESTINATION.lng },
           zoom: 13,
@@ -319,21 +331,18 @@ export function MapView({
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
             Defina{" "}
             <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
-              NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+              GOOGLE_MAPS_API_KEY
             </code>{" "}
-            (Maps JavaScript API) em{" "}
+            (ou{" "}
+            <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
+              NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+            </code>
+            ) no{" "}
             <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
               .env
             </code>{" "}
-            ou{" "}
-            <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
-              .env.local
-            </code>{" "}
-            e faça rebuild. Pode ser a mesma chave de{" "}
-            <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
-              GOOGLE_MAPS_API_KEY
-            </code>{" "}
-            se a API de Maps JavaScript estiver habilitada.
+            da VPS e reinicie o container. Ative também a{" "}
+            <strong>Maps JavaScript API</strong> no Google Cloud Console.
           </p>
         </div>
       </div>
@@ -342,10 +351,26 @@ export function MapView({
 
   if (loadError) {
     return (
-      <div className="relative flex h-full w-full items-center justify-center bg-slate-100 p-6 text-center">
-        <p className="max-w-md text-sm text-slate-600">
-          Não foi possível carregar o Google Maps: {loadError}
-        </p>
+      <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_top,_#d8ebe8_0%,_#e8eef2_45%,_#dce3ea_100%)] p-6">
+        <div className="relative z-10 mx-6 max-w-lg rounded-xl border border-amber-300/80 bg-white/95 p-6 text-center shadow-lg">
+          <p className="font-display text-lg font-semibold text-slate-900">
+            Google Maps não carregou
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            {loadError}
+          </p>
+          <p className="mt-3 text-left text-xs leading-relaxed text-slate-500">
+            No console do navegador costuma aparecer{" "}
+            <code className="rounded bg-slate-100 px-1 font-mono">
+              ApiNotActivatedMapError
+            </code>{" "}
+            (ative Maps JavaScript API) ou{" "}
+            <code className="rounded bg-slate-100 px-1 font-mono">
+              RefererNotAllowedMapError
+            </code>{" "}
+            (adicione o domínio nas restrições da chave).
+          </p>
+        </div>
       </div>
     );
   }
