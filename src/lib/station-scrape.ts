@@ -529,11 +529,12 @@ function portalListingsToCandidates(
 async function scrapePage(
   url: string,
   source: string,
-  allowPlaywright: boolean
+  allowPlaywright: boolean,
+  maxPages = 8
 ): Promise<{ listings: RawListingCandidate[]; warning?: string }> {
   const portal = normalizePortalId(source) as PortalId | undefined;
 
-  // Viva / ZAP / Imovelweb: Firefox (+ proxy p/ Imovelweb)
+  // Viva / ZAP / Imovelweb: Firefox (+ proxy p/ Imovelweb), paginação URL
   if (
     allowPlaywright &&
     (portal === "vivareal" ||
@@ -546,13 +547,14 @@ async function scrapePage(
         : portal === "imovelweb"
           ? "Imovelweb"
           : "Viva Real";
+    const pageOpts = { maxPages };
     try {
       const items =
         portal === "zapimoveis"
-          ? await scrapeZapFirefox(url)
+          ? await scrapeZapFirefox(url, pageOpts)
           : portal === "imovelweb"
-            ? await scrapeImovelwebFirefox(url)
-            : await scrapeVivaRealFirefox(url);
+            ? await scrapeImovelwebFirefox(url, pageOpts)
+            : await scrapeVivaRealFirefox(url, pageOpts);
       if (items.length > 0) {
         return { listings: portalListingsToCandidates(source, items) };
       }
@@ -726,13 +728,16 @@ export async function scrapeStationsNative(
         0,
         Math.max(4, maxPages * 2)
       );
+      // ZAP/Viva/Imovelweb: até N páginas por URL de busca (como Ver mais do QA/CNM)
+      const olxFamilyPages = Math.max(4, maxPages * 4);
       for (const item of urls) {
         scanned += 1;
         portals.add(item.source);
         const { listings, warning } = await scrapePage(
           item.url,
           item.source,
-          allowPlaywright
+          allowPlaywright,
+          olxFamilyPages
         );
         if (warning) warnings.push(warning);
         for (const listing of listings) {

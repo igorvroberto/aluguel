@@ -593,10 +593,49 @@ export function extractZapListingsFromHtml(
   return out;
 }
 
+/** Paginação por URL: ZAP/Viva `?pagina=N`; Imovelweb `-pagina-N.html`. */
+export function buildPortalPagedUrl(
+  url: string,
+  portal: "vivareal" | "zapimoveis" | "imovelweb",
+  page: number
+): string {
+  if (page <= 1) return url;
+  if (portal === "imovelweb") {
+    if (/[-_]pagina-\d+/i.test(url)) {
+      return url.replace(/([-_]pagina-)\d+/i, `$1${page}`);
+    }
+    return url.replace(/(\.html)(\?|$)/i, `-pagina-${page}$1$2`);
+  }
+  try {
+    const u = new URL(url);
+    u.searchParams.set("pagina", String(page));
+    return u.toString();
+  } catch {
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}pagina=${page}`;
+  }
+}
+
+function mergeListings(
+  into: PortalListing[],
+  batch: PortalListing[],
+  seen: Set<string>
+): number {
+  let added = 0;
+  for (const item of batch) {
+    const k = item.linkAnuncio.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    into.push(item);
+    added += 1;
+  }
+  return added;
+}
+
 async function scrapeOlxFamilyFirefox(
   url: string,
   portal: "vivareal" | "zapimoveis",
-  opts?: { browser?: Browser; scrollSteps?: number }
+  opts?: { browser?: Browser; scrollSteps?: number; maxPages?: number }
 ): Promise<PortalListing[]> {
   const browser = opts?.browser || (await getSharedFirefoxBrowser());
   const page = await browser.newPage({
@@ -605,63 +644,101 @@ async function scrapeOlxFamilyFirefox(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
     viewport: { width: 1440, height: 900 },
   });
+  const maxPages = Math.max(1, opts?.maxPages ?? 8);
+  const steps = opts?.scrollSteps ?? 5;
+  const seen = new Set<string>();
+  const out: PortalListing[] = [];
+
   try {
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await page.waitForTimeout(8000);
-    const steps = opts?.scrollSteps ?? 6;
-    for (let i = 0; i < steps; i++) {
-      await page.mouse.wheel(0, 1600);
-      await page.waitForTimeout(550);
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+      const pageUrl = buildPortalPagedUrl(url, portal, pageNum);
+      await page.goto(pageUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      });
+      await page.waitForTimeout(pageNum === 1 ? 8000 : 4500);
+      for (let i = 0; i < steps; i++) {
+        await page.mouse.wheel(0, 1600);
+        await page.waitForTimeout(450);
+      }
+      await page.waitForTimeout(1000);
+
+      const title = await page.title().catch(() => "");
+      const html = await page.content();
+      if (
+        /attention required|just a moment|um momento|you have been blocked/i.test(
+          `${title} ${html.slice(0, 2500)}`
+        )
+      ) {
+        break;
+      }
+      if (/não está mais disponível|ERROR_PAGE/i.test(html.slice(0, 8000))) {
+        break;
+      }
+
+      const batch =
+        portal === "zapimoveis"
+          ? extractZapListingsFromHtml(html, pageUrl)
+          : extractVivaListingsFromHtml(html, pageUrl);
+      const added = mergeListings(out, batch, seen);
+      if (added === 0) break;
     }
-    await page.waitForTimeout(1500);
-    const title = await page.title().catch(() => "");
-    const html = await page.content();
-    if (
-      /attention required|just a moment|um momento|you have been blocked/i.test(
-        `${title} ${html.slice(0, 2500)}`
-      )
-    ) {
-      return [];
-    }
-    if (/não está mais disponível|ERROR_PAGE/i.test(html.slice(0, 8000))) {
-      return [];
-    }
-    return portal === "zapimoveis"
-      ? extractZapListingsFromHtml(html, url)
-      : extractVivaListingsFromHtml(html, url);
   } catch {
-    return [];
+    // page errors
   } finally {
     await page.close().catch(() => undefined);
   }
+  return out;
 }
 
-/** Viva Real via Firefox (Chromium recebe Attention Required / sem cards). */
+/** Viva Real via Firefox — várias páginas (`?pagina=N`). */
 export async function scrapeVivaRealFirefox(
   url: string,
-  opts?: { browser?: Browser; scrollSteps?: number }
+  opts?: { browser?: Browser; scrollSteps?: number; maxPages?: number }
 ): Promise<PortalListing[]> {
   return scrapeOlxFamilyFirefox(url, "vivareal", opts);
 }
 
 /**
  * ZAP Imóveis via Firefox + URL com zona
- * (`sp+sao-paulo+zona-oeste+perdizes`, sem `++`).
+ * (`sp+sao-paulo+zona-oeste+perdizes`, sem `++`) — paginação `?pagina=N`.
  */
 export async function scrapeZapFirefox(
   url: string,
-  opts?: { browser?: Browser; scrollSteps?: number }
+  opts?: { browser?: Browser; scrollSteps?: number; maxPages?: number }
 ): Promise<PortalListing[]> {
   return scrapeOlxFamilyFirefox(url, "zapimoveis", opts);
 }
 
+async function waitOutImovelwebTurnstile(
+  page: import("playwright").Page
+): Promise<boolean> {
+  for (let i = 0; i < 20; i++) {
+    await page.waitForTimeout(3000);
+    const title = await page.title().catch(() => "");
+    for (const frame of page.frames()) {
+      const fu = frame.url();
+      if (!/turnstile|challenge|cloudflare/i.test(fu)) continue;
+      try {
+        await frame.locator("body").click({ timeout: 1000 });
+        await frame.locator("input").first().click({ timeout: 1000 });
+      } catch {
+        // ignore
+      }
+    }
+    if (!/um momento|just a moment|verifica/i.test(title)) return true;
+  }
+  const title = await page.title().catch(() => "");
+  return !/um momento|just a moment|attention required|blocked/i.test(title);
+}
+
 /**
  * Imovelweb via Firefox + SCRAPE_PROXY_URL (residencial).
- * Turnstile: espera longa + clique nos frames de challenge (validado na VPS).
+ * Turnstile na 1ª página; demais via `-pagina-N.html`.
  */
 export async function scrapeImovelwebFirefox(
   url: string,
-  opts?: { browser?: Browser; scrollSteps?: number }
+  opts?: { browser?: Browser; scrollSteps?: number; maxPages?: number }
 ): Promise<PortalListing[]> {
   if (!scrapeProxyServer()) {
     return [];
@@ -673,40 +750,46 @@ export async function scrapeImovelwebFirefox(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
     viewport: { width: 1440, height: 900 },
   });
+  const maxPages = Math.max(1, opts?.maxPages ?? 8);
+  const steps = opts?.scrollSteps ?? 5;
+  const seen = new Set<string>();
+  const out: PortalListing[] = [];
+
   try {
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 90000 });
-    for (let i = 0; i < 20; i++) {
-      await page.waitForTimeout(3000);
-      const title = await page.title().catch(() => "");
-      for (const frame of page.frames()) {
-        const fu = frame.url();
-        if (!/turnstile|challenge|cloudflare/i.test(fu)) continue;
-        try {
-          await frame.locator("body").click({ timeout: 1000 });
-          await frame.locator("input").first().click({ timeout: 1000 });
-        } catch {
-          // ignore
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+      const pageUrl = buildPortalPagedUrl(url, "imovelweb", pageNum);
+      await page.goto(pageUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 90000,
+      });
+      if (pageNum === 1) {
+        const ok = await waitOutImovelwebTurnstile(page);
+        if (!ok) break;
+      } else {
+        await page.waitForTimeout(4000);
+        const title = await page.title().catch(() => "");
+        if (/um momento|just a moment|verifica/i.test(title)) {
+          const ok = await waitOutImovelwebTurnstile(page);
+          if (!ok) break;
         }
       }
-      if (!/um momento|just a moment|verifica/i.test(title)) break;
+
+      for (let i = 0; i < steps; i++) {
+        await page.mouse.wheel(0, 1600);
+        await page.waitForTimeout(450);
+      }
+      await page.waitForTimeout(1000);
+      const html = await page.content();
+      const batch = extractFromHtmlPortals(html, "imovelweb", pageUrl);
+      const added = mergeListings(out, batch, seen);
+      if (added === 0) break;
     }
-    const title = await page.title().catch(() => "");
-    if (/um momento|just a moment|attention required|blocked/i.test(title)) {
-      return [];
-    }
-    const steps = opts?.scrollSteps ?? 6;
-    for (let i = 0; i < steps; i++) {
-      await page.mouse.wheel(0, 1600);
-      await page.waitForTimeout(550);
-    }
-    await page.waitForTimeout(1500);
-    const html = await page.content();
-    return extractFromHtmlPortals(html, "imovelweb", url);
   } catch {
-    return [];
+    // page errors
   } finally {
     await page.close().catch(() => undefined);
   }
+  return out;
 }
 
 export function buildPortalSearchUrls(

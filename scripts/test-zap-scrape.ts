@@ -11,8 +11,9 @@ const URL =
   "https://www.zapimoveis.com.br/aluguel/apartamentos/sp+sao-paulo+zona-oeste+perdizes/2-quartos/?transacao=aluguel&tipos=apartamento_residencial&quartos=2";
 
 async function main() {
-  console.log("zap+firefox:", URL);
-  const items = await scrapeZapFirefox(URL, { scrollSteps: 5 });
+  const maxPages = Number(process.env.MAX_PAGES || 3);
+  console.log("zap+firefox:", URL, "maxPages=", maxPages);
+  const items = await scrapeZapFirefox(URL, { scrollSteps: 5, maxPages });
   console.log(
     JSON.stringify(
       {

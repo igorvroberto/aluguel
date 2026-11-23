@@ -30,7 +30,12 @@ async function main() {
     })
   );
 
-  const items = await scrapeImovelwebFirefox(URL, { scrollSteps: 5 });
+  const maxPages = Number(process.env.MAX_PAGES || 3);
+  console.log("imovelweb maxPages=", maxPages);
+  const items = await scrapeImovelwebFirefox(URL, {
+    scrollSteps: 5,
+    maxPages,
+  });
   console.log(
     JSON.stringify(
       {

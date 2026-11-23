@@ -45,6 +45,8 @@ const TARGET_ROOMS = 2;
 const ORIGEM = "scraping" as const;
 const MAX_VER_MAIS_QA = 25;
 const MAX_VER_MAIS_CNM = 12;
+/** Até N páginas por busca ZAP / Viva / Imovelweb (`?pagina=` / `-pagina-N`). */
+const MAX_PAGES_OLX_FAMILY = 8;
 
 const SANTA_MARCELINA = {
   name: "Faculdade Santa Marcelina Perdizes",
@@ -246,13 +248,13 @@ async function scrapeSlice(
     });
   }
   if (portal === "vivareal") {
-    return scrapeVivaRealFirefox(url);
+    return scrapeVivaRealFirefox(url, { maxPages: MAX_PAGES_OLX_FAMILY });
   }
   if (portal === "zapimoveis") {
-    return scrapeZapFirefox(url);
+    return scrapeZapFirefox(url, { maxPages: MAX_PAGES_OLX_FAMILY });
   }
   if (portal === "imovelweb") {
-    return scrapeImovelwebFirefox(url);
+    return scrapeImovelwebFirefox(url, { maxPages: MAX_PAGES_OLX_FAMILY });
   }
   return [];
 }

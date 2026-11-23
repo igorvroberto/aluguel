@@ -11,8 +11,9 @@ const URL =
   "https://www.vivareal.com.br/aluguel/sp/sao-paulo/zona-oeste/perdizes/apartamento_residencial/";
 
 async function main() {
-  console.log("viva+firefox: abrindo", URL);
-  const items = await scrapeVivaRealFirefox(URL, { scrollSteps: 5 });
+  const maxPages = Number(process.env.MAX_PAGES || 3);
+  console.log("viva+firefox: abrindo", URL, "maxPages=", maxPages);
+  const items = await scrapeVivaRealFirefox(URL, { scrollSteps: 5, maxPages });
   console.log(
     JSON.stringify(
       {
