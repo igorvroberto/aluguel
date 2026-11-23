@@ -1,8 +1,10 @@
 /**
  * Scraping Playwright: ZAP/Viva (intercept Glue JSON) + HTML portals (JSON-LD/DOM).
+ * Viva Real: Chromium cai no Cloudflare; Firefox headless costuma passar e
+ * expor cards/links de /imovel/… (teste Nov/2026).
  */
 import * as cheerio from "cheerio";
-import { chromium, type Browser, type Page } from "playwright";
+import { chromium, firefox, type Browser, type Page } from "playwright";
 import {
   isGlueListingsUrl,
   parseGlueListings,
@@ -23,6 +25,7 @@ const UA =
 export type PlaywrightMode = "headed" | "headless";
 
 let sharedBrowser: Promise<Browser> | null = null;
+let sharedFirefox: Promise<Browser> | null = null;
 
 export async function getSharedBrowser(
   mode: PlaywrightMode = "headed"
@@ -41,15 +44,36 @@ export async function getSharedBrowser(
   return sharedBrowser;
 }
 
+/** Proxy opcional (residencial) — necessário p/ Imovelweb / Turnstile duro. */
+function scrapeProxyServer(): string | undefined {
+  const raw = (process.env.SCRAPE_PROXY_URL || "").trim();
+  return raw || undefined;
+}
+
+/** Firefox: melhor taxa contra Cloudflare do Viva/ZAP neste ambiente. */
+export async function getSharedFirefoxBrowser(): Promise<Browser> {
+  if (!sharedFirefox) {
+    const server = scrapeProxyServer();
+    sharedFirefox = firefox.launch({
+      headless: true,
+      ...(server ? { proxy: { server } } : {}),
+    });
+  }
+  return sharedFirefox;
+}
+
 export async function closeSharedBrowser(): Promise<void> {
-  if (!sharedBrowser) return;
-  try {
-    const b = await sharedBrowser;
-    await b.close();
-  } catch {
-    // ignore
-  } finally {
-    sharedBrowser = null;
+  const jobs: Array<Promise<Browser> | null> = [sharedBrowser, sharedFirefox];
+  sharedBrowser = null;
+  sharedFirefox = null;
+  for (const job of jobs) {
+    if (!job) continue;
+    try {
+      const b = await job;
+      await b.close();
+    } catch {
+      // ignore
+    }
   }
 }
 
@@ -310,13 +334,15 @@ export function extractFromHtmlPortals(
     portal === "chavesnamao"
       ? ["/imovel/", "/apartamento", "chavesnamao.com.br"]
       : portal === "imovelweb"
-        ? ["/propriedades/", "/apartamento", "imovelweb.com.br"]
+        ? ["/propriedades/"]
         : ["/imovel/", "/apartamento", "/propriedades/"];
 
   $("a[href]").each((_, el) => {
     const href = $(el).attr("href") || "";
     if (!hrefHints.some((h) => href.includes(h))) return;
-    if (/busca|filtro|login|cadastro/i.test(href)) return;
+    if (/busca|filtro|login|cadastro|venda-/i.test(href)) return;
+    // Imovelweb: só fichas de imóvel, não listagens de bairro.
+    if (portal === "imovelweb" && !/\/propriedades\//i.test(href)) return;
     const abs = absUrl(href, pageUrl);
     if (seen.has(abs.toLowerCase())) return;
     const card = $(el).closest("article, li, div.card, div[data-id], div.result");
@@ -408,6 +434,364 @@ export async function scrapeHtmlSearchPage(
   }
 }
 
+function pricesFromCardText(cardText: string): {
+  condominio: number;
+  iptu: number;
+} {
+  const prices = Array.from(cardText.matchAll(/R\$\s*([\d.]+)/g)).map((m) =>
+    parseBRLNumber(m[1])
+  );
+  const nums = prices.filter((n): n is number => n != null && n > 0);
+  // Heurística: 1º = aluguel (já no slug), 2º condomínio, 3º IPTU
+  return {
+    condominio: nums.length >= 2 ? nums[1] || 0 : 0,
+    iptu: nums.length >= 3 ? nums[2] || 0 : 0,
+  };
+}
+
+function bairroFromOlxSlug(slug: string): string {
+  // …-com-piscina-perdizes-zona-oeste-… → "Perdizes"
+  const beforeZona = slug.match(
+    /-([a-z0-9-]+)-zona-(?:oeste|leste|norte|sul|centro)/i
+  );
+  if (beforeZona) {
+    const parts = beforeZona[1].split("-").filter(Boolean);
+    const last = parts[parts.length - 1] || "";
+    if (last) return last.charAt(0).toUpperCase() + last.slice(1);
+  }
+  const m = slug.match(
+    /(?:quartos?|quarto)-([a-z0-9-]+?)-(?:sao-paulo|com-|\d+m2)/i
+  );
+  const raw = (m?.[1] || "").split("-").filter(Boolean).pop() || "";
+  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : "";
+}
+
+/**
+ * Extrai anúncios do HTML do Viva Real a partir dos links /imovel/…-aluguel-RS…-id-….
+ * Funciona mesmo sem Glue /v2/listings (bloqueado pelo CF no Chromium).
+ */
+export function extractVivaListingsFromHtml(
+  html: string,
+  pageUrl: string
+): PortalListing[] {
+  const $ = cheerio.load(html);
+  const out: PortalListing[] = [];
+  const seen = new Set<string>();
+
+  $('a[href*="/imovel/"][href*="-id-"]').each((_, el) => {
+    const href = String($(el).attr("href") || "");
+    const link = absUrl(href, pageUrl).split("?")[0];
+    if (!/\/imovel\/.+-id-\d+/i.test(link)) return;
+    if (/ERROR_PAGE|showcase/i.test(href)) return;
+    const k = link.toLowerCase();
+    if (seen.has(k)) return;
+
+    const slug = link.split("/imovel/")[1] || "";
+    const roomsMatch = slug.match(/(\d+)-quartos?/i);
+    const areaMatch = slug.match(/(\d+)m2/i);
+    const rentMatch = slug.match(/aluguel-RS(\d+)/i);
+    const idMatch = slug.match(/id-(\d+)/i);
+    const aluguel = rentMatch ? Number(rentMatch[1]) : 0;
+    if (!aluguel || !idMatch) return;
+
+    const bairro = bairroFromOlxSlug(slug) || "Perdizes";
+    const card = $(el).closest(
+      "article, li, [data-type], .property-card, .listing-card, div"
+    );
+    const { condominio, iptu } = pricesFromCardText(
+      card.text().replace(/\s+/g, " ").trim()
+    );
+
+    seen.add(k);
+    out.push({
+      id: idMatch[1],
+      titulo:
+        card.find("h2, h3, [class*='title']").first().text().trim() ||
+        `Apartamento ${roomsMatch?.[1] || "?"} qtos — ${bairro}`,
+      endereco: `${bairro}, São Paulo - SP`,
+      bairro,
+      aluguel,
+      condominio,
+      iptu,
+      quartos: roomsMatch ? Number(roomsMatch[1]) : 0,
+      vagas: /com-garagem/i.test(slug) ? 1 : undefined,
+      areaM2: areaMatch ? Number(areaMatch[1]) : undefined,
+      portaria24h: false,
+      linkAnuncio: link.startsWith("http")
+        ? link
+        : `https://www.vivareal.com.br${link}`,
+      portal: "vivareal",
+      portalLabel: PORTAL_LABELS.vivareal,
+    });
+  });
+
+  return out;
+}
+
+/**
+ * ZAP Imóveis: links /imovel/aluguel-apartamento-N-quartos-…-Xm2-id-….
+ * URL de busca precisa incluir a zona (`sp+sao-paulo+zona-oeste+perdizes`),
+ * senão o site devolve ERROR_PAGE / “página não disponível”.
+ */
+export function extractZapListingsFromHtml(
+  html: string,
+  pageUrl: string
+): PortalListing[] {
+  const $ = cheerio.load(html);
+  const out: PortalListing[] = [];
+  const seen = new Set<string>();
+
+  $('a[href*="/imovel/"][href*="-id-"]').each((_, el) => {
+    const href = String($(el).attr("href") || "");
+    if (/ERROR_PAGE|showcase/i.test(href)) return;
+    const link = absUrl(href, pageUrl).split("?")[0];
+    if (!/\/imovel\/aluguel-.+-id-\d+/i.test(link)) return;
+    const k = link.toLowerCase();
+    if (seen.has(k)) return;
+
+    const slug = link.split("/imovel/")[1] || "";
+    const roomsMatch = slug.match(/(\d+)-quartos?/i);
+    const areaMatch = slug.match(/(\d+)m2/i);
+    const idMatch = slug.match(/id-(\d+)/i);
+    if (!idMatch) return;
+
+    const card = $(el).closest(
+      "article, li, [data-type], .property-card, .listing-card, div"
+    );
+    const cardText = card.text().replace(/\s+/g, " ").trim();
+    const { condominio, iptu } = pricesFromCardText(cardText);
+    const rentFromCard = Array.from(cardText.matchAll(/R\$\s*([\d.]+)/g))
+      .map((m) => parseBRLNumber(m[1]))
+      .find((n) => n != null && n >= 800);
+    const aluguel = rentFromCard ?? 0;
+    if (!aluguel) return;
+
+    const bairro = bairroFromOlxSlug(slug) || "Perdizes";
+    seen.add(k);
+    out.push({
+      id: idMatch[1],
+      titulo:
+        card.find("h2, h3, [class*='title']").first().text().trim() ||
+        `Apartamento ${roomsMatch?.[1] || "?"} qtos — ${bairro}`,
+      endereco: `${bairro}, São Paulo - SP`,
+      bairro,
+      aluguel,
+      condominio,
+      iptu,
+      quartos: roomsMatch ? Number(roomsMatch[1]) : 0,
+      vagas: /vaga|garagem/i.test(slug + cardText) ? 1 : undefined,
+      areaM2: areaMatch ? Number(areaMatch[1]) : undefined,
+      portaria24h: false,
+      linkAnuncio: link.startsWith("http")
+        ? link
+        : `https://www.zapimoveis.com.br${link}`,
+      portal: "zapimoveis",
+      portalLabel: PORTAL_LABELS.zapimoveis,
+    });
+  });
+
+  return out;
+}
+
+/** Paginação por URL: ZAP/Viva `?pagina=N`; Imovelweb `-pagina-N.html`. */
+export function buildPortalPagedUrl(
+  url: string,
+  portal: "vivareal" | "zapimoveis" | "imovelweb",
+  page: number
+): string {
+  if (page <= 1) return url;
+  if (portal === "imovelweb") {
+    if (/[-_]pagina-\d+/i.test(url)) {
+      return url.replace(/([-_]pagina-)\d+/i, `$1${page}`);
+    }
+    return url.replace(/(\.html)(\?|$)/i, `-pagina-${page}$1$2`);
+  }
+  try {
+    const u = new URL(url);
+    u.searchParams.set("pagina", String(page));
+    return u.toString();
+  } catch {
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}pagina=${page}`;
+  }
+}
+
+function mergeListings(
+  into: PortalListing[],
+  batch: PortalListing[],
+  seen: Set<string>
+): number {
+  let added = 0;
+  for (const item of batch) {
+    const k = item.linkAnuncio.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    into.push(item);
+    added += 1;
+  }
+  return added;
+}
+
+async function scrapeOlxFamilyFirefox(
+  url: string,
+  portal: "vivareal" | "zapimoveis",
+  opts?: { browser?: Browser; scrollSteps?: number; maxPages?: number }
+): Promise<PortalListing[]> {
+  const browser = opts?.browser || (await getSharedFirefoxBrowser());
+  const page = await browser.newPage({
+    locale: "pt-BR",
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+    viewport: { width: 1440, height: 900 },
+  });
+  const maxPages = Math.max(1, opts?.maxPages ?? 8);
+  const steps = opts?.scrollSteps ?? 5;
+  const seen = new Set<string>();
+  const out: PortalListing[] = [];
+
+  try {
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+      const pageUrl = buildPortalPagedUrl(url, portal, pageNum);
+      await page.goto(pageUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      });
+      await page.waitForTimeout(pageNum === 1 ? 8000 : 4500);
+      for (let i = 0; i < steps; i++) {
+        await page.mouse.wheel(0, 1600);
+        await page.waitForTimeout(450);
+      }
+      await page.waitForTimeout(1000);
+
+      const title = await page.title().catch(() => "");
+      const html = await page.content();
+      if (
+        /attention required|just a moment|um momento|you have been blocked/i.test(
+          `${title} ${html.slice(0, 2500)}`
+        )
+      ) {
+        break;
+      }
+      if (/não está mais disponível|ERROR_PAGE/i.test(html.slice(0, 8000))) {
+        break;
+      }
+
+      const batch =
+        portal === "zapimoveis"
+          ? extractZapListingsFromHtml(html, pageUrl)
+          : extractVivaListingsFromHtml(html, pageUrl);
+      const added = mergeListings(out, batch, seen);
+      if (added === 0) break;
+    }
+  } catch {
+    // page errors
+  } finally {
+    await page.close().catch(() => undefined);
+  }
+  return out;
+}
+
+/** Viva Real via Firefox — várias páginas (`?pagina=N`). */
+export async function scrapeVivaRealFirefox(
+  url: string,
+  opts?: { browser?: Browser; scrollSteps?: number; maxPages?: number }
+): Promise<PortalListing[]> {
+  return scrapeOlxFamilyFirefox(url, "vivareal", opts);
+}
+
+/**
+ * ZAP Imóveis via Firefox + URL com zona
+ * (`sp+sao-paulo+zona-oeste+perdizes`, sem `++`) — paginação `?pagina=N`.
+ */
+export async function scrapeZapFirefox(
+  url: string,
+  opts?: { browser?: Browser; scrollSteps?: number; maxPages?: number }
+): Promise<PortalListing[]> {
+  return scrapeOlxFamilyFirefox(url, "zapimoveis", opts);
+}
+
+async function waitOutImovelwebTurnstile(
+  page: import("playwright").Page
+): Promise<boolean> {
+  for (let i = 0; i < 20; i++) {
+    await page.waitForTimeout(3000);
+    const title = await page.title().catch(() => "");
+    for (const frame of page.frames()) {
+      const fu = frame.url();
+      if (!/turnstile|challenge|cloudflare/i.test(fu)) continue;
+      try {
+        await frame.locator("body").click({ timeout: 1000 });
+        await frame.locator("input").first().click({ timeout: 1000 });
+      } catch {
+        // ignore
+      }
+    }
+    if (!/um momento|just a moment|verifica/i.test(title)) return true;
+  }
+  const title = await page.title().catch(() => "");
+  return !/um momento|just a moment|attention required|blocked/i.test(title);
+}
+
+/**
+ * Imovelweb via Firefox + SCRAPE_PROXY_URL (residencial).
+ * Turnstile na 1ª página; demais via `-pagina-N.html`.
+ */
+export async function scrapeImovelwebFirefox(
+  url: string,
+  opts?: { browser?: Browser; scrollSteps?: number; maxPages?: number }
+): Promise<PortalListing[]> {
+  if (!scrapeProxyServer()) {
+    return [];
+  }
+  const browser = opts?.browser || (await getSharedFirefoxBrowser());
+  const page = await browser.newPage({
+    locale: "pt-BR",
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+    viewport: { width: 1440, height: 900 },
+  });
+  const maxPages = Math.max(1, opts?.maxPages ?? 8);
+  const steps = opts?.scrollSteps ?? 5;
+  const seen = new Set<string>();
+  const out: PortalListing[] = [];
+
+  try {
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+      const pageUrl = buildPortalPagedUrl(url, "imovelweb", pageNum);
+      await page.goto(pageUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 90000,
+      });
+      if (pageNum === 1) {
+        const ok = await waitOutImovelwebTurnstile(page);
+        if (!ok) break;
+      } else {
+        await page.waitForTimeout(4000);
+        const title = await page.title().catch(() => "");
+        if (/um momento|just a moment|verifica/i.test(title)) {
+          const ok = await waitOutImovelwebTurnstile(page);
+          if (!ok) break;
+        }
+      }
+
+      for (let i = 0; i < steps; i++) {
+        await page.mouse.wheel(0, 1600);
+        await page.waitForTimeout(450);
+      }
+      await page.waitForTimeout(1000);
+      const html = await page.content();
+      const batch = extractFromHtmlPortals(html, "imovelweb", pageUrl);
+      const added = mergeListings(out, batch, seen);
+      if (added === 0) break;
+    }
+  } catch {
+    // page errors
+  } finally {
+    await page.close().catch(() => undefined);
+  }
+  return out;
+}
+
 export function buildPortalSearchUrls(
   neigh: string,
   opts: { rooms: number; priceBand: SearchPriceBand }
@@ -428,8 +812,30 @@ export function buildPortalSearchUrls(
         `https://www.chavesnamao.com.br/apartamentos-para-alugar/sp-sao-paulo/${neigh}/` +
         `?valorMin=${min}&valorMax=${max}&quartos=${rooms}`,
     },
+    {
+      portal: "vivareal",
+      url:
+        `https://www.vivareal.com.br/aluguel/sp/sao-paulo/zona-oeste/${neigh}/apartamento_residencial/` +
+        `?precoMaximo=${max}&precoMinimo=${min}&quartos=${rooms}`,
+    },
+    {
+      portal: "zapimoveis",
+      // Formato antigo `sp+sao-paulo++perdizes` devolve ERROR_PAGE.
+      url:
+        `https://www.zapimoveis.com.br/aluguel/apartamentos/sp+sao-paulo+zona-oeste+${neigh}/` +
+        `${rooms}-quartos/?transacao=aluguel&tipos=apartamento_residencial&quartos=${rooms}&precoMaximo=${max}`,
+    },
+    {
+      portal: "imovelweb",
+      url:
+        `https://www.imovelweb.com.br/apartamentos-aluguel-${neigh}-sao-paulo.html` +
+        `?precio-maximo=${max}&precio-minimo=${min}&ambientes=${rooms}`,
+    },
   ];
-  const active = new Set<PortalId>(SCRAPE_ACTIVE_PORTALS);
+  const active = new Set<PortalId>([
+    ...SCRAPE_ACTIVE_PORTALS,
+    ...(scrapeProxyServer() ? (["imovelweb"] as const) : []),
+  ]);
   return all.filter((item) => active.has(item.portal));
 }
 

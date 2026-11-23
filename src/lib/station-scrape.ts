@@ -6,6 +6,7 @@ import {
   PORTAL_LABELS,
   SCRAPE_ACTIVE_PORTALS,
   SEARCH_PRICE_BANDS,
+  isImovelwebScrapeEnabled,
   normalizePortalId,
   type PortalId,
 } from "./portals";
@@ -13,7 +14,10 @@ import {
   closeSharedBrowser,
   getSharedBrowser,
   scrapeChavesPaginated,
+  scrapeImovelwebFirefox,
   scrapeQuintoAndarPaginated,
+  scrapeVivaRealFirefox,
+  scrapeZapFirefox,
 } from "./portal-playwright";
 import type { Apartment, ApartmentStatus } from "./types";
 
@@ -57,6 +61,23 @@ function slugify(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+/** Path de zona do Viva Real a partir do slug do bairro/estação. */
+function vivaZonaForNeighborhood(neigh: string): string {
+  const n = neigh.toLowerCase();
+  if (
+    /perdizes|pompeia|sumare|vila-madalena|pinheiros|alto-de-pinheiros|lapa|agua-branca|barra-funda|santa-cecilia|higienopolis|consolacao|bela-vista/.test(
+      n
+    )
+  ) {
+    return "zona-oeste";
+  }
+  if (/tatuape|belem|mooca|bras|penha/.test(n)) return "zona-leste";
+  if (/santana|tucuruvi|casa-verde|freguesia/.test(n)) return "zona-norte";
+  if (/saude|vila-mariana|ipiranga|jabaquara/.test(n)) return "zona-sul";
+  if (/republica|se|centro|luz|anhangabau/.test(n)) return "centro";
+  return "zona-oeste";
 }
 
 async function fetchHtml(
@@ -435,6 +456,34 @@ function buildSearchUrls(
           `?valorMin=${band.min}&valorMax=${max}&quartos=${roomMin}`,
       });
     }
+    if (active.has("vivareal")) {
+      // Zona heurística — Perdizes/Pompéia/etc. caem em zona-oeste.
+      const zona = vivaZonaForNeighborhood(neigh);
+      out.push({
+        source: "vivareal",
+        url:
+          `https://www.vivareal.com.br/aluguel/sp/sao-paulo/${zona}/${neigh}/apartamento_residencial/` +
+          `#quartos=${roomMin}&preco-ate=${max}&preco-desde=${band.min}`,
+      });
+    }
+    if (active.has("zapimoveis")) {
+      const zona = vivaZonaForNeighborhood(neigh);
+      // Path ZAP: sp+sao-paulo+zona-oeste+perdizes (sem `++`).
+      out.push({
+        source: "zapimoveis",
+        url:
+          `https://www.zapimoveis.com.br/aluguel/apartamentos/sp+sao-paulo+${zona}+${neigh}/` +
+          `${roomMin}-quartos/?transacao=aluguel&tipos=apartamento_residencial&quartos=${roomMin}&precoMaximo=${max}`,
+      });
+    }
+    if (isImovelwebScrapeEnabled()) {
+      out.push({
+        source: "imovelweb",
+        url:
+          `https://www.imovelweb.com.br/apartamentos-aluguel-${neigh}-sao-paulo.html` +
+          `?precio-maximo=${max}&precio-minimo=${band.min}&ambientes=${roomMin}`,
+      });
+    }
   }
   return out;
 }
@@ -480,9 +529,49 @@ function portalListingsToCandidates(
 async function scrapePage(
   url: string,
   source: string,
-  allowPlaywright: boolean
+  allowPlaywright: boolean,
+  maxPages = 8
 ): Promise<{ listings: RawListingCandidate[]; warning?: string }> {
   const portal = normalizePortalId(source) as PortalId | undefined;
+
+  // Viva / ZAP / Imovelweb: Firefox (+ proxy p/ Imovelweb), paginação URL
+  if (
+    allowPlaywright &&
+    (portal === "vivareal" ||
+      portal === "zapimoveis" ||
+      portal === "imovelweb")
+  ) {
+    const label =
+      portal === "zapimoveis"
+        ? "ZAP"
+        : portal === "imovelweb"
+          ? "Imovelweb"
+          : "Viva Real";
+    const pageOpts = { maxPages };
+    try {
+      const items =
+        portal === "zapimoveis"
+          ? await scrapeZapFirefox(url, pageOpts)
+          : portal === "imovelweb"
+            ? await scrapeImovelwebFirefox(url, pageOpts)
+            : await scrapeVivaRealFirefox(url, pageOpts);
+      if (items.length > 0) {
+        return { listings: portalListingsToCandidates(source, items) };
+      }
+      return {
+        listings: [],
+        warning: `${label}: Firefox não retornou cards (CF/proxy/URL?).`,
+      };
+    } catch (err) {
+      return {
+        listings: [],
+        warning:
+          err instanceof Error
+            ? `${label}: ${err.message}`
+            : `${label}: falha no Firefox.`,
+      };
+    }
+  }
 
   // QuintoAndar / Chaves: paginação real quando Playwright liberado
   if (
@@ -639,13 +728,16 @@ export async function scrapeStationsNative(
         0,
         Math.max(4, maxPages * 2)
       );
+      // ZAP/Viva/Imovelweb: até N páginas por URL de busca (como Ver mais do QA/CNM)
+      const olxFamilyPages = Math.max(4, maxPages * 4);
       for (const item of urls) {
         scanned += 1;
         portals.add(item.source);
         const { listings, warning } = await scrapePage(
           item.url,
           item.source,
-          allowPlaywright
+          allowPlaywright,
+          olxFamilyPages
         );
         if (warning) warnings.push(warning);
         for (const listing of listings) {
