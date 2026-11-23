@@ -19,6 +19,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-${GOOGLE_MAPS_API_KEY:-}}
         NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
     image: radar-imoveis:v0.1
     container_name: radar-imoveis-web
@@ -30,6 +31,7 @@ services:
       PORT: 3000
       HOSTNAME: 0.0.0.0
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-${GOOGLE_MAPS_API_KEY:-}}
       APARTMENTS_DATA_PATH: /app/data/apartments.json
       ENABLE_PLAYWRIGHT_SCRAPE: ${ENABLE_PLAYWRIGHT_SCRAPE:-0}
     ports:

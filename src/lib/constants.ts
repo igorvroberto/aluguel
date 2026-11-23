@@ -6,7 +6,7 @@ export const DESTINATION = {
   lng: -46.66527,
 } as const;
 
-export const DEFAULT_MAX_PACKAGE = 6000;
+export const DEFAULT_MAX_PACKAGE = 4000;
 
 export const TRANSIT_STATIONS = [
   {
@@ -82,5 +82,3 @@ export const BUS_CORRIDORS = [
     ] as [number, number][],
   },
 ] as const;
-
-export const MAPBOX_STYLE = "mapbox://styles/mapbox/outdoors-v12";

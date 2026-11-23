@@ -22,7 +22,7 @@ import {
   type FiltersState,
 } from "@/lib/types";
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 export function RadarApp() {
   const [apartments, setApartments] = useState<Apartment[]>([]);
@@ -181,7 +181,7 @@ export function RadarApp() {
       <div ref={mapSectionRef} className="scroll-mt-2">
         <div className="h-[45vh] min-h-[280px] border-b border-slate-200 lg:h-[70vh]">
           <MapView
-            token={MAPBOX_TOKEN}
+            apiKey={GOOGLE_MAPS_API_KEY}
             apartments={visible}
             selectedId={selectedId}
             googleTransitRoute={googleTransitRoute}
