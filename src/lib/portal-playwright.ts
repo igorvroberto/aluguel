@@ -13,7 +13,7 @@ import {
 import { parseBRLNumber } from "./listing-parser";
 import {
   PORTAL_LABELS,
-  SCRAPE_ACTIVE_PORTALS,
+  resolveScrapePortals,
   normalizePortalId,
   type PortalId,
   type SearchPriceBand,
@@ -832,10 +832,27 @@ export function buildPortalSearchUrls(
         `?precio-maximo=${max}&precio-minimo=${min}&ambientes=${rooms}`,
     },
   ];
-  const active = new Set<PortalId>([
-    ...SCRAPE_ACTIVE_PORTALS,
-    ...(scrapeProxyServer() ? (["imovelweb"] as const) : []),
-  ]);
+  const active = new Set<PortalId>(resolveScrapePortals());
+  if (scrapeProxyServer()) {
+    const skip = new Set(
+      (process.env.SCRAPE_SKIP_PORTALS || "")
+        .split(/[,;\s]+/)
+        .map((s) => normalizePortalId(s))
+        .filter((id): id is PortalId => Boolean(id))
+    );
+    const onlyRaw = (process.env.SCRAPE_ONLY_PORTALS || "").trim();
+    const only = onlyRaw
+      ? new Set(
+          onlyRaw
+            .split(/[,;\s]+/)
+            .map((s) => normalizePortalId(s))
+            .filter((id): id is PortalId => Boolean(id))
+        )
+      : null;
+    if (!skip.has("imovelweb") && (!only || only.has("imovelweb"))) {
+      active.add("imovelweb");
+    }
+  }
   return all.filter((item) => active.has(item.portal));
 }
 

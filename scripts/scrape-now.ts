@@ -18,9 +18,9 @@ import type { PortalListing } from "../src/lib/glue-listings";
 import {
   SEARCH_NEIGHBORHOODS,
   SEARCH_PRICE_BANDS,
-  SCRAPE_ACTIVE_PORTALS,
   PORTAL_LABELS,
   PORTAL_IDS,
+  resolveScrapePortals,
   type PortalId,
   type SearchPriceBand,
 } from "../src/lib/portals";
@@ -269,10 +269,11 @@ async function main() {
   log(
     `faixas: ${SEARCH_PRICE_BANDS.map((b) => b.label).join(" · ")}`
   );
+  const activePortals = resolveScrapePortals();
   log(
-    `portais ativos: ${SCRAPE_ACTIVE_PORTALS.map((id) => PORTAL_LABELS[id]).join(", ")}`
+    `portais ativos: ${activePortals.map((id) => PORTAL_LABELS[id]).join(", ")}`
   );
-  const skipped = PORTAL_IDS.filter((id) => !SCRAPE_ACTIVE_PORTALS.includes(id));
+  const skipped = PORTAL_IDS.filter((id) => !activePortals.includes(id));
   if (skipped.length) {
     log(`portais pulados: ${skipped.map((id) => PORTAL_LABELS[id]).join(", ")}`);
   }

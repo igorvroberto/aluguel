@@ -31,6 +31,31 @@ export const SCRAPE_ACTIVE_PORTALS: readonly PortalId[] = [
   "zapimoveis",
 ] as const;
 
+/**
+ * Portais efetivos nesta execução.
+ * - `SCRAPE_ONLY_PORTALS=vivareal,zapimoveis` — só estes
+ * - `SCRAPE_SKIP_PORTALS=quintoandar,chavesnamao` — remove da lista ativa
+ * Imovelweb continua dependendo de SCRAPE_PROXY_URL em buildPortalSearchUrls.
+ */
+export function resolveScrapePortals(
+  base: readonly PortalId[] = SCRAPE_ACTIVE_PORTALS
+): PortalId[] {
+  const onlyRaw = (process.env.SCRAPE_ONLY_PORTALS || "").trim();
+  const skipRaw = (process.env.SCRAPE_SKIP_PORTALS || "").trim();
+  const parse = (raw: string) =>
+    raw
+      .split(/[,;\s]+/)
+      .map((s) => normalizePortalId(s))
+      .filter((id): id is PortalId => Boolean(id));
+
+  let list: PortalId[] = onlyRaw ? parse(onlyRaw) : [...base];
+  if (skipRaw) {
+    const skip = new Set(parse(skipRaw));
+    list = list.filter((id) => !skip.has(id));
+  }
+  return list;
+}
+
 /** True quando há proxy residencial para tentar Imovelweb. */
 export function isImovelwebScrapeEnabled(): boolean {
   return Boolean((process.env.SCRAPE_PROXY_URL || "").trim());
