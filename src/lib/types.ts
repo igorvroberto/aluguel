@@ -17,12 +17,13 @@ export const APARTMENT_STATUSES: ApartmentStatus[] = [
 
 /**
  * Status selecionados por padrão no filtro.
- * Inclui Manual para que imóveis inseridos por qualquer pessoa apareçam
- * sem precisar ativar o filtro (continua filtrável).
+ * Manual + Favorito: imóveis inseridos à mão (e os favoritados) aparecem
+ * sem precisar ativar o filtro; Descartado fica de fora.
  */
 export const DEFAULT_FILTER_STATUSES: ApartmentStatus[] = [
   "Candidato",
   "Manual",
+  "Favorito",
 ];
 
 export interface Apartment {

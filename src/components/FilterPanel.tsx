@@ -463,6 +463,10 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
 
       <div>
         <p className="mb-2 text-sm font-medium text-slate-700">Status</p>
+        <p className="mb-2 text-[10px] leading-snug text-slate-500">
+          Manual ignora teto de pacote, quartos e vagas — só o status (e
+          estações, se selecionadas) filtra esses imóveis.
+        </p>
         <div className="flex flex-wrap gap-1.5">
           {APARTMENT_STATUSES.map((status) => {
             const active = (filters.statuses ?? APARTMENT_STATUSES).includes(
