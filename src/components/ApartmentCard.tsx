@@ -5,34 +5,26 @@ import {
   ExternalLink,
   Footprints,
   MapPinned,
-  Mountain,
   Shield,
   TrainFront,
 } from "lucide-react";
+import { DESTINATION } from "@/lib/constants";
 import {
+  distanceMeters,
   formatMetroBadgeLabel,
   nearestMetroStation,
 } from "@/lib/geo";
-import {
-  formatBRL,
-  formatDistance,
-  formatElevation,
-  monthlyPackage,
-  topographyBadgeClass,
-} from "@/lib/format";
+import { formatBRL, formatDistance, monthlyPackage } from "@/lib/format";
 import { resolveListingUrl } from "@/lib/listing-url";
 import {
   APARTMENT_STATUSES,
   type Apartment,
   type ApartmentStatus,
-  type RouteAnalysis,
 } from "@/lib/types";
 
 interface ApartmentCardProps {
   apartment: Apartment;
-  analysis?: RouteAnalysis;
   selected: boolean;
-  analyzing: boolean;
   onSelect: () => void;
   /** Traçar rota: seleciona e rola até o mapa (não até o painel de detalhe). */
   onTraceRoute?: () => void;
@@ -49,9 +41,7 @@ const STATUS_STYLES: Record<ApartmentStatus, string> = {
 
 export function ApartmentCard({
   apartment,
-  analysis,
   selected,
-  analyzing,
   onSelect,
   onTraceRoute,
   onUpdateStatus,
@@ -67,6 +57,7 @@ export function ApartmentCard({
   const listingHref = resolveListingUrl(apartment);
   const nearestMetro = nearestMetroStation(apartment);
   const status = apartment.status || "Candidato";
+  const distToDest = distanceMeters(apartment, DESTINATION);
 
   return (
     <article
@@ -155,29 +146,13 @@ export function ApartmentCard({
             )}
           </span>
         </span>
-        {analysis ? (
-          <>
-            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-slate-700">
-              <Footprints className="h-3 w-3" aria-hidden />
-              {formatDistance(analysis.distanceMeters)}
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-slate-700">
-              <Mountain className="h-3 w-3" aria-hidden />
-              +{formatElevation(analysis.elevationGain)}
-            </span>
-            <span
-              className={`inline-flex items-center rounded-md border px-2 py-1 font-medium ${topographyBadgeClass(
-                analysis.topography
-              )}`}
-            >
-              {analysis.topography}
-            </span>
-          </>
-        ) : analyzing ? (
-          <span className="text-slate-400">Analisando trajeto…</span>
-        ) : (
-          <span className="text-slate-400">Selecione para analisar</span>
-        )}
+        <span
+          className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-slate-700"
+          title="Distância em linha reta até o destino"
+        >
+          <Footprints className="h-3 w-3" aria-hidden />
+          {formatDistance(distToDest)}
+        </span>
       </div>
 
       {(onUpdateStatus || onUpdateComments) && (

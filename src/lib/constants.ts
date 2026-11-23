@@ -8,20 +8,6 @@ export const DESTINATION = {
 
 export const DEFAULT_MAX_PACKAGE = 6000;
 
-export const GRADE_THRESHOLDS = {
-  green: 4,
-  yellow: 7,
-} as const;
-
-export const TOPOGRAPHY_THRESHOLDS = {
-  flatGain: 12,
-  moderateGain: 28,
-  flatGrade: 4,
-  moderateGrade: 7,
-} as const;
-
-export const SAMPLE_INTERVAL_METERS = 25;
-
 export const TRANSIT_STATIONS = [
   {
     id: "barra-funda",

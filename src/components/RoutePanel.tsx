@@ -1,28 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { Map as MapboxMap } from "mapbox-gl";
-import { Bus, Loader2, Mountain } from "lucide-react";
-import { ElevationChart } from "@/components/ElevationChart";
-import { legFromCoordinates } from "@/lib/elevation";
-import type { TransitRouteResult, WalkPathSegment } from "@/lib/transit";
-import type {
-  Apartment,
-  RouteAnalysis,
-  TripDirection,
-  WalkLegAnalysis,
-} from "@/lib/types";
+import { useEffect, useState } from "react";
+import { Bus, Loader2 } from "lucide-react";
+import type { TransitRouteResult } from "@/lib/transit";
+import type { Apartment, TripDirection } from "@/lib/types";
 
 interface RoutePanelProps {
   apartment: Apartment | null;
-  analysis: RouteAnalysis | null;
-  map: MapboxMap | null;
-  hoverDistance: number | null;
-  onHoverDistance: (distance: number | null) => void;
-  walkDirection: TripDirection;
-  onWalkDirectionChange: (dir: TripDirection) => void;
-  /** Geometria do trecho Caminhe em foco — para desenhar no mapa. */
-  onElevationLegChange?: (leg: WalkLegAnalysis | null) => void;
+  /** Opção Google ativa (ida/volta) — mapa desenha o trajeto multimodal. */
+  onGoogleRouteForMap?: (route: TransitRouteResult | null) => void;
 }
 
 function TransitLegBlock({
@@ -96,8 +82,7 @@ function TransitLegBlock({
         </p>
       ) : (
         <p className="text-[11px] text-slate-500">
-          Caminhada no trajeto: {route.walkDurationMinutes} min · elevação no
-          botão Elevação (soma de todo o a pé)
+          Caminhada no trajeto: {route.walkDurationMinutes} min
         </p>
       )}
 
@@ -135,133 +120,16 @@ function TransitLegBlock({
   );
 }
 
-function segmentToLeg(
-  map: MapboxMap,
-  segment: WalkPathSegment
-): WalkLegAnalysis {
-  return legFromCoordinates(
-    map,
-    segment.coordinates,
-    segment.distanceMeters,
-    Math.max(60, segment.durationMinutes * 60)
-  );
-}
-
-function WalkSegmentCharts({
-  directionLabel,
-  direction,
-  route,
-  map,
-  activeDirection,
-  hoverDistance,
-  onHoverDistance,
-  onWalkDirectionChange,
-  onFocusLeg,
-}: {
-  directionLabel: string;
-  direction: TripDirection;
-  route: TransitRouteResult | null;
-  map: MapboxMap | null;
-  activeDirection: TripDirection;
-  hoverDistance: number | null;
-  onHoverDistance: (distance: number | null) => void;
-  onWalkDirectionChange: (dir: TripDirection) => void;
-  onFocusLeg: (leg: WalkLegAnalysis | null) => void;
-}) {
-  const legs = useMemo(() => {
-    const segments = route?.walkSegments ?? [];
-    if (!map || segments.length === 0) return [];
-    return segments.map((seg) => ({
-      segment: seg,
-      leg: segmentToLeg(map, seg),
-    }));
-  }, [map, route?.walkSegments]);
-
-  if (!route) {
-    return (
-      <p className="px-4 py-3 text-xs text-slate-400">
-        {directionLabel}: aguardando trajeto…
-      </p>
-    );
-  }
-
-  if (!map) {
-    return (
-      <p className="px-4 py-3 text-xs text-slate-400">
-        {directionLabel}: aguarde o mapa carregar o terreno…
-      </p>
-    );
-  }
-
-  if (legs.length === 0) {
-    return (
-      <p className="px-4 py-3 text-xs text-slate-400">
-        {directionLabel}: sem trechos Caminhe neste trajeto.
-      </p>
-    );
-  }
-
-  return (
-    <div className="border-b border-slate-100">
-      <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">
-          {directionLabel}
-        </p>
-        <p className="text-[10px] text-slate-400">
-          Soma de todo o a pé (sem separar por rua) · metrô/ônibus fora
-        </p>
-      </div>
-
-      {legs.map(({ segment, leg }, idx) => (
-        <div
-          key={`${direction}-${idx}-${segment.label}`}
-          className="border-b border-slate-100 last:border-b-0"
-          onMouseEnter={() => {
-            onWalkDirectionChange(direction);
-            onFocusLeg(leg);
-          }}
-        >
-          <ElevationChart
-            leg={leg}
-            hoverDistance={
-              activeDirection === direction ? hoverDistance : null
-            }
-            onHoverDistance={(d) => {
-              onWalkDirectionChange(direction);
-              onFocusLeg(leg);
-              onHoverDistance(d);
-            }}
-            title={`${directionLabel} · a pé (total)`}
-            chartHeight={180}
-            emptyMessage="Perfil indisponível para esta caminhada."
-          />
-          <p className="px-4 pb-2 text-[11px] text-slate-500">
-            {segment.label}
-            {" · "}
-            {Math.round(segment.distanceMeters)} m · {segment.durationMinutes}{" "}
-            min · subida +{Math.round(leg.elevationGain)} m · {leg.topography}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function RoutePanel({
   apartment,
-  analysis,
-  map,
-  hoverDistance,
-  onHoverDistance,
-  walkDirection,
-  onWalkDirectionChange,
-  onElevationLegChange,
+  onGoogleRouteForMap,
 }: RoutePanelProps) {
-  const [mode, setMode] = useState<"elevation" | "transit">("transit");
   const [idaRoutes, setIdaRoutes] = useState<TransitRouteResult[]>([]);
   const [voltaRoutes, setVoltaRoutes] = useState<TransitRouteResult[]>([]);
   const [idaOption, setIdaOption] = useState(0);
   const [voltaOption, setVoltaOption] = useState(0);
+  const [activeDirection, setActiveDirection] =
+    useState<TripDirection>("ida");
   const [transitWarning, setTransitWarning] = useState<string | null>(null);
   const [loadingTransit, setLoadingTransit] = useState(false);
   const [transitError, setTransitError] = useState<string | null>(null);
@@ -270,20 +138,22 @@ export function RoutePanel({
   const transitVolta = voltaRoutes[voltaOption] ?? voltaRoutes[0] ?? null;
 
   useEffect(() => {
-    setMode("transit");
     setIdaRoutes([]);
     setVoltaRoutes([]);
     setIdaOption(0);
     setVoltaOption(0);
+    setActiveDirection("ida");
     setTransitWarning(null);
     setTransitError(null);
-    onWalkDirectionChange("ida");
-    onElevationLegChange?.(null);
+    onGoogleRouteForMap?.(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apartment?.id]);
 
-  const walkIdaMin = analysis?.ida.durationMinutes;
-  const walkVoltaMin = analysis?.volta.durationMinutes;
+  useEffect(() => {
+    const route = activeDirection === "ida" ? transitIda : transitVolta;
+    onGoogleRouteForMap?.(route);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDirection, transitIda, transitVolta]);
 
   useEffect(() => {
     if (!apartment) return;
@@ -294,10 +164,7 @@ export function RoutePanel({
 
     void (async () => {
       try {
-        const fetchDir = async (
-          direction: TripDirection,
-          directWalkMinutes?: number
-        ) => {
+        const fetchDir = async (direction: TripDirection) => {
           const res = await fetch("/api/transit-route", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -305,7 +172,6 @@ export function RoutePanel({
               lat: apartment.lat,
               lng: apartment.lng,
               direction,
-              directWalkMinutes,
             }),
           });
           const data = (await res.json()) as {
@@ -333,8 +199,8 @@ export function RoutePanel({
         };
 
         const [idaRes, voltaRes] = await Promise.all([
-          fetchDir("ida", walkIdaMin),
-          fetchDir("volta", walkVoltaMin),
+          fetchDir("ida"),
+          fetchDir("volta"),
         ]);
 
         if (cancelled) return;
@@ -359,191 +225,76 @@ export function RoutePanel({
     return () => {
       cancelled = true;
     };
-  }, [apartment, walkIdaMin, walkVoltaMin]);
-
-  // Foco inicial no primeiro trecho Caminhe da ida
-  useEffect(() => {
-    if (mode !== "elevation" || !map) {
-      if (mode !== "elevation") onElevationLegChange?.(null);
-      return;
-    }
-    const segs =
-      walkDirection === "ida"
-        ? transitIda?.walkSegments
-        : transitVolta?.walkSegments;
-    if (segs?.[0]) {
-      onElevationLegChange?.(segmentToLeg(map, segs[0]));
-    } else {
-      onElevationLegChange?.(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, map, walkDirection, transitIda, transitVolta]);
+  }, [apartment]);
 
   if (!apartment) {
     return (
       <div className="flex h-full items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100/80 px-6 text-center">
         <p className="max-w-sm text-sm text-slate-500">
-          Selecione um imóvel para ver transporte público (Google Maps) e, em
-          seguida, a elevação dos trechos Caminhe da opção escolhida.
+          Selecione um imóvel para ver transporte público (Google Maps) — ida e
+          volta.
         </p>
       </div>
     );
   }
 
-  const hasWalkSegs =
-    (transitIda?.walkSegments?.length ?? 0) > 0 ||
-    (transitVolta?.walkSegments?.length ?? 0) > 0;
-
   return (
     <div className="flex h-full flex-col bg-gradient-to-b from-white to-slate-50">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-2">
-        <div className="flex rounded-md border border-slate-200 p-0.5">
-          <button
-            type="button"
-            onClick={() => setMode("transit")}
-            className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition ${
-              mode === "transit"
-                ? "bg-blue-600 text-white"
-                : "text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            <Bus className="h-3.5 w-3.5" aria-hidden />
-            Transporte Público
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("elevation")}
-            className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition ${
-              mode === "elevation"
-                ? "bg-teal-700 text-white"
-                : "text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            <Mountain className="h-3.5 w-3.5" aria-hidden />
-            Elevação
-          </button>
+        <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-800">
+          <Bus className="h-3.5 w-3.5" aria-hidden />
+          Transporte Público
         </div>
         <p className="text-[10px] text-slate-400">
-          Escolha o trajeto Google · elevação segue a opção
+          Opções do Google Routes · traçado no mapa
         </p>
       </div>
 
-      {mode === "elevation" ? (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {loadingTransit && !hasWalkSegs ? (
-            <div className="flex h-[160px] items-center justify-center gap-2 px-6 text-sm text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Calculando trechos Caminhe da opção Google…
-            </div>
-          ) : null}
-
-          {transitError && (
-            <p className="m-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
-              {transitError}
-            </p>
-          )}
-
-          {transitWarning && (
-            <p className="mx-3 mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              {transitWarning}
-            </p>
-          )}
-
-          {(transitIda || transitVolta) && (
-            <div className="border-b border-slate-100 px-4 py-2 text-[11px] text-slate-600">
-              <p className="font-medium text-slate-700">
-                Elevação da opção escolhida em Transporte Público
-              </p>
-              {transitIda?.optionLabel ? (
-                <p className="mt-0.5 text-slate-500">
-                  Ida: {transitIda.optionLabel}
-                </p>
-              ) : null}
-              {transitVolta?.optionLabel ? (
-                <p className="text-slate-500">
-                  Volta: {transitVolta.optionLabel}
-                </p>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setMode("transit")}
-                className="mt-1 text-[11px] font-semibold text-blue-700 hover:underline"
-              >
-                Trocar opção no Google Routes
-              </button>
-            </div>
-          )}
-
-          <p className="border-b border-slate-100 px-4 py-2 text-[11px] text-slate-500">
-            Um gráfico por sentido com a <strong>soma de todo o a pé</strong> da
-            opção Google (ruas juntas). Metrô/ônibus ficam de fora.
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+        {loadingTransit && (
+          <p className="mb-3 inline-flex items-center gap-2 text-sm text-slate-500">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            Calculando transporte público (ida e volta)…
           </p>
+        )}
 
-          <WalkSegmentCharts
-            directionLabel="Ida"
-            direction="ida"
-            route={transitIda}
-            map={map}
-            activeDirection={walkDirection}
-            hoverDistance={hoverDistance}
-            onHoverDistance={onHoverDistance}
-            onWalkDirectionChange={onWalkDirectionChange}
-            onFocusLeg={(leg) => onElevationLegChange?.(leg)}
-          />
+        {transitError && (
+          <p className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+            {transitError}
+          </p>
+        )}
 
-          <WalkSegmentCharts
-            directionLabel="Volta"
-            direction="volta"
-            route={transitVolta}
-            map={map}
-            activeDirection={walkDirection}
-            hoverDistance={hoverDistance}
-            onHoverDistance={onHoverDistance}
-            onWalkDirectionChange={onWalkDirectionChange}
-            onFocusLeg={(leg) => onElevationLegChange?.(leg)}
-          />
+        {transitWarning && (
+          <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            {transitWarning}
+          </p>
+        )}
+
+        <div className="space-y-4">
+          {idaRoutes.length > 0 && (
+            <TransitLegBlock
+              label="Ida (imóvel → faculdade)"
+              routes={idaRoutes}
+              selectedIndex={idaOption}
+              onSelect={(idx) => {
+                setIdaOption(idx);
+                setActiveDirection("ida");
+              }}
+            />
+          )}
+          {voltaRoutes.length > 0 && (
+            <TransitLegBlock
+              label="Volta (faculdade → imóvel)"
+              routes={voltaRoutes}
+              selectedIndex={voltaOption}
+              onSelect={(idx) => {
+                setVoltaOption(idx);
+                setActiveDirection("volta");
+              }}
+            />
+          )}
         </div>
-      ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-          {loadingTransit && (
-            <p className="mb-3 inline-flex items-center gap-2 text-sm text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Calculando transporte público (ida e volta)…
-            </p>
-          )}
-
-          {transitError && (
-            <p className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
-              {transitError}
-            </p>
-          )}
-
-          {transitWarning && (
-            <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              {transitWarning}
-            </p>
-          )}
-
-          <div className="space-y-4">
-            {idaRoutes.length > 0 && (
-              <TransitLegBlock
-                label="Ida (imóvel → faculdade)"
-                routes={idaRoutes}
-                selectedIndex={idaOption}
-                onSelect={setIdaOption}
-              />
-            )}
-            {voltaRoutes.length > 0 && (
-              <TransitLegBlock
-                label="Volta (faculdade → imóvel)"
-                routes={voltaRoutes}
-                selectedIndex={voltaOption}
-                onSelect={setVoltaOption}
-              />
-            )}
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

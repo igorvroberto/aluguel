@@ -33,7 +33,6 @@ const ROOM_OPTIONS: Array<{ value: 1 | 2 | 3; label: string }> = [
 const SORT_OPTIONS: Array<{ value: SortOption; label: string }> = [
   { value: "pacote", label: "Menor Valor" },
   { value: "distancia", label: "Menor Distância" },
-  { value: "subida", label: "Menor Subida" },
 ];
 
 function StationChecklist({

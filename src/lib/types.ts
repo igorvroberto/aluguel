@@ -1,6 +1,4 @@
-export type TopographyClass = "Plano" | "Inclinação Moderada" | "Ladeira Íngreme";
-
-export type SortOption = "pacote" | "distancia" | "subida";
+export type SortOption = "pacote" | "distancia";
 
 export type ApartmentStatus =
   | "Candidato"
@@ -36,48 +34,7 @@ export interface Apartment {
   scrapedAt?: string;
 }
 
-export type TravelMode = "walk" | "transit";
 export type TripDirection = "ida" | "volta";
-
-export interface ElevationPoint {
-  distance: number;
-  elevation: number;
-  lng: number;
-  lat: number;
-  grade: number;
-  /**
-   * Índice do trecho Caminhe (0, 1, …). Arestas entre índices diferentes
-   * não são metrô — não desenhar no mapa nem interpolar elevação no vão.
-   */
-  walkSegmentIndex?: number;
-}
-
-/** Um trecho a pé (ida ou volta). Altimetria só deste caminhar. */
-export interface WalkLegAnalysis {
-  distanceMeters: number;
-  durationMinutes: number;
-  elevationGain: number;
-  maxGrade: number;
-  topography: TopographyClass;
-  coordinates: [number, number][];
-  elevationProfile: ElevationPoint[];
-  segmentGrades: number[];
-}
-
-export interface RouteAnalysis {
-  apartmentId: string;
-  /** Ida: imóvel → destino (compat: campos flat espelham a ida). */
-  ida: WalkLegAnalysis;
-  /** Volta: destino → imóvel. */
-  volta: WalkLegAnalysis;
-  distanceMeters: number;
-  elevationGain: number;
-  maxGrade: number;
-  topography: TopographyClass;
-  coordinates: [number, number][];
-  elevationProfile: ElevationPoint[];
-  segmentGrades: number[];
-}
 
 export interface FiltersState {
   /** Pacote mensal mínimo (null = sem mínimo). */

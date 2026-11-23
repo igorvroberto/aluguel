@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Map as MapboxMap } from "mapbox-gl";
 import { ApartmentCard } from "@/components/ApartmentCard";
 import { FilterPanel } from "@/components/FilterPanel";
 import { Header } from "@/components/Header";
@@ -19,16 +18,13 @@ import {
 } from "@/lib/apartments-api";
 import { BUS_LINES } from "@/lib/bus-lines";
 import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
-import { analyzeRoute } from "@/lib/elevation";
 import { getVisibleApartments } from "@/lib/filters";
+import type { TransitRouteResult } from "@/lib/transit";
 import {
   APARTMENT_STATUSES,
   type Apartment,
   type ApartmentStatus,
   type FiltersState,
-  type RouteAnalysis,
-  type TripDirection,
-  type WalkLegAnalysis,
 } from "@/lib/types";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -43,37 +39,14 @@ function initialMapLayers(): MapLayersState {
   };
 }
 
-function displayAnalysis(
-  full: RouteAnalysis | null | undefined,
-  direction: TripDirection
-): RouteAnalysis | null {
-  if (!full) return null;
-  const leg = direction === "ida" ? full.ida : full.volta;
-  return {
-    ...full,
-    distanceMeters: leg.distanceMeters,
-    elevationGain: leg.elevationGain,
-    maxGrade: leg.maxGrade,
-    topography: leg.topography,
-    coordinates: leg.coordinates,
-    elevationProfile: leg.elevationProfile,
-    segmentGrades: leg.segmentGrades,
-  };
-}
-
 export function RadarApp() {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [persistHint, setPersistHint] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [analyses, setAnalyses] = useState<Record<string, RouteAnalysis>>({});
-  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
-  const [hoverDistance, setHoverDistance] = useState<number | null>(null);
-  const [mapInstance, setMapInstance] = useState<MapboxMap | null>(null);
   const [mapLayers, setMapLayers] = useState<MapLayersState>(initialMapLayers);
-  const [walkDirection, setWalkDirection] = useState<TripDirection>("ida");
-  /** Trechos Caminhe (Google) — sobrescreve a rota do mapa no modo Elevação. */
-  const [elevationLeg, setElevationLeg] = useState<WalkLegAnalysis | null>(null);
+  const [googleTransitRoute, setGoogleTransitRoute] =
+    useState<TransitRouteResult | null>(null);
   const [filters, setFilters] = useState<FiltersState>({
     minPackage: null,
     maxPackage: DEFAULT_MAX_PACKAGE,
@@ -83,14 +56,8 @@ export function RadarApp() {
     stationRadiusMeters: DEFAULT_STATION_RADIUS_METERS,
     statuses: [...APARTMENT_STATUSES],
   });
-  const analyzingRef = useRef<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
   const mapSectionRef = useRef<HTMLDivElement>(null);
-  const apartmentsRef = useRef<Apartment[]>([]);
-
-  useEffect(() => {
-    apartmentsRef.current = apartments;
-  }, [apartments]);
 
   const notePersist = useCallback(
     (meta?: { persisted?: boolean; persistError?: string }) => {
@@ -129,10 +96,9 @@ export function RadarApp() {
     };
   }, []);
 
-  // Ordem só dos filtros — não puxar o selecionado para o topo (quebrava a ordenação).
   const visible = useMemo(
-    () => getVisibleApartments(apartments, filters, analyses),
-    [apartments, filters, analyses]
+    () => getVisibleApartments(apartments, filters),
+    [apartments, filters]
   );
 
   useEffect(() => {
@@ -143,85 +109,14 @@ export function RadarApp() {
     el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [selectedId]);
 
-  const selectedFullAnalysis = selectedId
-    ? analyses[selectedId] ?? null
-    : null;
-  const selectedAnalysis = useMemo(() => {
-    if (elevationLeg && selectedId) {
-      return {
-        apartmentId: selectedId,
-        ida: elevationLeg,
-        volta: elevationLeg,
-        distanceMeters: elevationLeg.distanceMeters,
-        elevationGain: elevationLeg.elevationGain,
-        maxGrade: elevationLeg.maxGrade,
-        topography: elevationLeg.topography,
-        coordinates: elevationLeg.coordinates,
-        elevationProfile: elevationLeg.elevationProfile,
-        segmentGrades: elevationLeg.segmentGrades,
-      } satisfies RouteAnalysis;
-    }
-    return displayAnalysis(selectedFullAnalysis, walkDirection);
-  }, [elevationLeg, selectedId, selectedFullAnalysis, walkDirection]);
-
-  const runAnalysis = useCallback(
-    async (apartment: Apartment, map: MapboxMap) => {
-      if (!MAPBOX_TOKEN) return;
-      if (analyses[apartment.id]) {
-        setSelectedId(apartment.id);
-        return;
-      }
-      if (analyzingRef.current.has(apartment.id)) {
-        setSelectedId(apartment.id);
-        return;
-      }
-
-      analyzingRef.current.add(apartment.id);
-      setAnalyzingId(apartment.id);
-      setSelectedId(apartment.id);
-      setHoverDistance(null);
-
-      try {
-        const result = await analyzeRoute(
-          map,
-          MAPBOX_TOKEN,
-          apartment.id,
-          apartment.lng,
-          apartment.lat
-        );
-        setAnalyses((prev) => ({ ...prev, [apartment.id]: result }));
-      } catch (err) {
-        console.error(err);
-      } finally {
-        analyzingRef.current.delete(apartment.id);
-        setAnalyzingId((cur) => (cur === apartment.id ? null : cur));
-      }
-    },
-    [analyses]
-  );
-
-  const handleSelect = useCallback(
-    (id: string) => {
-      setSelectedId(id);
-      setHoverDistance(null);
-      setWalkDirection("ida");
-      setElevationLeg(null);
-      const apt = apartments.find((a) => a.id === id);
-      if (!apt || !mapInstance || !MAPBOX_TOKEN) return;
-      void runAnalysis(apt, mapInstance);
-    },
-    [apartments, mapInstance, runAnalysis]
-  );
-
-  const handleElevationLegChange = useCallback((leg: WalkLegAnalysis | null) => {
-    setElevationLeg(leg);
+  const handleSelect = useCallback((id: string) => {
+    setSelectedId(id);
+    setGoogleTransitRoute(null);
   }, []);
 
-  /** Seleciona, analisa e rola até o mapa (não até o painel a pé/transit). */
   const handleTraceRoute = useCallback(
     (id: string) => {
       handleSelect(id);
-      // rAF: espera o layout do mapa no mobile (order-1) antes de rolar
       requestAnimationFrame(() => {
         mapSectionRef.current?.scrollIntoView({
           behavior: "smooth",
@@ -231,36 +126,6 @@ export function RadarApp() {
     },
     [handleSelect]
   );
-
-  const handleMapReady = useCallback((map: MapboxMap) => {
-    setMapInstance(map);
-    if (!MAPBOX_TOKEN) return;
-    void (async () => {
-      const queue = apartmentsRef.current;
-      for (const apt of queue) {
-        if (analyzingRef.current.has(apt.id)) continue;
-        analyzingRef.current.add(apt.id);
-        setAnalyzingId(apt.id);
-        try {
-          const result = await analyzeRoute(
-            map,
-            MAPBOX_TOKEN,
-            apt.id,
-            apt.lng,
-            apt.lat
-          );
-          setAnalyses((prev) =>
-            prev[apt.id] ? prev : { ...prev, [apt.id]: result }
-          );
-        } catch (err) {
-          console.error(err);
-        } finally {
-          analyzingRef.current.delete(apt.id);
-          setAnalyzingId((cur) => (cur === apt.id ? null : cur));
-        }
-      }
-    })();
-  }, []);
 
   const handleUpdateStatus = async (id: string, status: ApartmentStatus) => {
     try {
@@ -313,9 +178,7 @@ export function RadarApp() {
           <div key={apt.id} data-apartment-id={apt.id}>
             <ApartmentCard
               apartment={apt}
-              analysis={analyses[apt.id]}
               selected={selectedId === apt.id}
-              analyzing={analyzingId === apt.id}
               onSelect={() => handleSelect(apt.id)}
               onTraceRoute={() => handleTraceRoute(apt.id)}
               onUpdateStatus={handleUpdateStatus}
@@ -341,12 +204,10 @@ export function RadarApp() {
             token={MAPBOX_TOKEN}
             apartments={visible}
             selectedId={selectedId}
-            analysis={selectedAnalysis}
-            hoverDistance={hoverDistance}
+            googleTransitRoute={googleTransitRoute}
             stationIds={filters.stationIds}
             stationRadiusMeters={filters.stationRadiusMeters}
             layers={mapLayers}
-            onMapReady={handleMapReady}
             onSelectApartment={handleSelect}
           />
         </div>
@@ -354,13 +215,7 @@ export function RadarApp() {
       <div className="min-h-[420px] lg:min-h-[480px]">
         <RoutePanel
           apartment={selectedApartment}
-          analysis={selectedFullAnalysis}
-          map={mapInstance}
-          hoverDistance={hoverDistance}
-          onHoverDistance={setHoverDistance}
-          walkDirection={walkDirection}
-          onWalkDirectionChange={setWalkDirection}
-          onElevationLegChange={handleElevationLegChange}
+          onGoogleRouteForMap={setGoogleTransitRoute}
         />
       </div>
     </section>
@@ -373,7 +228,6 @@ export function RadarApp() {
         onDownloadServerJson={handleDownloadServerJson}
       />
 
-      {/* Mobile: mapa/camadas primeiro; Desktop: lista à esquerda */}
       <div className="flex flex-1 flex-col lg:flex-row">
         <aside className="order-2 flex w-full shrink-0 flex-col border-b border-slate-200 bg-white/90 shadow-[4px_0_24px_rgba(15,61,62,0.04)] lg:order-1 lg:w-[420px] lg:border-b-0 lg:border-r">
           {filtersBlock}

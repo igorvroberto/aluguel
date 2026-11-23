@@ -19,8 +19,6 @@ import {
 } from "@/lib/bus-lines";
 import { buildBusStopsGeoJSON } from "../../data/busStops";
 import type { MapLayersState } from "@/components/MapLayersPanel";
-import { gradeBucket } from "@/lib/elevation";
-import { gradeColor } from "@/lib/format";
 import {
   buildLinhaLaranjaLineGeoJSON,
   buildLinhaLaranjaStationsGeoJSON,
@@ -28,62 +26,55 @@ import {
   buildLinhaVermelhaStationsGeoJSON,
   buildStationRadiusGeoJSON,
 } from "@/lib/geo";
-import type { Apartment, RouteAnalysis } from "@/lib/types";
+import {
+  transitModeMapColor,
+  type TransitRouteResult,
+} from "@/lib/transit";
+import type { Apartment } from "@/lib/types";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 interface MapViewProps {
   token?: string;
   apartments: Apartment[];
   selectedId: string | null;
-  analysis: RouteAnalysis | null;
-  hoverDistance: number | null;
+  googleTransitRoute?: TransitRouteResult | null;
   stationIds?: string[];
   stationRadiusMeters?: number;
   focusStationsToken?: number;
   layers: MapLayersState;
-  onMapReady: (map: mapboxgl.Map) => void;
   onSelectApartment: (id: string) => void;
 }
 
-const DEM_SOURCE = "mapbox-dem";
 const ROUTE_SOURCE = "route-segments";
 const TRANSIT_SOURCE = "transit-overlay";
 const BUS_LINES_SOURCE = "bus-lines-dedicated";
 const BUS_STOPS_SOURCE = "bus-stops-real";
-const HOVER_SOURCE = "hover-point";
 const L3_LINE_SOURCE = "linha-vermelha-line";
 const L3_STATIONS_SOURCE = "linha-vermelha-stations";
 const L6_LINE_SOURCE = "linha-laranja-line";
 const L6_STATIONS_SOURCE = "linha-laranja-stations";
 const METRO_RADIUS_SOURCE = "metro-station-radii";
 
-function buildSegmentFeatures(analysis: RouteAnalysis) {
+function buildGoogleTransitFeatures(
+  route: TransitRouteResult
+): GeoJSON.FeatureCollection {
   const features: GeoJSON.Feature[] = [];
-  const coords = analysis.elevationProfile.map(
-    (p) => [p.lng, p.lat] as [number, number]
-  );
-
-  for (let i = 0; i < coords.length - 1; i++) {
-    const grade = analysis.segmentGrades[i] ?? 0;
-    const bucket = gradeBucket(grade);
+  for (const step of route.steps) {
+    const coords = step.coordinates;
+    if (!coords || coords.length < 2) continue;
     features.push({
       type: "Feature",
       properties: {
-        grade,
-        color: gradeColor(grade),
-        bucket,
+        mode: step.mode,
+        color: transitModeMapColor(step.mode),
       },
       geometry: {
         type: "LineString",
-        coordinates: [coords[i], coords[i + 1]],
+        coordinates: coords,
       },
     });
   }
-
-  return {
-    type: "FeatureCollection" as const,
-    features,
-  };
+  return { type: "FeatureCollection", features };
 }
 
 function buildTransitGeoJSON(): GeoJSON.FeatureCollection {
@@ -128,13 +119,11 @@ export function MapView({
   token,
   apartments,
   selectedId,
-  analysis,
-  hoverDistance,
+  googleTransitRoute = null,
   stationIds = [],
   stationRadiusMeters = 800,
   focusStationsToken = 0,
   layers,
-  onMapReady,
   onSelectApartment,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -142,9 +131,7 @@ export function MapView({
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const destMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
-  const [terrainReady, setTerrainReady] = useState(false);
-  const onMapReadyRef = useRef(onMapReady);
-  onMapReadyRef.current = onMapReady;
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     if (!token || !containerRef.current || mapRef.current) return;
@@ -169,17 +156,7 @@ export function MapView({
       className: "bus-line-popup",
     });
 
-    const setupTerrainAndLayers = () => {
-      if (!map.getSource(DEM_SOURCE)) {
-        map.addSource(DEM_SOURCE, {
-          type: "raster-dem",
-          url: "mapbox://mapbox.mapbox-terrain-dem-v1",
-          tileSize: 512,
-          maxzoom: 14,
-        });
-      }
-      map.setTerrain({ source: DEM_SOURCE, exaggeration: 1.4 });
-
+    const setupLayers = () => {
       if (!map.getSource(ROUTE_SOURCE)) {
         map.addSource(ROUTE_SOURCE, {
           type: "geojson",
@@ -201,23 +178,6 @@ export function MapView({
         });
       }
 
-      if (!map.getSource(HOVER_SOURCE)) {
-        map.addSource(HOVER_SOURCE, {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: [] },
-        });
-        map.addLayer({
-          id: "hover-point",
-          type: "circle",
-          source: HOVER_SOURCE,
-          paint: {
-            "circle-radius": 7,
-            "circle-color": "#f0b429",
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#0f172a",
-          },
-        });
-      }
 
       if (!map.getSource(BUS_LINES_SOURCE)) {
         map.addSource(BUS_LINES_SOURCE, {
@@ -510,11 +470,11 @@ export function MapView({
         });
       }
 
-      setTerrainReady(true);
-      onMapReadyRef.current(map);
+      setMapReady(true);
+      
     };
 
-    map.on("style.load", setupTerrainAndLayers);
+    map.on("style.load", setupLayers);
 
     const destEl = document.createElement("div");
     destEl.className = "perdizes-dest-marker";
@@ -536,7 +496,7 @@ export function MapView({
       popupRef.current?.remove();
       map.remove();
       mapRef.current = null;
-      setTerrainReady(false);
+      setMapReady(false);
     };
   }, [token]);
 
@@ -564,57 +524,44 @@ export function MapView({
         .addTo(map);
       markersRef.current.push(marker);
     });
-  }, [apartments, selectedId, token, onSelectApartment, terrainReady]);
+  }, [apartments, selectedId, token, onSelectApartment, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.getSource(ROUTE_SOURCE)) return;
 
     const source = map.getSource(ROUTE_SOURCE) as mapboxgl.GeoJSONSource;
-    if (!analysis) {
+    const hasGeom =
+      googleTransitRoute &&
+      googleTransitRoute.steps.some(
+        (s) => s.coordinates && s.coordinates.length >= 2
+      );
+
+    if (!hasGeom || !googleTransitRoute) {
       source.setData({ type: "FeatureCollection", features: [] });
       return;
     }
 
-    source.setData(buildSegmentFeatures(analysis));
-
+    const fc = buildGoogleTransitFeatures(googleTransitRoute);
+    source.setData(fc);
     const bounds = new mapboxgl.LngLatBounds();
-    analysis.elevationProfile.forEach((p) => bounds.extend([p.lng, p.lat]));
-    bounds.extend([DESTINATION.lng, DESTINATION.lat]);
-    map.fitBounds(bounds, { padding: 64, duration: 800, maxZoom: 16, pitch: 50 });
-  }, [analysis]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !map.getSource(HOVER_SOURCE)) return;
-    const source = map.getSource(HOVER_SOURCE) as mapboxgl.GeoJSONSource;
-
-    if (!analysis || hoverDistance == null) {
-      source.setData({ type: "FeatureCollection", features: [] });
-      return;
+    let hasPoint = false;
+    for (const f of fc.features) {
+      const coords = (f.geometry as GeoJSON.LineString).coordinates;
+      for (const c of coords) {
+        bounds.extend(c as [number, number]);
+        hasPoint = true;
+      }
     }
-
-    const point = analysis.elevationProfile.reduce((best, cur) =>
-      Math.abs(cur.distance - hoverDistance) <
-      Math.abs(best.distance - hoverDistance)
-        ? cur
-        : best
-    );
-
-    source.setData({
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "Point",
-            coordinates: [point.lng, point.lat],
-          },
-        },
-      ],
-    });
-  }, [hoverDistance, analysis]);
+    if (hasPoint) {
+      map.fitBounds(bounds, {
+        padding: 64,
+        duration: 800,
+        maxZoom: 16,
+        pitch: 45,
+      });
+    }
+  }, [googleTransitRoute, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -623,7 +570,7 @@ export function MapView({
     map.setLayoutProperty("bus-corridors", "visibility", visibility);
     map.setLayoutProperty("transit-stations", "visibility", visibility);
     map.setLayoutProperty("transit-station-labels", "visibility", visibility);
-  }, [layers.showTransit, terrainReady]);
+  }, [layers.showTransit, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -632,7 +579,7 @@ export function MapView({
     map.setLayoutProperty("l3-line", "visibility", visibility);
     map.setLayoutProperty("l3-stations", "visibility", visibility);
     map.setLayoutProperty("l3-station-labels", "visibility", visibility);
-  }, [layers.showLinhaVermelha, terrainReady]);
+  }, [layers.showLinhaVermelha, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -641,7 +588,7 @@ export function MapView({
     map.setLayoutProperty("l6-line", "visibility", visibility);
     map.setLayoutProperty("l6-stations", "visibility", visibility);
     map.setLayoutProperty("l6-station-labels", "visibility", visibility);
-  }, [layers.showLinhaLaranja, terrainReady]);
+  }, [layers.showLinhaLaranja, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -650,7 +597,7 @@ export function MapView({
     source.setData(
       buildStationRadiusGeoJSON(stationIds, stationRadiusMeters)
     );
-  }, [stationIds, stationRadiusMeters, terrainReady]);
+  }, [stationIds, stationRadiusMeters, mapReady]);
 
   useEffect(() => {
     if (!focusStationsToken) return;
@@ -685,7 +632,7 @@ export function MapView({
         layers.showBusLines && layers.enabledLines[line.id] !== false;
       map.setLayoutProperty(layerId, "visibility", on ? "visible" : "none");
     });
-  }, [layers.showBusLines, layers.enabledLines, terrainReady]);
+  }, [layers.showBusLines, layers.enabledLines, mapReady]);
 
   if (!token) {
     return (

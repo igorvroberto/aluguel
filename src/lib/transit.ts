@@ -15,8 +15,22 @@ export interface TransitStep {
   durationMinutes: number;
   distanceMeters?: number;
   lineName?: string;
-  /** Geometria só em passos WALK (Caminhe) — nunca metrô/ônibus. */
+  /** Geometria do passo (Google polyline) — WALK + BUS/SUBWAY no mapa. */
   coordinates?: [number, number][];
+}
+
+/** Cor do traçado no mapa (estilo multimodal). */
+export function transitModeMapColor(mode: TransitStepMode): string {
+  switch (mode) {
+    case "WALK":
+      return "#0f766e";
+    case "BUS":
+      return "#2563eb";
+    case "SUBWAY":
+      return "#dc2626";
+    default:
+      return "#64748b";
+  }
 }
 
 /** Um trecho contínuo a pé (Caminhe) — nunca inclui metrô/ônibus. */
@@ -589,10 +603,7 @@ function parseGoogleRouteRaw(
     }
 
     const encoded = s.polyline?.encodedPolyline;
-    const coordinates =
-      mode === "WALK" && encoded
-        ? decodeGooglePolyline(encoded)
-        : undefined;
+    const coordinates = encoded ? decodeGooglePolyline(encoded) : undefined;
 
     return {
       mode,

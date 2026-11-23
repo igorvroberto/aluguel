@@ -6,18 +6,15 @@ Aplicação web em **Next.js 14** (App Router, TypeScript, Tailwind CSS) para an
 
 ## Funcionalidades
 
-- Layout split-screen: lista/filtros (420px) + mapa Mapbox 3D (70%) + painel de trajeto (30%)
-- Pacote mensal (`aluguel + condomínio + IPTU`), quartos, topografia e portaria 24h
-- Rotas a pé via Mapbox Directions, reamostragem a cada 25 m (`@turf/turf`) e altimetria via `queryTerrainElevation`
-- Comparador multimodal: **A Pé** vs **Transporte Público** (`/api/transit-route`, Google Routes ou heurística local)
+- Layout split-screen: lista/filtros + mapa Mapbox + painel de transporte público
+- Pacote mensal (`aluguel + condomínio + IPTU`), quartos e portaria 24h
+- **Transporte Público** via Google Routes TRANSIT (alternativas ônibus/metrô) — traçado no mapa conforme a opção
+- Estações L3/L6, pontos de ônibus e filtros por estação
 - Importação por URL de anúncio (`/api/scrape-listing`) com fallback “colar texto”
-- Segmentos coloridos por inclinação e classificação Plano / Moderada / Íngreme
-- Camada de transporte público (estações e corredores de ônibus)
 - Persistência centralizada em `data/apartments.json` via `/api/apartments` (sem `localStorage`)
 - Status (`Candidato` / `Favorito` / `Visita Agendada` / `Descartado`) e comentários no servidor
 - Varredura nativa `/api/scrape-stations` (cheerio + Playwright opcional) nas estações L3/L6
 - Botão **Baixar JSON Atualizado** para sincronizar o arquivo do servidor com o repositório
-- Exportação CSV / JSON no header (com métricas de distância e elevação)
 - Modal de cadastro com geocodificação Mapbox restrita a São Paulo
 
 ## Setup
