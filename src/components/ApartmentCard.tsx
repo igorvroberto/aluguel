@@ -1,21 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Car,
-  ExternalLink,
-  Footprints,
-  MapPinned,
-  Shield,
-  TrainFront,
-} from "lucide-react";
+import { Car, ExternalLink, MapPinned, Shield } from "lucide-react";
 import { DESTINATION } from "@/lib/constants";
-import {
-  distanceMeters,
-  formatMetroBadgeLabel,
-  nearestMetroStation,
-} from "@/lib/geo";
-import { formatBRL, formatDistance, monthlyPackage } from "@/lib/format";
+import { distanceMeters } from "@/lib/geo";
+import { formatBRL, formatDistanceKm, monthlyPackage } from "@/lib/format";
 import { resolveListingUrl } from "@/lib/listing-url";
 import { portalLabel, resolveApartmentPortal } from "@/lib/portals";
 import {
@@ -57,7 +46,6 @@ export function ApartmentCard({
     apartment.iptu
   );
   const listingHref = resolveListingUrl(apartment);
-  const nearestMetro = nearestMetroStation(apartment);
   const status = apartment.status || "Candidato";
   const distToDest = distanceMeters(apartment, DESTINATION);
   const portal = portalLabel(resolveApartmentPortal(apartment));
@@ -142,27 +130,10 @@ export function ApartmentCard({
           {status}
         </span>
         <span
-          className="inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 font-medium text-white"
-          style={{
-            backgroundColor: nearestMetro.station.color,
-            borderColor: nearestMetro.station.color,
-          }}
-          title={`Estação de metrô mais próxima (${nearestMetro.station.lineCode})`}
-        >
-          <TrainFront className="h-3 w-3 shrink-0" aria-hidden />
-          <span className="truncate">
-            {formatMetroBadgeLabel(
-              nearestMetro.station,
-              nearestMetro.distanceMeters
-            )}
-          </span>
-        </span>
-        <span
-          className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-slate-700"
+          className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 tabular-nums text-slate-700"
           title="Distância em linha reta até o destino"
         >
-          <Footprints className="h-3 w-3" aria-hidden />
-          {formatDistance(distToDest)}
+          {formatDistanceKm(distToDest)}
         </span>
       </div>
 
