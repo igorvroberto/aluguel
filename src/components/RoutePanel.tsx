@@ -13,6 +13,7 @@ import {
   formatWalkElevationSummary,
   type WalkElevationStats,
 } from "@/lib/elevation";
+import { formatDistanceKm } from "@/lib/format";
 import type { TransitRouteResult } from "@/lib/transit";
 import type { Apartment, TripDirection } from "@/lib/types";
 
@@ -73,6 +74,9 @@ function TransitLegBlock({
           porta a porta:{" "}
           <span className="font-semibold text-slate-900">
             {route.totalDurationMinutes} min
+            {route.totalDistanceMeters > 0
+              ? ` · ${formatDistanceKm(route.totalDistanceMeters)}`
+              : ""}
           </span>
         </p>
       </div>
