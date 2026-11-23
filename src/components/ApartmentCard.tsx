@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  Car,
   ExternalLink,
   Footprints,
   MapPinned,
@@ -118,6 +119,11 @@ export function ApartmentCard({
         <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-slate-700">
           {apartment.rooms >= 3 ? "3+" : apartment.rooms} qto
           {apartment.rooms === 1 ? "" : "s"}
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-slate-700">
+          <Car className="h-3 w-3" aria-hidden />
+          {apartment.parkingSpots ?? 0} vaga
+          {(apartment.parkingSpots ?? 0) === 1 ? "" : "s"}
         </span>
         {apartment.portaria24h && (
           <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-1 text-sky-800">

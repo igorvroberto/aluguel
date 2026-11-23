@@ -42,6 +42,8 @@ export interface FiltersState {
   /** Pacote mensal máximo (null = sem máximo). */
   maxPackage: number | null;
   rooms: Array<1 | 2 | 3>;
+  /** Vagas de carro: 0, 1 ou 2+ (2). */
+  parkingSpots: Array<0 | 1 | 2>;
   sortBy: SortOption;
   stationIds: string[];
   stationRadiusMeters: number;

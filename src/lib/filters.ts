@@ -12,6 +12,7 @@ export function getVisibleApartments(
   filters: FiltersState
 ): Apartment[] {
   const roomSet = new Set(filters.rooms);
+  const parkingSet = new Set(filters.parkingSpots);
 
   const list = apartments.filter((apt) => {
     const pkg = packageValue(apt);
@@ -20,6 +21,10 @@ export function getVisibleApartments(
 
     const roomKey = (apt.rooms >= 3 ? 3 : apt.rooms) as 1 | 2 | 3;
     if (roomSet.size > 0 && !roomSet.has(roomKey)) return false;
+
+    const spots = apt.parkingSpots ?? 0;
+    const parkingKey = (spots >= 2 ? 2 : spots) as 0 | 1 | 2;
+    if (parkingSet.size > 0 && !parkingSet.has(parkingKey)) return false;
 
     if (filters.statuses && filters.statuses.length > 0) {
       const status = apt.status || "Candidato";
