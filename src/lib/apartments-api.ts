@@ -37,6 +37,14 @@ export async function createApartments(
     persisted?: boolean;
     persistError?: string;
   }>(res);
+  if (data.persisted === false) {
+    throw new Error(
+      data.persistError
+        ? `Não foi possível gravar no servidor: ${data.persistError}`
+        : "Não foi possível gravar no servidor (disco somente leitura)."
+    );
+  }
+
   return {
     apartments: data.apartments,
     meta: {

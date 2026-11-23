@@ -15,8 +15,15 @@ export const APARTMENT_STATUSES: ApartmentStatus[] = [
   "Descartado",
 ];
 
-/** Status selecionados por padrão no filtro. */
-export const DEFAULT_FILTER_STATUSES: ApartmentStatus[] = ["Candidato"];
+/**
+ * Status selecionados por padrão no filtro.
+ * Inclui Manual para que imóveis inseridos por qualquer pessoa apareçam
+ * sem precisar ativar o filtro (continua filtrável).
+ */
+export const DEFAULT_FILTER_STATUSES: ApartmentStatus[] = [
+  "Candidato",
+  "Manual",
+];
 
 export interface Apartment {
   id: string;

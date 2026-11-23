@@ -71,7 +71,7 @@ export function RadarApp() {
 
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
+    const load = async () => {
       try {
         const list = await fetchApartments();
         if (!cancelled) {
@@ -85,9 +85,16 @@ export function RadarApp() {
           setPersistHint("Falha ao carregar imóveis do servidor.");
         }
       }
-    })();
+    };
+    void load();
+    // Outra pessoa pode ter adicionado manuais — recarrega ao voltar à aba.
+    const onFocus = () => {
+      void load();
+    };
+    window.addEventListener("focus", onFocus);
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", onFocus);
     };
   }, []);
 
