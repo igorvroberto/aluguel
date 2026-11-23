@@ -19,7 +19,9 @@ import { softListingKey, type PortalListing } from "../src/lib/glue-listings";
 import { parseBRLNumber } from "../src/lib/listing-parser";
 import {
   SEARCH_NEIGHBORHOODS,
+  SCRAPE_ACTIVE_PORTALS,
   PORTAL_LABELS,
+  PORTAL_IDS,
   type PortalId,
 } from "../src/lib/portals";
 import {
@@ -469,6 +471,17 @@ async function main() {
     `critério: ${TARGET_ROOMS} dorms, pacote ≤ R$ ${MAX_PACKAGE} (sem corte por raio na gravação)`
   );
   log(`bairros de busca: ${SEARCH_NEIGHBORHOODS.join(", ")}`);
+  const skippedPortals = PORTAL_IDS.filter(
+    (id) => !SCRAPE_ACTIVE_PORTALS.includes(id)
+  ).map((id) => PORTAL_LABELS[id]);
+  log(
+    `portais ativos: ${SCRAPE_ACTIVE_PORTALS.map((id) => PORTAL_LABELS[id]).join(", ")}`
+  );
+  if (skippedPortals.length) {
+    log(
+      `portais pulados (Cloudflare): ${skippedPortals.join(", ")}`
+    );
+  }
 
   const mapboxToken = (process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "").trim();
   if (!mapboxToken) {

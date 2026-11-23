@@ -3,7 +3,12 @@ import * as turf from "@turf/turf";
 import { METRO_STATIONS, type MetroStation } from "../../data/linhasMetro";
 import { softListingKey } from "./glue-listings";
 import { extractFromHtml, parseBRLNumber } from "./listing-parser";
-import { PORTAL_LABELS, normalizePortalId, type PortalId } from "./portals";
+import {
+  PORTAL_LABELS,
+  SCRAPE_ACTIVE_PORTALS,
+  normalizePortalId,
+  type PortalId,
+} from "./portals";
 import {
   closeSharedBrowser,
   getSharedBrowser,
@@ -408,7 +413,7 @@ function buildSearchUrls(
   const roomMax = Math.max(...rooms);
   const rentMax = Math.max(1500, maxPackage);
 
-  return [
+  const all: Array<{ url: string; source: string }> = [
     {
       source: "quintoandar",
       url:
@@ -441,6 +446,8 @@ function buildSearchUrls(
         `?valorMax=${rentMax}&quartos=${roomMin}`,
     },
   ];
+  const active = new Set<string>(SCRAPE_ACTIVE_PORTALS);
+  return all.filter((item) => active.has(item.source));
 }
 
 function portalListingsToCandidates(

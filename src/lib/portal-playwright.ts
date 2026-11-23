@@ -11,6 +11,7 @@ import {
 import { parseBRLNumber } from "./listing-parser";
 import {
   PORTAL_LABELS,
+  SCRAPE_ACTIVE_PORTALS,
   normalizePortalId,
   type PortalId,
 } from "./portals";
@@ -411,7 +412,7 @@ export function buildPortalSearchUrls(
   opts: { rooms: number; maxPackage: number }
 ): Array<{ portal: PortalId; url: string }> {
   const { rooms, maxPackage } = opts;
-  return [
+  const all: Array<{ portal: PortalId; url: string }> = [
     {
       portal: "quintoandar",
       url:
@@ -443,4 +444,6 @@ export function buildPortalSearchUrls(
         `?valorMax=${maxPackage}&quartos=${rooms}`,
     },
   ];
+  const active = new Set<PortalId>(SCRAPE_ACTIVE_PORTALS);
+  return all.filter((item) => active.has(item.portal));
 }
