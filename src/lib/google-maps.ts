@@ -93,3 +93,51 @@ export function svgCircleIcon(opts: {
     anchor: new google.maps.Point(size / 2, size / 2),
   };
 }
+
+export type StationLabelOverlay = google.maps.OverlayView & {
+  setMap: (map: google.maps.Map | null) => void;
+};
+
+/** Marcador de estação com nome sempre visível (como no Mapbox). */
+export function createStationLabelOverlay(
+  map: google.maps.Map,
+  position: google.maps.LatLngLiteral,
+  name: string,
+  color: string,
+  labelColor: string
+): StationLabelOverlay {
+  class StationOverlay extends google.maps.OverlayView {
+    private div: HTMLDivElement | null = null;
+
+    onAdd() {
+      const div = document.createElement("div");
+      div.className = "metro-station-marker";
+      div.title = name;
+      div.innerHTML =
+        `<span class="metro-station-dot" style="background:${color}"></span>` +
+        `<span class="metro-station-name" style="color:${labelColor}">${name}</span>`;
+      this.div = div;
+      this.getPanes()?.overlayMouseTarget.appendChild(div);
+    }
+
+    draw() {
+      const projection = this.getProjection();
+      if (!projection || !this.div) return;
+      const point = projection.fromLatLngToDivPixel(
+        new google.maps.LatLng(position.lat, position.lng)
+      );
+      if (!point) return;
+      this.div.style.left = `${point.x}px`;
+      this.div.style.top = `${point.y}px`;
+    }
+
+    onRemove() {
+      this.div?.remove();
+      this.div = null;
+    }
+  }
+
+  const overlay = new StationOverlay();
+  overlay.setMap(map);
+  return overlay;
+}

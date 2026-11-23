@@ -33,6 +33,17 @@ export function transitModeMapColor(mode: TransitStepMode): string {
   }
 }
 
+/** Itens da legenda do mapa (trajeto). */
+export const TRANSIT_ROUTE_LEGEND: ReadonlyArray<{
+  mode: TransitStepMode;
+  label: string;
+  color: string;
+}> = [
+  { mode: "WALK", label: "A pé", color: transitModeMapColor("WALK") },
+  { mode: "BUS", label: "Ônibus", color: transitModeMapColor("BUS") },
+  { mode: "SUBWAY", label: "Metrô (trajeto)", color: transitModeMapColor("SUBWAY") },
+];
+
 /** Um trecho contínuo a pé (Caminhe) — nunca inclui metrô/ônibus. */
 export interface WalkPathSegment {
   label: string;

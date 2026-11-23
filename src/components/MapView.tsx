@@ -9,12 +9,28 @@ import {
 } from "../../data/linhasMetro";
 import { DESTINATION } from "@/lib/constants";
 import { buildStationRadiusGeoJSON } from "@/lib/geo";
-import { loadGoogleMaps, svgCircleIcon } from "@/lib/google-maps";
 import {
+  createStationLabelOverlay,
+  loadGoogleMaps,
+  svgCircleIcon,
+  type StationLabelOverlay,
+} from "@/lib/google-maps";
+import {
+  TRANSIT_ROUTE_LEGEND,
   transitModeMapColor,
   type TransitRouteResult,
 } from "@/lib/transit";
 import type { Apartment } from "@/lib/types";
+
+const MAP_LEGEND_LINES = [
+  { label: "Linha 3-Vermelha", color: LINHA_VERMELHA_COLOR },
+  { label: "Linha 6-Laranja", color: LINHA_LARANJA_COLOR },
+] as const;
+
+const MAP_LEGEND_MARKERS = [
+  { label: "Destino", color: "#f0b429" },
+  { label: "Imóvel", color: "#145c5e" },
+] as const;
 
 interface MapViewProps {
   apiKey?: string;
@@ -56,13 +72,17 @@ export function MapView({
   const destMarkerRef = useRef<google.maps.Marker | null>(null);
   const routePolylinesRef = useRef<google.maps.Polyline[]>([]);
   const radiusPolygonsRef = useRef<google.maps.Polygon[]>([]);
-  const staticOverlaysRef = useRef<
-    Array<google.maps.Polyline | google.maps.Marker>
-  >([]);
+  const linePolylinesRef = useRef<google.maps.Polyline[]>([]);
+  const stationOverlaysRef = useRef<StationLabelOverlay[]>([]);
   const onSelectRef = useRef(onSelectApartment);
   onSelectRef.current = onSelectApartment;
   const [mapReady, setMapReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const showRouteLegend = Boolean(
+    googleTransitRoute?.steps.some(
+      (s) => s.coordinates && s.coordinates.length >= 2
+    )
+  );
 
   useEffect(() => {
     if (!apiKey || !containerRef.current || mapRef.current) return;
@@ -102,61 +122,57 @@ export function MapView({
         });
         mapRef.current = map;
 
-        const overlays: Array<google.maps.Polyline | google.maps.Marker> = [];
+        const linePolys: google.maps.Polyline[] = [];
+        const stationOverlays: StationLabelOverlay[] = [];
 
-        const l3 = new google.maps.Polyline({
-          path: linePath(LINHA_VERMELHA),
-          strokeColor: LINHA_VERMELHA_COLOR,
-          strokeOpacity: 0.92,
-          strokeWeight: 4,
-          map,
-          zIndex: 1,
-        });
-        overlays.push(l3);
+        linePolys.push(
+          new google.maps.Polyline({
+            path: linePath(LINHA_VERMELHA),
+            strokeColor: LINHA_VERMELHA_COLOR,
+            strokeOpacity: 0.92,
+            strokeWeight: 4,
+            map,
+            zIndex: 1,
+          })
+        );
 
         for (const s of LINHA_VERMELHA) {
-          overlays.push(
-            new google.maps.Marker({
-              position: { lat: s.lat, lng: s.lng },
+          stationOverlays.push(
+            createStationLabelOverlay(
               map,
-              title: s.name,
-              icon: svgCircleIcon({
-                fill: LINHA_VERMELHA_COLOR,
-                size: 14,
-                strokeWidth: 2,
-              }),
-              zIndex: 2,
-            })
+              { lat: s.lat, lng: s.lng },
+              s.name,
+              LINHA_VERMELHA_COLOR,
+              "#7f1d1d"
+            )
           );
         }
 
-        const l6 = new google.maps.Polyline({
-          path: linePath(LINHA_LARANJA_ATIVAS),
-          strokeColor: LINHA_LARANJA_COLOR,
-          strokeOpacity: 0.92,
-          strokeWeight: 4,
-          map,
-          zIndex: 1,
-        });
-        overlays.push(l6);
+        linePolys.push(
+          new google.maps.Polyline({
+            path: linePath(LINHA_LARANJA_ATIVAS),
+            strokeColor: LINHA_LARANJA_COLOR,
+            strokeOpacity: 0.92,
+            strokeWeight: 4,
+            map,
+            zIndex: 1,
+          })
+        );
 
         for (const s of LINHA_LARANJA_ATIVAS) {
-          overlays.push(
-            new google.maps.Marker({
-              position: { lat: s.lat, lng: s.lng },
+          stationOverlays.push(
+            createStationLabelOverlay(
               map,
-              title: s.name,
-              icon: svgCircleIcon({
-                fill: LINHA_LARANJA_COLOR,
-                size: 14,
-                strokeWidth: 2,
-              }),
-              zIndex: 2,
-            })
+              { lat: s.lat, lng: s.lng },
+              s.name,
+              LINHA_LARANJA_COLOR,
+              "#9a3412"
+            )
           );
         }
 
-        staticOverlaysRef.current = overlays;
+        linePolylinesRef.current = linePolys;
+        stationOverlaysRef.current = stationOverlays;
 
         destMarkerRef.current = new google.maps.Marker({
           position: { lat: DESTINATION.lat, lng: DESTINATION.lng },
@@ -198,8 +214,10 @@ export function MapView({
       routePolylinesRef.current = [];
       radiusPolygonsRef.current.forEach((p) => p.setMap(null));
       radiusPolygonsRef.current = [];
-      staticOverlaysRef.current.forEach((o) => o.setMap(null));
-      staticOverlaysRef.current = [];
+      linePolylinesRef.current.forEach((p) => p.setMap(null));
+      linePolylinesRef.current = [];
+      stationOverlaysRef.current.forEach((o) => o.setMap(null));
+      stationOverlaysRef.current = [];
       mapRef.current = null;
       setMapReady(false);
     };
@@ -360,15 +378,15 @@ export function MapView({
             {loadError}
           </p>
           <p className="mt-3 text-left text-xs leading-relaxed text-slate-500">
-            No console do navegador costuma aparecer{" "}
+            No console:{" "}
             <code className="rounded bg-slate-100 px-1 font-mono">
-              ApiNotActivatedMapError
+              ApiTargetBlockedMapError
             </code>{" "}
-            (ative Maps JavaScript API) ou{" "}
+            = inclua Maps JavaScript API nas restrições da chave;{" "}
             <code className="rounded bg-slate-100 px-1 font-mono">
               RefererNotAllowedMapError
             </code>{" "}
-            (adicione o domínio nas restrições da chave).
+            = libere este domínio nos HTTP referrers.
           </p>
         </div>
       </div>
@@ -378,6 +396,68 @@ export function MapView({
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
+      {mapReady && !loadError ? (
+        <aside
+          className="pointer-events-none absolute bottom-3 left-3 z-10 max-w-[220px] rounded-lg border border-slate-200/90 bg-white/95 px-2.5 py-2 shadow-md backdrop-blur-sm"
+          aria-label="Legenda do mapa"
+        >
+          {showRouteLegend ? (
+            <div className="mb-2">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                Trajeto
+              </p>
+              <ul className="space-y-1">
+                {TRANSIT_ROUTE_LEGEND.map((item) => (
+                  <li
+                    key={item.mode}
+                    className="flex items-center gap-2 text-[11px] text-slate-700"
+                  >
+                    <span
+                      className="h-1 w-5 shrink-0 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                      aria-hidden
+                    />
+                    {item.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <div className={showRouteLegend ? "border-t border-slate-100 pt-2" : ""}>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              Rede / pontos
+            </p>
+            <ul className="space-y-1">
+              {MAP_LEGEND_LINES.map((item) => (
+                <li
+                  key={item.label}
+                  className="flex items-center gap-2 text-[11px] text-slate-700"
+                >
+                  <span
+                    className="h-1 w-5 shrink-0 rounded-full"
+                    style={{ backgroundColor: item.color }}
+                    aria-hidden
+                  />
+                  {item.label}
+                </li>
+              ))}
+              {MAP_LEGEND_MARKERS.map((item) => (
+                <li
+                  key={item.label}
+                  className="flex items-center gap-2 text-[11px] text-slate-700"
+                >
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full border border-white shadow-sm"
+                    style={{ backgroundColor: item.color }}
+                    aria-hidden
+                  />
+                  {item.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </aside>
+      ) : null}
     </div>
   );
 }

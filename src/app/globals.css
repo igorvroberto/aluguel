@@ -36,3 +36,39 @@ body {
 .gm-style {
   font: inherit;
 }
+
+.metro-station-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.metro-station-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 9999px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.35);
+  flex-shrink: 0;
+}
+
+.metro-station-name {
+  margin-top: 3px;
+  max-width: 110px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-shadow:
+    0 0 3px #fff,
+    0 0 3px #fff,
+    1px 0 0 #fff,
+    -1px 0 0 #fff,
+    0 1px 0 #fff,
+    0 -1px 0 #fff;
+  white-space: normal;
+}
