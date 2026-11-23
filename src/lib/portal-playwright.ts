@@ -334,13 +334,15 @@ export function extractFromHtmlPortals(
     portal === "chavesnamao"
       ? ["/imovel/", "/apartamento", "chavesnamao.com.br"]
       : portal === "imovelweb"
-        ? ["/propriedades/", "/apartamento", "imovelweb.com.br"]
+        ? ["/propriedades/"]
         : ["/imovel/", "/apartamento", "/propriedades/"];
 
   $("a[href]").each((_, el) => {
     const href = $(el).attr("href") || "";
     if (!hrefHints.some((h) => href.includes(h))) return;
-    if (/busca|filtro|login|cadastro/i.test(href)) return;
+    if (/busca|filtro|login|cadastro|venda-/i.test(href)) return;
+    // Imovelweb: só fichas de imóvel, não listagens de bairro.
+    if (portal === "imovelweb" && !/\/propriedades\//i.test(href)) return;
     const abs = absUrl(href, pageUrl);
     if (seen.has(abs.toLowerCase())) return;
     const card = $(el).closest("article, li, div.card, div[data-id], div.result");
@@ -654,8 +656,8 @@ export async function scrapeZapFirefox(
 }
 
 /**
- * Imovelweb via Firefox. Em IP de datacenter o Turnstile trava em
- * “Um momento…” — precisa de SCRAPE_PROXY_URL (proxy residencial).
+ * Imovelweb via Firefox + SCRAPE_PROXY_URL (residencial).
+ * Turnstile: espera longa + clique nos frames de challenge (validado na VPS).
  */
 export async function scrapeImovelwebFirefox(
   url: string,
@@ -673,10 +675,19 @@ export async function scrapeImovelwebFirefox(
   });
   try {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 90000 });
-    // Turnstile às vezes resolve sozinho atrás de IP residencial.
-    for (let i = 0; i < 12; i++) {
-      await page.waitForTimeout(2500);
+    for (let i = 0; i < 20; i++) {
+      await page.waitForTimeout(3000);
       const title = await page.title().catch(() => "");
+      for (const frame of page.frames()) {
+        const fu = frame.url();
+        if (!/turnstile|challenge|cloudflare/i.test(fu)) continue;
+        try {
+          await frame.locator("body").click({ timeout: 1000 });
+          await frame.locator("input").first().click({ timeout: 1000 });
+        } catch {
+          // ignore
+        }
+      }
       if (!/um momento|just a moment|verifica/i.test(title)) break;
     }
     const title = await page.title().catch(() => "");
