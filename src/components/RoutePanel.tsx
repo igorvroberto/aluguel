@@ -1,9 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bus, Loader2 } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Bus,
+  Loader2,
+  Minus,
+  TrendingUp,
+} from "lucide-react";
+import {
+  formatWalkElevationSummary,
+  type WalkElevationStats,
+} from "@/lib/elevation";
 import type { TransitRouteResult } from "@/lib/transit";
 import type { Apartment, TripDirection } from "@/lib/types";
+
+function ElevationBadge({ stats }: { stats: WalkElevationStats }) {
+  const Icon =
+    stats.direction === "subida"
+      ? ArrowUpRight
+      : stats.direction === "descida"
+        ? ArrowDownRight
+        : stats.direction === "misto"
+          ? TrendingUp
+          : Minus;
+  const tone =
+    stats.direction === "subida"
+      ? "border-amber-200 bg-amber-50 text-amber-950"
+      : stats.direction === "descida"
+        ? "border-sky-200 bg-sky-50 text-sky-950"
+        : stats.direction === "misto"
+          ? "border-violet-200 bg-violet-50 text-violet-950"
+          : "border-slate-200 bg-slate-50 text-slate-700";
+
+  return (
+    <p
+      className={`mt-1.5 inline-flex max-w-full items-start gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium leading-snug ${tone}`}
+      title={`Ganho ${stats.elevationGainMeters} m · Perda ${stats.elevationLossMeters} m · ${stats.startElevationMeters} → ${stats.endElevationMeters} m`}
+    >
+      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+      <span>{formatWalkElevationSummary(stats)}</span>
+    </p>
+  );
+}
 
 interface RoutePanelProps {
   apartment: Apartment | null;
@@ -97,6 +137,9 @@ function TransitLegBlock({
                   ? ` · ${Math.round(step.distanceMeters)} m`
                   : ""}
               </p>
+              {step.mode === "WALK" && step.elevation ? (
+                <ElevationBadge stats={step.elevation} />
+              ) : null}
             </div>
           </li>
         ))}

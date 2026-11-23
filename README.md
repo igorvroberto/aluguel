@@ -30,7 +30,7 @@ npm run dev
 
 Abra [http://localhost:3000](http://localhost:3000).
 
-O mapa usa **Maps JavaScript API** (chave via `GOOGLE_MAPS_API_KEY` em runtime ou `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`). Sem a key, a UI mostra aviso. Se aparecer “Ops! Algo deu errado”, ative Maps JavaScript API + faturamento e libere o domínio nas restrições HTTP referrer. **Transporte público** usa a mesma `GOOGLE_MAPS_API_KEY` (Routes TRANSIT).
+O mapa usa **Maps JavaScript API** (chave via `GOOGLE_MAPS_API_KEY` em runtime ou `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`). Sem a key, a UI mostra aviso. Se aparecer “Ops! Algo deu errado”, ative Maps JavaScript API + faturamento e libere o domínio nas restrições HTTP referrer. **Transporte público** usa a mesma `GOOGLE_MAPS_API_KEY` (Routes TRANSIT). Trechos a pé mostram **subida/descida e íngreme** via **Elevation API**.
 
 ## Scripts
 

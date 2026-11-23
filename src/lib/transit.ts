@@ -5,6 +5,10 @@ import {
   fetchNearbyTransitPlaces,
   type PlaceTransitHub,
 } from "./googlePlaces";
+import {
+  analyzeWalkElevation,
+  type WalkElevationStats,
+} from "./elevation";
 import { decodeGooglePolyline } from "./polyline";
 
 export type TransitStepMode = "WALK" | "BUS" | "SUBWAY" | "TRANSIT";
@@ -17,6 +21,8 @@ export interface TransitStep {
   lineName?: string;
   /** Geometria do passo (Google polyline) — WALK + BUS/SUBWAY no mapa. */
   coordinates?: [number, number][];
+  /** Só WALK: subida/descida e íngreme (Elevation API). */
+  elevation?: WalkElevationStats;
 }
 
 /** Cor do traçado no mapa (estilo multimodal). */
@@ -55,6 +61,7 @@ export interface WalkPathSegment {
   coordinates: [number, number][];
   distanceMeters: number;
   durationMinutes: number;
+  elevation?: WalkElevationStats;
 }
 
 export interface TransitRouteResult {
@@ -109,24 +116,24 @@ function formatWalkTo(place: string, minutes: number): string {
 }
 
 /**
- * Soma todo o a pé do trajeto Google (todas as ruas/trechos Caminhe)
- * num único segmento — elevação não separa por rua. Metrô/ônibus ficam de fora.
+ * Um segmento por passo WALK (Caminhe) do Google — elevação por trecho,
+ * sem interpolar o vão do metrô/ônibus.
  */
 function extractWalkPaths(steps: TransitStep[]): {
   walkSegments: WalkPathSegment[];
   walkCoordinates: [number, number][];
   walkDistanceMeters: number;
 } {
+  const walkSegments: WalkPathSegment[] = [];
   const walkCoordinates: [number, number][] = [];
   let walkDistanceMeters = 0;
-  let walkDurationMinutes = 0;
-  let walkStepCount = 0;
+  let walkIndex = 0;
 
   for (const step of steps) {
     if (step.mode !== "WALK") continue;
     const coords = step.coordinates;
     if (!coords || coords.length < 2) continue;
-    walkStepCount += 1;
+    walkIndex += 1;
     const distanceMeters =
       step.distanceMeters ??
       Math.round(
@@ -138,7 +145,15 @@ function extractWalkPaths(steps: TransitStep[]): {
         ) * WALK_DETOUR
       );
     walkDistanceMeters += distanceMeters;
-    walkDurationMinutes += step.durationMinutes;
+    walkSegments.push({
+      label:
+        step.instruction ||
+        `Trecho a pé ${walkIndex} (${step.durationMinutes} min)`,
+      coordinates: coords,
+      distanceMeters,
+      durationMinutes: step.durationMinutes,
+      elevation: step.elevation,
+    });
     for (const c of coords) {
       const prev = walkCoordinates[walkCoordinates.length - 1];
       if (prev && prev[0] === c[0] && prev[1] === c[1]) continue;
@@ -146,20 +161,50 @@ function extractWalkPaths(steps: TransitStep[]): {
     }
   }
 
-  const walkSegments: WalkPathSegment[] = [];
-  if (walkCoordinates.length >= 2 && walkDistanceMeters > 0) {
-    walkSegments.push({
-      label:
-        walkStepCount <= 1
-          ? "Caminhada a pé"
-          : `Caminhada total a pé (${walkStepCount} trechos do Maps somados)`,
-      coordinates: walkCoordinates,
-      distanceMeters: walkDistanceMeters,
-      durationMinutes: Math.max(1, walkDurationMinutes),
-    });
-  }
-
   return { walkSegments, walkCoordinates, walkDistanceMeters };
+}
+
+/** Anexa Elevation API a cada passo WALK (e espelha em walkSegments). */
+export async function enrichRouteWithWalkElevation(
+  apiKey: string,
+  route: TransitRouteResult
+): Promise<TransitRouteResult> {
+  const steps = await Promise.all(
+    route.steps.map(async (step) => {
+      if (
+        step.mode !== "WALK" ||
+        !step.coordinates ||
+        step.coordinates.length < 2
+      ) {
+        return step;
+      }
+      try {
+        const elevation = await analyzeWalkElevation(apiKey, step.coordinates);
+        return elevation ? { ...step, elevation } : step;
+      } catch (err) {
+        console.warn("Elevation API falhou num trecho a pé:", err);
+        return step;
+      }
+    })
+  );
+  const { walkSegments, walkCoordinates, walkDistanceMeters } =
+    extractWalkPaths(steps);
+  return {
+    ...route,
+    steps,
+    walkSegments,
+    walkCoordinates,
+    walkDistanceMeters,
+  };
+}
+
+export async function enrichRoutesWithWalkElevation(
+  apiKey: string,
+  routes: TransitRouteResult[]
+): Promise<TransitRouteResult[]> {
+  return Promise.all(
+    routes.map((r) => enrichRouteWithWalkElevation(apiKey, r))
+  );
 }
 
 type Hub = {
