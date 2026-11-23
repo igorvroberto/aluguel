@@ -42,16 +42,13 @@ export interface WalkPathSegment {
 }
 
 export interface TransitRouteResult {
-  source: "google" | "fallback" | "walk-preferred";
+  source: "google" | "fallback";
   totalDurationMinutes: number;
   walkDurationMinutes: number;
   steps: TransitStep[];
   summary: string;
   /** Rótulo curto estilo Maps: "Ônibus 175P-10 · 22 min" */
   optionLabel?: string;
-  /** Se true, a pé direto é mais rápido que metrô/ônibus + caminhadas. */
-  preferDirectWalk?: boolean;
-  directWalkMinutes?: number;
   /**
    * Trechos WALK/Caminhe separados (para elevação sem interpolar o vão do metrô).
    */
@@ -89,25 +86,6 @@ function haversineMeters(
 
 function walkMinutesFromMeters(meters: number): number {
   return Math.max(1, Math.round((meters * WALK_DETOUR) / WALK_METERS_PER_MIN));
-}
-
-function estimateDirectWalkMinutes(
-  fromLat: number,
-  fromLng: number,
-  toLat: number,
-  toLng: number,
-  overrideMinutes?: number
-): number {
-  if (
-    overrideMinutes != null &&
-    Number.isFinite(overrideMinutes) &&
-    overrideMinutes > 0
-  ) {
-    return Math.max(1, Math.round(overrideMinutes));
-  }
-  return walkMinutesFromMeters(
-    haversineMeters(fromLat, fromLng, toLat, toLng)
-  );
 }
 
 function formatWalkTo(place: string, minutes: number): string {
@@ -358,7 +336,6 @@ export async function buildFallbackTransitRoute(
   originLat: number,
   originLng: number,
   direction: TripDirection = "ida",
-  directWalkMinutesOverride?: number,
   mapboxToken?: string,
   googleApiKey?: string
 ): Promise<TransitRouteResult> {
@@ -367,14 +344,6 @@ export async function buildFallbackTransitRoute(
   const toLat = direction === "ida" ? DESTINATION.lat : originLat;
   const toLng = direction === "ida" ? DESTINATION.lng : originLng;
   const toLabel = direction === "ida" ? DESTINATION.name : "o imóvel";
-
-  const directWalkMin = estimateDirectWalkMinutes(
-    fromLat,
-    fromLng,
-    toLat,
-    toLng,
-    directWalkMinutesOverride
-  );
 
   const hubs = await resolveHubs(googleApiKey, [
     { lat: fromLat, lng: fromLng },
@@ -465,28 +434,6 @@ export async function buildFallbackTransitRoute(
   const { walkSegments, walkCoordinates, walkDistanceMeters } =
     extractWalkPaths(walkSteps);
 
-  if (directWalkMin + 2 < transitTotal) {
-    return {
-      source: "walk-preferred",
-      totalDurationMinutes: directWalkMin,
-      walkDurationMinutes: directWalkMin,
-      steps: [
-        {
-          mode: "WALK",
-          instruction: `Vá a pé direto até ${toLabel} (${directWalkMin} min) — mais rápido que metrô/ônibus neste caso`,
-          durationMinutes: directWalkMin,
-        },
-      ],
-      summary: `A pé direto (${directWalkMin} min) é melhor que TRANSIT (${transitTotal} min)`,
-      preferDirectWalk: true,
-      directWalkMinutes: directWalkMin,
-      // Elevação só nos trechos Caminhe do multimodal (walkSegments), não no a pé total
-      walkSegments,
-      walkCoordinates,
-      walkDistanceMeters,
-    };
-  }
-
   const walkDurationMinutes = walkToHubMin + walkFromHubMin;
 
   return {
@@ -495,8 +442,6 @@ export async function buildFallbackTransitRoute(
     walkDurationMinutes,
     steps: walkSteps,
     summary: walkSteps.map((s) => s.instruction).join(" → "),
-    preferDirectWalk: false,
-    directWalkMinutes: directWalkMin,
     walkSegments,
     walkCoordinates,
     walkDistanceMeters,
@@ -569,10 +514,7 @@ function buildOptionLabel(
   return `${modes} · ${totalDurationMinutes} min`;
 }
 
-function parseGoogleRouteRaw(
-  raw: GoogleRouteRaw,
-  directWalkMin: number
-): TransitRouteResult | null {
+function parseGoogleRouteRaw(raw: GoogleRouteRaw): TransitRouteResult | null {
   const stepsRaw = raw.legs?.[0]?.steps;
   if (!stepsRaw?.length) return null;
 
@@ -640,8 +582,6 @@ function parseGoogleRouteRaw(
     steps,
     summary,
     optionLabel,
-    preferDirectWalk: false,
-    directWalkMinutes: directWalkMin,
     walkSegments,
     walkCoordinates,
     walkDistanceMeters,
@@ -656,8 +596,7 @@ export async function fetchGoogleTransitRoutes(
   apiKey: string,
   originLat: number,
   originLng: number,
-  direction: TripDirection = "ida",
-  directWalkMinutesOverride?: number
+  direction: TripDirection = "ida"
 ): Promise<TransitRouteResult[]> {
   const from =
     direction === "ida"
@@ -667,14 +606,6 @@ export async function fetchGoogleTransitRoutes(
     direction === "ida"
       ? { lat: DESTINATION.lat, lng: DESTINATION.lng }
       : { lat: originLat, lng: originLng };
-
-  const directWalkMin = estimateDirectWalkMinutes(
-    from.lat,
-    from.lng,
-    to.lat,
-    to.lng,
-    directWalkMinutesOverride
-  );
 
   const res = await fetch(
     "https://routes.googleapis.com/directions/v2:computeRoutes",
@@ -714,38 +645,11 @@ export async function fetchGoogleTransitRoutes(
   }
 
   const parsed = data.routes
-    .map((raw) => parseGoogleRouteRaw(raw, directWalkMin))
+    .map((raw) => parseGoogleRouteRaw(raw))
     .filter((r): r is TransitRouteResult => r != null);
 
   if (!parsed.length) {
     throw new Error("Google Routes não retornou passos TRANSIT utilizáveis");
-  }
-
-  // Se a pé direto for claramente melhor que a melhor opção Google, inclui como opção
-  const bestTransitMin = Math.min(...parsed.map((r) => r.totalDurationMinutes));
-  if (directWalkMin + 2 < bestTransitMin) {
-    const toLabel = direction === "ida" ? DESTINATION.name : "o imóvel";
-    const walkOpt: TransitRouteResult = {
-      source: "walk-preferred",
-      totalDurationMinutes: directWalkMin,
-      walkDurationMinutes: directWalkMin,
-      steps: [
-        {
-          mode: "WALK",
-          instruction: `Vá a pé direto até ${toLabel} (${directWalkMin} min) — mais rápido que o transporte público neste caso`,
-          durationMinutes: directWalkMin,
-        },
-      ],
-      summary: `A pé direto (${directWalkMin} min) é melhor que TRANSIT (${bestTransitMin} min)`,
-      optionLabel: `A pé direto · ${directWalkMin} min`,
-      preferDirectWalk: true,
-      directWalkMinutes: directWalkMin,
-      // Mantém caminhadas do melhor trajeto Google para o gráfico Elevação
-      walkSegments: parsed[0].walkSegments,
-      walkCoordinates: parsed[0].walkCoordinates,
-      walkDistanceMeters: parsed[0].walkDistanceMeters,
-    };
-    return [walkOpt, ...parsed];
   }
 
   return parsed;
@@ -756,15 +660,13 @@ export async function fetchGoogleTransitRoute(
   apiKey: string,
   originLat: number,
   originLng: number,
-  direction: TripDirection = "ida",
-  directWalkMinutesOverride?: number
+  direction: TripDirection = "ida"
 ): Promise<TransitRouteResult> {
   const routes = await fetchGoogleTransitRoutes(
     apiKey,
     originLat,
     originLng,
-    direction,
-    directWalkMinutesOverride
+    direction
   );
   return routes[0];
 }

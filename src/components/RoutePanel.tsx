@@ -34,12 +34,6 @@ function TransitLegBlock({
           <span className="font-semibold text-slate-900">
             {route.totalDurationMinutes} min
           </span>
-          {route.directWalkMinutes != null && !route.preferDirectWalk ? (
-            <span className="text-slate-400">
-              {" "}
-              · a pé direto ~{route.directWalkMinutes} min
-            </span>
-          ) : null}
         </p>
       </div>
 
@@ -75,16 +69,9 @@ function TransitLegBlock({
         </div>
       ) : null}
 
-      {route.preferDirectWalk ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-950">
-          A pé direto (~{route.directWalkMinutes} min) é mais rápido que
-          metrô/ônibus + caminhadas neste trajeto.
-        </p>
-      ) : (
-        <p className="text-[11px] text-slate-500">
-          Caminhada no trajeto: {route.walkDurationMinutes} min
-        </p>
-      )}
+      <p className="text-[11px] text-slate-500">
+        Caminhada no trajeto: {route.walkDurationMinutes} min
+      </p>
 
       <ol className="space-y-2">
         {route.steps.map((step, idx) => (

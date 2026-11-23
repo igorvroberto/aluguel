@@ -13,19 +13,12 @@ export async function POST(req: NextRequest) {
       lat?: number;
       lng?: number;
       direction?: TripDirection;
-      /** Tempo a pé real (Mapbox) para comparar com TRANSIT. */
-      directWalkMinutes?: number;
     };
 
     const lat = Number(body.lat);
     const lng = Number(body.lng);
     const direction: TripDirection =
       body.direction === "volta" ? "volta" : "ida";
-    const directWalkMinutes =
-      body.directWalkMinutes != null &&
-      Number.isFinite(Number(body.directWalkMinutes))
-        ? Number(body.directWalkMinutes)
-        : undefined;
 
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       return NextResponse.json(
@@ -55,8 +48,7 @@ export async function POST(req: NextRequest) {
         apiKey,
         lat,
         lng,
-        direction,
-        directWalkMinutes
+        direction
       );
       return NextResponse.json({
         ok: true,
@@ -65,7 +57,7 @@ export async function POST(req: NextRequest) {
         direction,
         source: "google",
         message:
-          "Trajetos via Google Routes (TRANSIT), como no Maps — escolha a opção. Elevação só nos trechos Caminhe.",
+          "Trajetos via Google Routes (TRANSIT), como no Maps — escolha a opção.",
       });
     } catch (err) {
       console.warn("Google TRANSIT falhou, fallback local:", err);
@@ -73,7 +65,6 @@ export async function POST(req: NextRequest) {
         lat,
         lng,
         direction,
-        directWalkMinutes,
         mapboxToken,
         apiKey
       );
