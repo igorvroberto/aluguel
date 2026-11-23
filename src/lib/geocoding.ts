@@ -22,7 +22,7 @@ interface GeocodingResponse {
 
 /** São Paulo city bbox (approx) + proximity to destination. */
 const SP_BBOX = "-46.826,-23.78,-46.365,-23.356";
-const PROXIMITY = "-46.6654622,-23.5363756";
+const PROXIMITY = "-46.66527,-23.53593";
 
 export async function searchSaoPauloAddresses(
   token: string,
