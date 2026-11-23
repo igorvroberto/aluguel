@@ -67,6 +67,8 @@ export interface WalkPathSegment {
 export interface TransitRouteResult {
   source: "google" | "fallback";
   totalDurationMinutes: number;
+  /** Soma das distâncias dos passos (porta a porta). */
+  totalDistanceMeters: number;
   walkDurationMinutes: number;
   steps: TransitStep[];
   summary: string;
@@ -500,6 +502,7 @@ export async function buildFallbackTransitRoute(
   return {
     source: "fallback",
     totalDurationMinutes: transitTotal,
+    totalDistanceMeters: totalDistanceFromSteps(walkSteps),
     walkDurationMinutes,
     steps: walkSteps,
     summary: walkSteps.map((s) => s.instruction).join(" → "),
@@ -557,6 +560,12 @@ function googleModeToOurs(mode?: string, vehicleType?: string): TransitStepMode 
   }
   if (m === "TRANSIT") return "TRANSIT";
   return "WALK";
+}
+
+function totalDistanceFromSteps(steps: TransitStep[]): number {
+  return Math.round(
+    steps.reduce((sum, s) => sum + (s.distanceMeters ?? 0), 0)
+  );
 }
 
 function buildOptionLabel(
@@ -671,6 +680,7 @@ function parseGoogleRouteRaw(raw: GoogleRouteRaw): TransitRouteResult | null {
   return {
     source: "google",
     totalDurationMinutes,
+    totalDistanceMeters: totalDistanceFromSteps(steps),
     walkDurationMinutes,
     steps,
     summary,
