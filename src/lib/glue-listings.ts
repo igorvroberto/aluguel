@@ -26,6 +26,8 @@ export interface PortalListing {
   lat?: number;
   lng?: number;
   descricao?: string;
+  /** Bairro da busca (para fallback de coords). */
+  searchNeighborhood?: string;
 }
 
 function asRecord(v: unknown): Record<string, unknown> | null {

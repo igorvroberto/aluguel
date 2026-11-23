@@ -36,10 +36,22 @@ loadEnv({ path: path.join(process.cwd(), ".env") });
 const ROOT = process.cwd();
 const OUT_PATH = path.join(ROOT, "data", "apartments.json");
 
-const RADIUS_M = 1000;
 const MAX_PACKAGE = 4500;
 const TARGET_ROOMS = 2;
 const ORIGEM = "scraping" as const;
+
+/** Centro aproximado por bairro de busca (fallback se geocode falhar). */
+const NEIGH_COORDS: Record<string, { lat: number; lng: number }> = {
+  perdizes: { lat: -23.5385, lng: -46.6743 },
+  pompeia: { lat: -23.5289, lng: -46.6881 },
+  "agua-branca": { lat: -23.5208, lng: -46.6847 },
+  "barra-funda": { lat: -23.5255, lng: -46.6674 },
+  "santa-cecilia": { lat: -23.5389, lng: -46.6498 },
+  higienopolis: { lat: -23.5455, lng: -46.6565 },
+  republica: { lat: -23.5437, lng: -46.6425 },
+  belem: { lat: -23.5428, lng: -46.5895 },
+  tatuape: { lat: -23.5401, lng: -46.5766 },
+};
 
 const SANTA_MARCELINA = {
   name: "Faculdade Santa Marcelina Perdizes",
@@ -420,26 +432,32 @@ function nearestStation(
   return { station: best, distanceM: bestD };
 }
 
-function withinAnyStation(
-  lat: number,
-  lng: number,
-  stations: MetroStation[],
-  radiusM: number
-): boolean {
-  return nearestStation(lat, lng, stations).distanceM <= radiusM;
+function monthly(l: PortalListing): number {
+  return l.aluguel + l.condominio + l.iptu;
 }
 
-function normAddr(s: string): string {
-  return s
+function fallbackCoords(listing: PortalListing): { lat: number; lng: number } {
+  const neigh = (listing.searchNeighborhood || listing.bairro || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function monthly(l: PortalListing): number {
-  return l.aluguel + l.condominio + l.iptu;
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  if (neigh && NEIGH_COORDS[neigh]) return NEIGH_COORDS[neigh];
+  // aliases
+  if (neigh.includes("pompe")) return NEIGH_COORDS.pompeia;
+  if (neigh.includes("agua")) return NEIGH_COORDS["agua-branca"];
+  if (neigh.includes("barra")) return NEIGH_COORDS["barra-funda"];
+  if (neigh.includes("cecil")) return NEIGH_COORDS["santa-cecilia"];
+  if (neigh.includes("higien")) return NEIGH_COORDS.higienopolis;
+  if (neigh.includes("repub")) return NEIGH_COORDS.republica;
+  if (neigh.includes("belem")) return NEIGH_COORDS.belem;
+  if (neigh.includes("tatu")) return NEIGH_COORDS.tatuape;
+  if (neigh.includes("perdiz")) return NEIGH_COORDS.perdizes;
+  return {
+    lat: SANTA_MARCELINA.lat,
+    lng: SANTA_MARCELINA.lng,
+  };
 }
 
 async function main() {
@@ -448,7 +466,7 @@ async function main() {
     `estações: L3=${LINHA_VERMELHA.length} L6=${LINHA_LARANJA_ATIVAS.length} total=${stations.length}`
   );
   log(
-    `critério: ${TARGET_ROOMS} dorms, pacote ≤ R$ ${MAX_PACKAGE}, raio ${RADIUS_M}m`
+    `critério: ${TARGET_ROOMS} dorms, pacote ≤ R$ ${MAX_PACKAGE} (sem corte por raio na gravação)`
   );
   log(`bairros de busca: ${SEARCH_NEIGHBORHOODS.join(", ")}`);
 
@@ -487,6 +505,8 @@ async function main() {
         const key = item.linkAnuncio.toLowerCase();
         if (seenLinks.has(key)) continue;
         seenLinks.add(key);
+        item.searchNeighborhood = neigh;
+        if (!item.bairro) item.bairro = neigh;
         raw.push(item);
         added += 1;
       }
@@ -539,8 +559,7 @@ async function main() {
   const scrapedAt = new Date().toISOString();
   let added = 0;
   let skipped = 0;
-  let geoFail = 0;
-  let outOfRadius = 0;
+  let geoFallback = 0;
   const addedByPortal: Record<string, number> = {};
 
   // Completa endereço a partir do título quando o card só traz bairro/cidade
@@ -557,13 +576,9 @@ async function main() {
     }
   }
 
-  // Preferir itens com coords nativas; demais só se endereço parecer rua
-  const queue = filtered.filter(
-    (l) =>
-      (l.lat != null && l.lng != null) ||
-      /(rua|r\.|av\.?|avenida|alameda|travessa)/i.test(l.endereco)
-  );
-  log(`fila persistência: ${queue.length}/${filtered.length}`);
+  // Grava TODOS após preço/quartos — só pula duplicados
+  const queue = filtered;
+  log(`fila persistência: ${queue.length} (todos após preço/quartos)`);
 
   let done = 0;
   for (const listing of queue) {
@@ -574,20 +589,18 @@ async function main() {
       continue;
     }
 
-    const coords = await resolveCoords(listing, mapboxToken);
+    let coords = await resolveCoords(listing, mapboxToken);
+    let usedFallback = false;
+    if (!coords) {
+      coords = fallbackCoords(listing);
+      usedFallback = true;
+      geoFallback += 1;
+    }
     done += 1;
     if (done % 25 === 0 || done === queue.length) {
       log(
-        `geo ${done}/${queue.length} · novos=${added} · semGeo=${geoFail} · foraRaio=${outOfRadius}`
+        `geo ${done}/${queue.length} · novos=${added} · fallbackCoords=${geoFallback}`
       );
-    }
-    if (!coords) {
-      geoFail += 1;
-      continue;
-    }
-    if (!withinAnyStation(coords.lat, coords.lng, stations, RADIUS_M)) {
-      outOfRadius += 1;
-      continue;
     }
 
     const near = nearestStation(coords.lat, coords.lng, stations);
@@ -617,6 +630,7 @@ async function main() {
         `origem=${ORIGEM}`,
         `portal=${listing.portal}`,
         listing.bairro ? `bairro=${listing.bairro}` : null,
+        usedFallback ? "coords=fallback-bairro" : "coords=nativas-ou-geocode",
         `estação=${near.station.name} (${Math.round(near.distanceM)}m)`,
         `${SANTA_MARCELINA.name}: ${Math.round(toFaculdade)}m`,
       ]
@@ -652,7 +666,7 @@ async function main() {
   log(`arquivo: ${OUT_PATH}`);
   log(`total no JSON: ${existing.length}`);
   log(
-    `novos: ${added} | duplicados: ${skipped} | sem geo: ${geoFail} | fora do raio: ${outOfRadius}`
+    `novos: ${added} | duplicados: ${skipped} | coords fallback bairro: ${geoFallback}`
   );
   printCounts("novos por portal:", addedByPortal);
   printCounts("total no JSON por portal:", finalByPortal);
