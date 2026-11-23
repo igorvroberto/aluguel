@@ -122,6 +122,28 @@ export function RadarApp() {
     [apartments, filters]
   );
 
+  const manualTotal = useMemo(
+    () =>
+      apartments.filter(
+        (a) =>
+          a.status === "Manual" ||
+          (a.source || "").toLowerCase() === "manual" ||
+          (a.portal || "").toLowerCase() === "manual"
+      ).length,
+    [apartments]
+  );
+
+  const manualVisible = useMemo(
+    () =>
+      visible.filter(
+        (a) =>
+          a.status === "Manual" ||
+          (a.source || "").toLowerCase() === "manual" ||
+          (a.portal || "").toLowerCase() === "manual"
+      ).length,
+    [visible]
+  );
+
   const scrollMapIntoView = useCallback(() => {
     requestAnimationFrame(() => {
       mapSectionRef.current?.scrollIntoView({
@@ -274,6 +296,15 @@ export function RadarApp() {
 
   const listBlock = (
     <div ref={listRef} className="lg:max-h-[70vh] lg:overflow-y-auto">
+      {hydrated && manualTotal > 0 && (
+        <p className="border-b border-teal-100 bg-teal-50/70 px-4 py-2 text-[11px] text-teal-900">
+          {manualVisible} de {manualTotal} imóvel(is) manual(is) visíveis com
+          os filtros atuais
+          {manualVisible === 0
+            ? " — ative Status Manual (e Favorito, se tiver marcado)."
+            : "."}
+        </p>
+      )}
       {!hydrated ? (
         <p className="p-4 text-sm text-slate-500">Carregando imóveis…</p>
       ) : visible.length === 0 ? (
