@@ -2,23 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
-import {
-  LINHA_VERMELHA_COLOR,
-  METRO_STATIONS,
-} from "../../data/linhasMetro";
-import {
-  BUS_CORRIDORS,
-  DESTINATION,
-  MAPBOX_STYLE,
-  TRANSIT_STATIONS,
-} from "@/lib/constants";
-import {
-  BUS_LINES,
-  BUS_LINE_WIDTH,
-  buildBusLinesGeoJSON,
-} from "@/lib/bus-lines";
-import { buildBusStopsGeoJSON } from "../../data/busStops";
-import type { MapLayersState } from "@/components/MapLayersPanel";
+import { LINHA_VERMELHA_COLOR } from "../../data/linhasMetro";
+import { DESTINATION, MAPBOX_STYLE } from "@/lib/constants";
 import {
   buildLinhaLaranjaLineGeoJSON,
   buildLinhaLaranjaStationsGeoJSON,
@@ -40,15 +25,10 @@ interface MapViewProps {
   googleTransitRoute?: TransitRouteResult | null;
   stationIds?: string[];
   stationRadiusMeters?: number;
-  focusStationsToken?: number;
-  layers: MapLayersState;
   onSelectApartment: (id: string) => void;
 }
 
 const ROUTE_SOURCE = "route-segments";
-const TRANSIT_SOURCE = "transit-overlay";
-const BUS_LINES_SOURCE = "bus-lines-dedicated";
-const BUS_STOPS_SOURCE = "bus-stops-real";
 const L3_LINE_SOURCE = "linha-vermelha-line";
 const L3_STATIONS_SOURCE = "linha-vermelha-stations";
 const L6_LINE_SOURCE = "linha-laranja-line";
@@ -77,44 +57,6 @@ function buildGoogleTransitFeatures(
   return { type: "FeatureCollection", features };
 }
 
-function buildTransitGeoJSON(): GeoJSON.FeatureCollection {
-  const stationFeatures: GeoJSON.Feature[] = TRANSIT_STATIONS.map((s) => ({
-    type: "Feature",
-    properties: {
-      kind: "station",
-      name: s.name,
-      line: s.line,
-      color: s.color,
-    },
-    geometry: {
-      type: "Point",
-      coordinates: [s.lng, s.lat],
-    },
-  }));
-
-  const corridorFeatures: GeoJSON.Feature[] = BUS_CORRIDORS.map((c) => ({
-    type: "Feature",
-    properties: {
-      kind: "bus",
-      name: c.name,
-      lines: c.lines.join(", "),
-    },
-    geometry: {
-      type: "LineString",
-      coordinates: c.coordinates,
-    },
-  }));
-
-  return {
-    type: "FeatureCollection",
-    features: [...corridorFeatures, ...stationFeatures],
-  };
-}
-
-function busLayerId(lineId: string) {
-  return `bus-line-${lineId}`;
-}
-
 export function MapView({
   token,
   apartments,
@@ -122,15 +64,12 @@ export function MapView({
   googleTransitRoute = null,
   stationIds = [],
   stationRadiusMeters = 800,
-  focusStationsToken = 0,
-  layers,
   onSelectApartment,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const destMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const popupRef = useRef<mapboxgl.Popup | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
@@ -141,20 +80,14 @@ export function MapView({
       container: containerRef.current,
       style: MAPBOX_STYLE,
       center: [DESTINATION.lng, DESTINATION.lat],
-      zoom: 14,
-      pitch: 45,
-      bearing: -20,
+      zoom: 13,
+      pitch: 0,
+      bearing: 0,
       antialias: true,
     });
 
-    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
+    map.addControl(new mapboxgl.NavigationControl(), "top-right");
     mapRef.current = map;
-    popupRef.current = new mapboxgl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-      offset: 8,
-      className: "bus-line-popup",
-    });
 
     const setupLayers = () => {
       if (!map.getSource(ROUTE_SOURCE)) {
@@ -174,152 +107,6 @@ export function MapView({
             "line-color": ["get", "color"],
             "line-width": 5,
             "line-opacity": 0.9,
-          },
-        });
-      }
-
-
-      if (!map.getSource(BUS_LINES_SOURCE)) {
-        map.addSource(BUS_LINES_SOURCE, {
-          type: "geojson",
-          data: buildBusLinesGeoJSON(),
-        });
-
-        BUS_LINES.forEach((line) => {
-          const layerId = busLayerId(line.id);
-          if (map.getLayer(layerId)) return;
-          map.addLayer({
-            id: layerId,
-            type: "line",
-            source: BUS_LINES_SOURCE,
-            filter: ["==", ["get", "id"], line.id],
-            layout: {
-              "line-join": "round",
-              "line-cap": "round",
-              visibility: "visible",
-            },
-            paint: {
-              "line-color": line.color,
-              "line-width": BUS_LINE_WIDTH,
-              "line-opacity": 0.92,
-              "line-offset": line.offset,
-            },
-          });
-
-          map.on("mouseenter", layerId, (e) => {
-            map.getCanvas().style.cursor = "pointer";
-            const feat = e.features?.[0];
-            if (!feat || !e.lngLat || !popupRef.current) return;
-            const p = feat.properties || {};
-            popupRef.current
-              .setLngLat(e.lngLat)
-              .setHTML(
-                `<strong style="color:${p.color}">${p.code}</strong><br/>` +
-                  `<span>${p.name}</span><br/>` +
-                  `<span style="opacity:.8">${p.itinerary}</span>`
-              )
-              .addTo(map);
-          });
-          map.on("mousemove", layerId, (e) => {
-            if (e.lngLat && popupRef.current?.isOpen()) {
-              popupRef.current.setLngLat(e.lngLat);
-            }
-          });
-          map.on("mouseleave", layerId, () => {
-            map.getCanvas().style.cursor = "";
-            popupRef.current?.remove();
-          });
-        });
-      }
-
-      if (!map.getSource(BUS_STOPS_SOURCE)) {
-        map.addSource(BUS_STOPS_SOURCE, {
-          type: "geojson",
-          data: buildBusStopsGeoJSON(),
-        });
-        map.addLayer({
-          id: "bus-stops",
-          type: "circle",
-          source: BUS_STOPS_SOURCE,
-          paint: {
-            "circle-radius": 5,
-            "circle-color": "#1d4ed8",
-            "circle-stroke-width": 1.5,
-            "circle-stroke-color": "#ffffff",
-            "circle-opacity": 0.95,
-          },
-        });
-        map.on("mouseenter", "bus-stops", (e) => {
-          map.getCanvas().style.cursor = "pointer";
-          const feat = e.features?.[0];
-          if (!feat || !e.lngLat || !popupRef.current) return;
-          const p = feat.properties || {};
-          popupRef.current
-            .setLngLat(e.lngLat)
-            .setHTML(
-              `<strong>Parada</strong><br/>${p.name}<br/>` +
-                `<span style="opacity:.8">${p.lines || ""}</span>`
-            )
-            .addTo(map);
-        });
-        map.on("mouseleave", "bus-stops", () => {
-          map.getCanvas().style.cursor = "";
-          popupRef.current?.remove();
-        });
-      }
-
-      if (!map.getSource(TRANSIT_SOURCE)) {
-        map.addSource(TRANSIT_SOURCE, {
-          type: "geojson",
-          data: buildTransitGeoJSON(),
-        });
-        map.addLayer({
-          id: "bus-corridors",
-          type: "line",
-          source: TRANSIT_SOURCE,
-          filter: ["==", ["get", "kind"], "bus"],
-          layout: {
-            "line-join": "round",
-            "line-cap": "round",
-            visibility: "none",
-          },
-          paint: {
-            "line-color": "#64748b",
-            "line-width": 3,
-            "line-opacity": 0.35,
-            "line-dasharray": [2, 1.5],
-          },
-        });
-        map.addLayer({
-          id: "transit-stations",
-          type: "circle",
-          source: TRANSIT_SOURCE,
-          filter: ["==", ["get", "kind"], "station"],
-          layout: { visibility: "none" },
-          paint: {
-            "circle-radius": 8,
-            "circle-color": ["get", "color"],
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#ffffff",
-          },
-        });
-        map.addLayer({
-          id: "transit-station-labels",
-          type: "symbol",
-          source: TRANSIT_SOURCE,
-          filter: ["==", ["get", "kind"], "station"],
-          layout: {
-            visibility: "none",
-            "text-field": ["concat", ["get", "name"], "\n", ["get", "line"]],
-            "text-size": 11,
-            "text-offset": [0, 1.4],
-            "text-anchor": "top",
-            "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
-          },
-          paint: {
-            "text-color": "#0f172a",
-            "text-halo-color": "#ffffff",
-            "text-halo-width": 1.5,
           },
         });
       }
@@ -471,7 +258,6 @@ export function MapView({
       }
 
       setMapReady(true);
-      
     };
 
     map.on("style.load", setupLayers);
@@ -493,7 +279,6 @@ export function MapView({
       markersRef.current = [];
       destMarkerRef.current?.remove();
       destMarkerRef.current = null;
-      popupRef.current?.remove();
       map.remove();
       mapRef.current = null;
       setMapReady(false);
@@ -558,81 +343,16 @@ export function MapView({
         padding: 64,
         duration: 800,
         maxZoom: 16,
-        pitch: 45,
       });
     }
   }, [googleTransitRoute, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.getLayer("bus-corridors")) return;
-    const visibility = layers.showTransit ? "visible" : "none";
-    map.setLayoutProperty("bus-corridors", "visibility", visibility);
-    map.setLayoutProperty("transit-stations", "visibility", visibility);
-    map.setLayoutProperty("transit-station-labels", "visibility", visibility);
-  }, [layers.showTransit, mapReady]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !map.getLayer("l3-line")) return;
-    const visibility = layers.showLinhaVermelha ? "visible" : "none";
-    map.setLayoutProperty("l3-line", "visibility", visibility);
-    map.setLayoutProperty("l3-stations", "visibility", visibility);
-    map.setLayoutProperty("l3-station-labels", "visibility", visibility);
-  }, [layers.showLinhaVermelha, mapReady]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !map.getLayer("l6-line")) return;
-    const visibility = layers.showLinhaLaranja ? "visible" : "none";
-    map.setLayoutProperty("l6-line", "visibility", visibility);
-    map.setLayoutProperty("l6-stations", "visibility", visibility);
-    map.setLayoutProperty("l6-station-labels", "visibility", visibility);
-  }, [layers.showLinhaLaranja, mapReady]);
-
-  useEffect(() => {
-    const map = mapRef.current;
     if (!map || !map.getSource(METRO_RADIUS_SOURCE)) return;
     const source = map.getSource(METRO_RADIUS_SOURCE) as mapboxgl.GeoJSONSource;
-    source.setData(
-      buildStationRadiusGeoJSON(stationIds, stationRadiusMeters)
-    );
+    source.setData(buildStationRadiusGeoJSON(stationIds, stationRadiusMeters));
   }, [stationIds, stationRadiusMeters, mapReady]);
-
-  useEffect(() => {
-    if (!focusStationsToken) return;
-    const map = mapRef.current;
-    if (!map || stationIds.length === 0) return;
-
-    const selected = METRO_STATIONS.filter((s) => stationIds.includes(s.id));
-    if (selected.length === 0) return;
-
-    const bounds = new mapboxgl.LngLatBounds();
-    // ~1° lat ≈ 111 km; padding roughly by radius in degrees
-    const padDeg = stationRadiusMeters / 111_000;
-    selected.forEach((s) => {
-      bounds.extend([s.lng - padDeg, s.lat - padDeg]);
-      bounds.extend([s.lng + padDeg, s.lat + padDeg]);
-    });
-    map.fitBounds(bounds, {
-      padding: 72,
-      duration: 900,
-      maxZoom: 15,
-      pitch: 40,
-    });
-  }, [focusStationsToken, stationIds, stationRadiusMeters]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    BUS_LINES.forEach((line) => {
-      const layerId = busLayerId(line.id);
-      if (!map.getLayer(layerId)) return;
-      const on =
-        layers.showBusLines && layers.enabledLines[line.id] !== false;
-      map.setLayoutProperty(layerId, "visibility", on ? "visible" : "none");
-    });
-  }, [layers.showBusLines, layers.enabledLines, mapReady]);
 
   if (!token) {
     return (
@@ -643,10 +363,19 @@ export function MapView({
             Token Mapbox não configurado
           </p>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            Defina <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">NEXT_PUBLIC_MAPBOX_TOKEN</code>{" "}
-            em <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">.env</code>{" "}
-            (VPS) ou <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">.env.local</code>{" "}
-            (local) e faça rebuild. O restante da interface continua funcional.
+            Defina{" "}
+            <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
+              NEXT_PUBLIC_MAPBOX_TOKEN
+            </code>{" "}
+            em{" "}
+            <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
+              .env
+            </code>{" "}
+            (VPS) ou{" "}
+            <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
+              .env.local
+            </code>{" "}
+            (local) e faça rebuild.
           </p>
         </div>
       </div>
