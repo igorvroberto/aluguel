@@ -6,7 +6,7 @@ export const DESTINATION = {
   lng: -46.66527,
 } as const;
 
-export const DEFAULT_MAX_PACKAGE = 6000;
+export const DEFAULT_MAX_PACKAGE = 4000;
 
 export const TRANSIT_STATIONS = [
   {

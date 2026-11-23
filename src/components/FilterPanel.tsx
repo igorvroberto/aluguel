@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, TrainFront, X } from "lucide-react";
 import {
   LINHA_LARANJA_ATIVAS,
@@ -11,8 +11,8 @@ import {
   type MetroStation,
 } from "../../data/linhasMetro";
 import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
-import { formatBRL } from "@/lib/format";
-import { PORTAL_OPTIONS } from "@/lib/portals";
+import { formatBRL, formatThousands, parseThousandsInput } from "@/lib/format";
+import { PORTAL_FILTER_OPTIONS } from "@/lib/portals";
 import {
   APARTMENT_STATUSES,
   type ApartmentStatus,
@@ -116,6 +116,54 @@ function StationChecklist({
 
 export function FilterPanel({ filters, onChange }: FilterPanelProps) {
   const [stationQuery, setStationQuery] = useState("");
+  const [minDraft, setMinDraft] = useState(
+    filters.minPackage != null ? formatThousands(filters.minPackage) : ""
+  );
+  const [maxDraft, setMaxDraft] = useState(
+    filters.maxPackage != null ? formatThousands(filters.maxPackage) : ""
+  );
+
+  useEffect(() => {
+    setMinDraft(
+      filters.minPackage != null ? formatThousands(filters.minPackage) : ""
+    );
+  }, [filters.minPackage]);
+
+  useEffect(() => {
+    setMaxDraft(
+      filters.maxPackage != null ? formatThousands(filters.maxPackage) : ""
+    );
+  }, [filters.maxPackage]);
+
+  const commitPackage = (which: "min" | "max", draft: string) => {
+    const raw = draft.trim();
+    if (raw === "") {
+      onChange({
+        ...filters,
+        [which === "min" ? "minPackage" : "maxPackage"]: null,
+      });
+      return;
+    }
+    const n = parseThousandsInput(raw);
+    if (n == null) {
+      // restaura formatação atual
+      if (which === "min") {
+        setMinDraft(
+          filters.minPackage != null ? formatThousands(filters.minPackage) : ""
+        );
+      } else {
+        setMaxDraft(
+          filters.maxPackage != null ? formatThousands(filters.maxPackage) : ""
+        );
+      }
+      return;
+    }
+    const value = Math.max(0, Math.round(n));
+    onChange({
+      ...filters,
+      [which === "min" ? "minPackage" : "maxPackage"]: value,
+    });
+  };
 
   const toggleRoom = (room: 1 | 2 | 3) => {
     const exists = filters.rooms.includes(room);
@@ -205,44 +253,24 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
           <label className="block text-[11px] text-slate-500">
             De
             <input
-              type="number"
+              type="text"
               inputMode="numeric"
-              min={0}
-              step={100}
               placeholder="sem mín."
-              value={filters.minPackage ?? ""}
-              onChange={(e) => {
-                const raw = e.target.value.trim();
-                onChange({
-                  ...filters,
-                  minPackage:
-                    raw === "" || !Number.isFinite(Number(raw))
-                      ? null
-                      : Math.max(0, Math.round(Number(raw))),
-                });
-              }}
+              value={minDraft}
+              onChange={(e) => setMinDraft(e.target.value)}
+              onBlur={() => commitPackage("min", minDraft)}
               className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm tabular-nums text-slate-800 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
             />
           </label>
           <label className="block text-[11px] text-slate-500">
             Até
             <input
-              type="number"
+              type="text"
               inputMode="numeric"
-              min={0}
-              step={100}
               placeholder="sem máx."
-              value={filters.maxPackage ?? ""}
-              onChange={(e) => {
-                const raw = e.target.value.trim();
-                onChange({
-                  ...filters,
-                  maxPackage:
-                    raw === "" || !Number.isFinite(Number(raw))
-                      ? null
-                      : Math.max(0, Math.round(Number(raw))),
-                });
-              }}
+              value={maxDraft}
+              onChange={(e) => setMaxDraft(e.target.value)}
+              onBlur={() => commitPackage("max", maxDraft)}
               className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm tabular-nums text-slate-800 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
             />
           </label>
@@ -326,7 +354,7 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
           </span>
         </p>
         <div className="flex flex-wrap gap-2">
-          {PORTAL_OPTIONS.map((opt) => {
+          {PORTAL_FILTER_OPTIONS.map((opt) => {
             const active = (filters.portals ?? []).includes(opt.id);
             return (
               <button

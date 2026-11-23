@@ -18,11 +18,6 @@ export const PORTAL_LABELS: Record<PortalId, string> = {
   imovelweb: "Imovelweb",
 };
 
-export const PORTAL_OPTIONS = PORTAL_IDS.map((id) => ({
-  id,
-  label: PORTAL_LABELS[id],
-}));
-
 /**
  * Portais que o scrape tenta de verdade.
  * ZAP / Viva Real / Imovelweb caem em Cloudflare (ERROR_PAGE / Turnstile)
@@ -32,6 +27,15 @@ export const SCRAPE_ACTIVE_PORTALS: readonly PortalId[] = [
   "quintoandar",
   "chavesnamao",
 ] as const;
+
+/** Opções do filtro de portal na UI (só portais ativos no scrape). */
+export const PORTAL_FILTER_OPTIONS = SCRAPE_ACTIVE_PORTALS.map((id) => ({
+  id,
+  label: PORTAL_LABELS[id],
+}));
+
+/** @deprecated use PORTAL_FILTER_OPTIONS */
+export const PORTAL_OPTIONS = PORTAL_FILTER_OPTIONS;
 
 /** Bairros-alvo (polos L3/L6 ativas + entorno). */
 export const SEARCH_NEIGHBORHOODS = [
