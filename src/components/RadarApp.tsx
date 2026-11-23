@@ -22,13 +22,14 @@ import {
   type FiltersState,
 } from "@/lib/types";
 
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
 export function RadarApp() {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [persistHint, setPersistHint] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [mapsApiKey, setMapsApiKey] = useState<string | undefined>(
+    () => process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  );
   const [googleTransitRoute, setGoogleTransitRoute] =
     useState<TransitRouteResult | null>(null);
   const [filters, setFilters] = useState<FiltersState>({
@@ -75,6 +76,25 @@ export function RadarApp() {
           setHydrated(true);
           setPersistHint("Falha ao carregar imóveis do servidor.");
         }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/maps-config");
+        if (!res.ok) return;
+        const data = (await res.json()) as { apiKey?: string | null };
+        if (!cancelled && data.apiKey) {
+          setMapsApiKey(data.apiKey);
+        }
+      } catch (err) {
+        console.error(err);
       }
     })();
     return () => {
@@ -181,7 +201,7 @@ export function RadarApp() {
       <div ref={mapSectionRef} className="scroll-mt-2">
         <div className="h-[45vh] min-h-[280px] border-b border-slate-200 lg:h-[70vh]">
           <MapView
-            apiKey={GOOGLE_MAPS_API_KEY}
+            apiKey={mapsApiKey}
             apartments={visible}
             selectedId={selectedId}
             googleTransitRoute={googleTransitRoute}

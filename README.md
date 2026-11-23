@@ -23,15 +23,14 @@ Aplicação web em **Next.js 14** (App Router, TypeScript, Tailwind CSS) para an
 npm install
 cp .env.local.example .env.local
 # Edite .env.local:
-#   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...  # Maps JavaScript API (mapa)
-#   GOOGLE_MAPS_API_KEY=...              # Routes TRANSIT (pode ser a mesma chave)
+#   GOOGLE_MAPS_API_KEY=...              # mapa + Routes TRANSIT (mesma chave)
 #   NEXT_PUBLIC_MAPBOX_TOKEN=...         # opcional: geocode scrape/cadastro
 npm run dev
 ```
 
 Abra [http://localhost:3000](http://localhost:3000).
 
-Sem `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`, a interface continua funcional e a área do mapa exibe um aviso. Habilite **Maps JavaScript API** na chave. **Transporte público** exige `GOOGLE_MAPS_API_KEY` (Routes TRANSIT). Sem a key a API responde 503.
+O mapa usa **Maps JavaScript API** (chave via `GOOGLE_MAPS_API_KEY` em runtime ou `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`). Sem a key, a UI mostra aviso. Se aparecer “Ops! Algo deu errado”, ative Maps JavaScript API + faturamento e libere o domínio nas restrições HTTP referrer. **Transporte público** usa a mesma `GOOGLE_MAPS_API_KEY` (Routes TRANSIT).
 
 ## Scripts
 
@@ -75,7 +74,7 @@ sudo mkdir -p /opt/radar-imoveis
 sudo git clone https://github.com/igorvroberto/aluguel.git /opt/radar-imoveis
 cd /opt/radar-imoveis
 sudo cp .env.example .env
-sudo nano .env   # NEXT_PUBLIC_GOOGLE_MAPS_API_KEY + GOOGLE_MAPS_API_KEY
+sudo nano .env   # GOOGLE_MAPS_API_KEY (Maps JavaScript + Routes)
 sudo bash tools/deploy.sh
 ```
 
