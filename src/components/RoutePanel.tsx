@@ -86,8 +86,6 @@ function TransitLegBlock({
         </p>
       )}
 
-      <p className="text-sm leading-relaxed text-slate-700">{route.summary}</p>
-
       <ol className="space-y-2">
         {route.steps.map((step, idx) => (
           <li
