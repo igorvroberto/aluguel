@@ -4,10 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApartmentCard } from "@/components/ApartmentCard";
 import { FilterPanel } from "@/components/FilterPanel";
 import { Header } from "@/components/Header";
-import {
-  MapLayersPanel,
-  type MapLayersState,
-} from "@/components/MapLayersPanel";
 import { MapView } from "@/components/MapView";
 import { RoutePanel } from "@/components/RoutePanel";
 import { DEFAULT_STATION_RADIUS_METERS } from "../../data/linhasMetro";
@@ -16,7 +12,6 @@ import {
   fetchApartments,
   patchApartment,
 } from "@/lib/apartments-api";
-import { BUS_LINES } from "@/lib/bus-lines";
 import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
 import { getVisibleApartments } from "@/lib/filters";
 import type { TransitRouteResult } from "@/lib/transit";
@@ -29,22 +24,11 @@ import {
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-function initialMapLayers(): MapLayersState {
-  return {
-    showBusLines: true,
-    enabledLines: Object.fromEntries(BUS_LINES.map((l) => [l.id, true])),
-    showLinhaVermelha: true,
-    showLinhaLaranja: true,
-    showTransit: false,
-  };
-}
-
 export function RadarApp() {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [persistHint, setPersistHint] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [mapLayers, setMapLayers] = useState<MapLayersState>(initialMapLayers);
   const [googleTransitRoute, setGoogleTransitRoute] =
     useState<TransitRouteResult | null>(null);
   const [filters, setFilters] = useState<FiltersState>({
@@ -193,12 +177,6 @@ export function RadarApp() {
   const mapBlock = (
     <section className="flex min-w-0 flex-1 flex-col">
       <div ref={mapSectionRef} className="scroll-mt-2">
-        <MapLayersPanel
-          layers={mapLayers}
-          onChange={setMapLayers}
-          stationIds={filters.stationIds}
-          stationRadiusMeters={filters.stationRadiusMeters}
-        />
         <div className="h-[45vh] min-h-[280px] border-b border-slate-200 lg:h-[70vh]">
           <MapView
             token={MAPBOX_TOKEN}
@@ -207,7 +185,6 @@ export function RadarApp() {
             googleTransitRoute={googleTransitRoute}
             stationIds={filters.stationIds}
             stationRadiusMeters={filters.stationRadiusMeters}
-            layers={mapLayers}
             onSelectApartment={handleSelect}
           />
         </div>

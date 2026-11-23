@@ -9,7 +9,7 @@ Aplicação web em **Next.js 14** (App Router, TypeScript, Tailwind CSS) para an
 - Layout split-screen: lista/filtros + mapa Mapbox + painel de transporte público
 - Pacote mensal (`aluguel + condomínio + IPTU`), quartos e portaria 24h
 - **Transporte Público** via Google Routes TRANSIT (alternativas ônibus/metrô) — traçado no mapa conforme a opção
-- Estações L3/L6, pontos de ônibus e filtros por estação
+- Mapa com Linha 3-Vermelha e Linha 6-Laranja; filtro por estação (sem linhas/corredores de ônibus no mapa)
 - Importação por URL de anúncio (`/api/scrape-listing`) com fallback “colar texto”
 - Persistência centralizada em `data/apartments.json` via `/api/apartments` (sem `localStorage`)
 - Status (`Candidato` / `Favorito` / `Visita Agendada` / `Descartado`) e comentários no servidor
