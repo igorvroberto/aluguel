@@ -33,18 +33,24 @@ fi
 
 echo "=== scrape (skip=${SCRAPE_SKIP_PORTALS:-} only=${SCRAPE_ONLY_PORTALS:-}) ==="
 
-docker run --rm -i \
+# Pin Playwright à imagem Docker (evita npm puxar versão nova sem browsers).
+docker run --rm \
   --network host \
-  -e SCRAPE_PROXY_URL \
-  -e NEXT_PUBLIC_MAPBOX_TOKEN \
+  --env-file "$ROOT/.env" \
   -e SCRAPE_SKIP_PORTALS \
   -e SCRAPE_ONLY_PORTALS \
-  -e DISPLAY \
   -v "$ROOT:/work" \
   -v "$VOL_DATA:/work/data/apartments.json" \
   -w /work \
   mcr.microsoft.com/playwright:v1.49.1-jammy \
-  bash -lc 'npm ci --omit=dev=false 2>/dev/null || npm install --no-save playwright tsx dotenv @turf/turf cheerio; xvfb-run -a npx tsx scripts/scrape-now.ts'
+  bash -lc 'set -e
+    npm install --no-save --no-package-lock \
+      playwright@1.49.1 tsx dotenv @turf/turf cheerio
+    export DISPLAY=:99
+    Xvfb :99 -screen 0 1440x900x24 -nolisten tcp >/tmp/xvfb.log 2>&1 &
+    sleep 2
+    npx --yes tsx scripts/scrape-now.ts
+  '
 
 # Espelho no checkout (backup local)
 if [[ -f "$VOL_DATA" ]]; then
