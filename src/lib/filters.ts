@@ -1,36 +1,15 @@
 import { DESTINATION } from "./constants";
 import { distanceMeters, isWithinSelectedStations } from "./geo";
 import { monthlyPackage } from "./format";
-import type { Apartment, FiltersState, RouteAnalysis } from "./types";
+import type { Apartment, FiltersState } from "./types";
 
 function packageValue(apt: Apartment): number {
   return monthlyPackage(apt.aluguel, apt.condominio, apt.iptu);
 }
 
-/** Distância a pé Mapbox quando houver; senão linha reta até o destino. */
-function sortDistanceMeters(
-  apt: Apartment,
-  analyses: Record<string, RouteAnalysis>
-): number {
-  const analyzed = analyses[apt.id]?.distanceMeters;
-  if (analyzed != null && Number.isFinite(analyzed)) return analyzed;
-  return distanceMeters(apt, DESTINATION);
-}
-
-/** Subida acumulada do trajeto a pé analisado; sem análise → infinito (vai ao fim). */
-function sortElevationGain(
-  apt: Apartment,
-  analyses: Record<string, RouteAnalysis>
-): number {
-  const gain = analyses[apt.id]?.elevationGain;
-  if (gain != null && Number.isFinite(gain)) return gain;
-  return Number.POSITIVE_INFINITY;
-}
-
 export function getVisibleApartments(
   apartments: Apartment[],
-  filters: FiltersState,
-  analyses: Record<string, RouteAnalysis>
+  filters: FiltersState
 ): Apartment[] {
   const roomSet = new Set(filters.rooms);
 
@@ -65,22 +44,17 @@ export function getVisibleApartments(
 
     if (filters.sortBy === "pacote") {
       primary = packageValue(a) - packageValue(b);
-    } else if (filters.sortBy === "distancia") {
-      primary =
-        sortDistanceMeters(a, analyses) - sortDistanceMeters(b, analyses);
     } else {
-      // subida
-      primary =
-        sortElevationGain(a, analyses) - sortElevationGain(b, analyses);
+      // distancia (linha reta até o destino)
+      primary = distanceMeters(a, DESTINATION) - distanceMeters(b, DESTINATION);
     }
 
     if (primary !== 0) return primary;
 
-    // Desempate estável: valor → distância → id
     const byValue = packageValue(a) - packageValue(b);
     if (byValue !== 0) return byValue;
     const byDist =
-      sortDistanceMeters(a, analyses) - sortDistanceMeters(b, analyses);
+      distanceMeters(a, DESTINATION) - distanceMeters(b, DESTINATION);
     if (byDist !== 0) return byDist;
     return a.id.localeCompare(b.id);
   });
