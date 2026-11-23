@@ -12,6 +12,7 @@ import {
 } from "../../data/linhasMetro";
 import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
 import { formatBRL } from "@/lib/format";
+import { PORTAL_OPTIONS } from "@/lib/portals";
 import {
   APARTMENT_STATUSES,
   type ApartmentStatus,
@@ -28,6 +29,12 @@ const ROOM_OPTIONS: Array<{ value: 1 | 2 | 3; label: string }> = [
   { value: 1, label: "1" },
   { value: 2, label: "2" },
   { value: 3, label: "3+" },
+];
+
+const PARKING_OPTIONS: Array<{ value: 0 | 1 | 2; label: string }> = [
+  { value: 0, label: "0" },
+  { value: 1, label: "1" },
+  { value: 2, label: "2+" },
 ];
 
 const SORT_OPTIONS: Array<{ value: SortOption; label: string }> = [
@@ -116,6 +123,26 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       ? filters.rooms.filter((r) => r !== room)
       : [...filters.rooms, room];
     onChange({ ...filters, rooms: rooms.sort() as Array<1 | 2 | 3> });
+  };
+
+  const toggleParking = (spots: 0 | 1 | 2) => {
+    const exists = filters.parkingSpots.includes(spots);
+    const parkingSpots = exists
+      ? filters.parkingSpots.filter((s) => s !== spots)
+      : [...filters.parkingSpots, spots];
+    onChange({
+      ...filters,
+      parkingSpots: parkingSpots.sort() as Array<0 | 1 | 2>,
+    });
+  };
+
+  const togglePortal = (portalId: string) => {
+    const current = filters.portals ?? [];
+    const exists = current.includes(portalId);
+    const portals = exists
+      ? current.filter((p) => p !== portalId)
+      : [...current, portalId];
+    onChange({ ...filters, portals });
   };
 
   const toggleStatus = (status: ApartmentStatus) => {
@@ -256,6 +283,57 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
                 type="button"
                 onClick={() => toggleRoom(opt.value)}
                 className={`flex-1 rounded-md border px-2 py-1.5 text-sm font-medium transition ${
+                  active
+                    ? "border-teal-700 bg-teal-700 text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-medium text-slate-700">Vagas</p>
+        <div className="flex gap-2">
+          {PARKING_OPTIONS.map((opt) => {
+            const active = filters.parkingSpots.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => toggleParking(opt.value)}
+                className={`flex-1 rounded-md border px-2 py-1.5 text-sm font-medium transition ${
+                  active
+                    ? "border-teal-700 bg-teal-700 text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-medium text-slate-700">
+          Portal
+          <span className="ml-1 font-normal text-slate-400">
+            (vazio = todos)
+          </span>
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {PORTAL_OPTIONS.map((opt) => {
+            const active = (filters.portals ?? []).includes(opt.id);
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => togglePortal(opt.id)}
+                className={`rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
                   active
                     ? "border-teal-700 bg-teal-700 text-white"
                     : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"

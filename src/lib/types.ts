@@ -31,6 +31,8 @@ export interface Apartment {
   status?: ApartmentStatus;
   comments?: string;
   source?: string;
+  /** Portal de origem (ex.: QuintoAndar, ZAP Imóveis). */
+  portal?: string;
   scrapedAt?: string;
 }
 
@@ -42,6 +44,10 @@ export interface FiltersState {
   /** Pacote mensal máximo (null = sem máximo). */
   maxPackage: number | null;
   rooms: Array<1 | 2 | 3>;
+  /** Vagas de carro: 0, 1 ou 2+ (2). */
+  parkingSpots: Array<0 | 1 | 2>;
+  /** Portais selecionados (vazio = todos). */
+  portals: string[];
   sortBy: SortOption;
   stationIds: string[];
   stationRadiusMeters: number;
@@ -65,4 +71,5 @@ export interface NewApartmentInput {
   status?: ApartmentStatus;
   comments?: string;
   source?: string;
+  portal?: string;
 }

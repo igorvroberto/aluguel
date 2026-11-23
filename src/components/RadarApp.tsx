@@ -34,7 +34,9 @@ export function RadarApp() {
   const [filters, setFilters] = useState<FiltersState>({
     minPackage: null,
     maxPackage: DEFAULT_MAX_PACKAGE,
-    rooms: [1, 2, 3],
+    rooms: [2],
+    parkingSpots: [1],
+    portals: [],
     sortBy: "pacote",
     stationIds: [],
     stationRadiusMeters: DEFAULT_STATION_RADIUS_METERS,

@@ -2,6 +2,19 @@ import * as cheerio from "cheerio";
 import * as turf from "@turf/turf";
 import { METRO_STATIONS, type MetroStation } from "../../data/linhasMetro";
 import { extractFromHtml, parseBRLNumber } from "./listing-parser";
+import {
+  PORTAL_LABELS,
+  SCRAPE_ACTIVE_PORTALS,
+  SEARCH_PRICE_BANDS,
+  normalizePortalId,
+  type PortalId,
+} from "./portals";
+import {
+  closeSharedBrowser,
+  getSharedBrowser,
+  scrapeChavesPaginated,
+  scrapeQuintoAndarPaginated,
+} from "./portal-playwright";
 import type { Apartment, ApartmentStatus } from "./types";
 
 const DEFAULT_STATUS: ApartmentStatus = "Candidato";
@@ -21,6 +34,7 @@ export interface RawListingCandidate {
   portaria24h: boolean;
   externalUrl: string;
   source: string;
+  portal?: string;
   lat?: number;
   lng?: number;
   notes?: string;
@@ -255,6 +269,7 @@ function listingFromObject(
 
   if (!address && aluguel <= 0) return null;
 
+  const portalId = normalizePortalId(source);
   return {
     title,
     address: address || "São Paulo - SP",
@@ -267,6 +282,7 @@ function listingFromObject(
     portaria24h: Boolean(obj.doorman || obj.portaria24h),
     externalUrl,
     source,
+    portal: portalId ? PORTAL_LABELS[portalId] : undefined,
     lat,
     lng,
     notes: pickString(obj.description)?.slice(0, 280),
@@ -395,36 +411,70 @@ function buildSearchUrls(
   const neigh = slugify(station.name.split("–")[0].split("-")[0].trim());
   const roomMin = Math.min(...rooms);
   const roomMax = Math.max(...rooms);
-  const rentMax = Math.max(1500, maxPackage);
+  const active = new Set<string>(SCRAPE_ACTIVE_PORTALS);
+  const out: Array<{ url: string; source: string }> = [];
 
-  return [
-    {
-      source: "quintoandar",
-      url:
-        `https://www.quintoandar.com.br/alugar/imovel/${neigh}-sao-paulo-sp-brasil/apartamento` +
-        `/de-0-a-${rentMax}/de-${roomMin}-a-${roomMax}-quartos` +
-        `?proximity=${station.lat},${station.lng}`,
-    },
-    {
-      source: "vivareal",
-      url:
-        `https://www.vivareal.com.br/aluguel/sp/sao-paulo/${neigh}/apartamento_residencial/` +
-        `#onde=Brasil,São Paulo,São Paulo,,,,BR%3ESao%20Paulo%3ENULL%3ESao%20Paulo,,,` +
-        `&preco-ate=${rentMax}&quartos=${roomMin}`,
-    },
-    {
-      source: "imovelweb",
-      url:
-        `https://www.imovelweb.com.br/apartamentos-aluguel-${neigh}-sao-paulo.html` +
-        `?precio-maximo=${rentMax}&ambientes=${roomMin}`,
-    },
-    {
-      source: "chavesnamao",
-      url:
-        `https://www.chavesnamao.com.br/apartamentos-para-alugar/sp-sao-paulo/${neigh}/` +
-        `?valorMax=${rentMax}&quartos=${roomMin}`,
-    },
-  ];
+  for (const band of SEARCH_PRICE_BANDS) {
+    if (band.min > maxPackage) continue;
+    const max = Math.min(band.max ?? maxPackage, maxPackage);
+    if (max < band.min) continue;
+    if (active.has("quintoandar")) {
+      out.push({
+        source: "quintoandar",
+        url:
+          `https://www.quintoandar.com.br/alugar/imovel/${neigh}-sao-paulo-sp-brasil/apartamento` +
+          `/de-${band.min}-a-${max}/de-${roomMin}-a-${roomMax}-quartos` +
+          `?proximity=${station.lat},${station.lng}`,
+      });
+    }
+    if (active.has("chavesnamao")) {
+      out.push({
+        source: "chavesnamao",
+        url:
+          `https://www.chavesnamao.com.br/apartamentos-para-alugar/sp-sao-paulo/${neigh}/` +
+          `?valorMin=${band.min}&valorMax=${max}&quartos=${roomMin}`,
+      });
+    }
+  }
+  return out;
+}
+
+function portalListingsToCandidates(
+  source: string,
+  items: Array<{
+    titulo: string;
+    endereco: string;
+    aluguel: number;
+    condominio: number;
+    iptu: number;
+    quartos: number;
+    vagas?: number;
+    areaM2?: number;
+    portaria24h: boolean;
+    linkAnuncio: string;
+    portalLabel: string;
+    lat?: number;
+    lng?: number;
+    descricao?: string;
+  }>
+): RawListingCandidate[] {
+  return items.map((item) => ({
+    title: item.titulo,
+    address: item.endereco,
+    aluguel: item.aluguel,
+    condominio: item.condominio,
+    iptu: item.iptu,
+    rooms: item.quartos || 1,
+    areaM2: item.areaM2,
+    parkingSpots: item.vagas,
+    portaria24h: item.portaria24h,
+    externalUrl: item.linkAnuncio,
+    source,
+    portal: item.portalLabel,
+    lat: item.lat,
+    lng: item.lng,
+    notes: item.descricao,
+  }));
 }
 
 async function scrapePage(
@@ -432,6 +482,34 @@ async function scrapePage(
   source: string,
   allowPlaywright: boolean
 ): Promise<{ listings: RawListingCandidate[]; warning?: string }> {
+  const portal = normalizePortalId(source) as PortalId | undefined;
+
+  // QuintoAndar / Chaves: paginação real quando Playwright liberado
+  if (
+    allowPlaywright &&
+    portal &&
+    (portal === "quintoandar" || portal === "chavesnamao")
+  ) {
+    try {
+      await getSharedBrowser("headless");
+      const items =
+        portal === "quintoandar"
+          ? await scrapeQuintoAndarPaginated(url, {
+              mode: "headless",
+              maxClicks: 12,
+            })
+          : await scrapeChavesPaginated(url, {
+              mode: "headless",
+              maxClicks: 8,
+            });
+      if (items.length > 0) {
+        return { listings: portalListingsToCandidates(source, items) };
+      }
+    } catch {
+      // cai no fetch HTML abaixo
+    }
+  }
+
   let fetched = await fetchHtml(url);
   if ((!fetched.ok || fetched.blocked) && allowPlaywright) {
     const html = await scrapeWithPlaywrightFallback(url);
@@ -459,7 +537,6 @@ async function scrapePage(
     "/aluguel/",
   ]);
 
-  // Enrich sparse anchor hits with HTML extract of first few
   const merged = [...fromNext, ...fromLd];
   if (merged.length === 0) {
     for (const a of fromAnchors.slice(0, 8)) {
@@ -555,26 +632,33 @@ export async function scrapeStationsNative(
   let scanned = 0;
   const allowPlaywright = process.env.ENABLE_PLAYWRIGHT_SCRAPE === "1";
 
-  for (const station of stations) {
-    const urls = buildSearchUrls(station, opts.rooms, opts.maxPackage).slice(
-      0,
-      maxPages + 2
-    );
-    for (const item of urls) {
-      scanned += 1;
-      portals.add(item.source);
-      const { listings, warning } = await scrapePage(
-        item.url,
-        item.source,
-        allowPlaywright
+  try {
+    for (const station of stations) {
+      // Fatias bairro×preço — limita pelo maxPages para não estourar timeout da API
+      const urls = buildSearchUrls(station, opts.rooms, opts.maxPackage).slice(
+        0,
+        Math.max(4, maxPages * 2)
       );
-      if (warning) warnings.push(warning);
-      for (const listing of listings) {
-        const key = listing.externalUrl.trim().toLowerCase();
-        if (!key || seenUrl.has(key)) continue;
-        seenUrl.add(key);
-        raw.push(listing);
+      for (const item of urls) {
+        scanned += 1;
+        portals.add(item.source);
+        const { listings, warning } = await scrapePage(
+          item.url,
+          item.source,
+          allowPlaywright
+        );
+        if (warning) warnings.push(warning);
+        for (const listing of listings) {
+          const key = listing.externalUrl.trim().toLowerCase();
+          if (!key || seenUrl.has(key)) continue;
+          seenUrl.add(key);
+          raw.push(listing);
+        }
       }
+    }
+  } finally {
+    if (allowPlaywright) {
+      await closeSharedBrowser().catch(() => undefined);
     }
   }
 
@@ -616,6 +700,7 @@ export async function scrapeStationsNative(
       continue;
     }
 
+    const portalId = normalizePortalId(listing.source);
     apartments.push({
       id: `apt-scrape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       title: listing.title,
@@ -633,6 +718,7 @@ export async function scrapeStationsNative(
       notes: listing.notes,
       status: DEFAULT_STATUS,
       source: listing.source,
+      portal: listing.portal || (portalId ? PORTAL_LABELS[portalId] : undefined),
       scrapedAt: new Date().toISOString(),
     });
   }

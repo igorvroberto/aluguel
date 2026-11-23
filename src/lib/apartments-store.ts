@@ -35,6 +35,7 @@ function normalizeApartment(raw: Partial<Apartment>): Apartment {
     status: (raw.status as ApartmentStatus) || DEFAULT_STATUS,
     comments: raw.comments != null ? String(raw.comments) : undefined,
     source: raw.source != null ? String(raw.source) : undefined,
+    portal: raw.portal != null ? String(raw.portal) : undefined,
     scrapedAt: raw.scrapedAt != null ? String(raw.scrapedAt) : undefined,
   };
 }

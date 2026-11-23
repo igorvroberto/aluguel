@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  Car,
   ExternalLink,
   Footprints,
   MapPinned,
@@ -16,6 +17,7 @@ import {
 } from "@/lib/geo";
 import { formatBRL, formatDistance, monthlyPackage } from "@/lib/format";
 import { resolveListingUrl } from "@/lib/listing-url";
+import { portalLabel, resolveApartmentPortal } from "@/lib/portals";
 import {
   APARTMENT_STATUSES,
   type Apartment,
@@ -58,6 +60,7 @@ export function ApartmentCard({
   const nearestMetro = nearestMetroStation(apartment);
   const status = apartment.status || "Candidato";
   const distToDest = distanceMeters(apartment, DESTINATION);
+  const portal = portalLabel(resolveApartmentPortal(apartment));
 
   return (
     <article
@@ -118,6 +121,14 @@ export function ApartmentCard({
         <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-slate-700">
           {apartment.rooms >= 3 ? "3+" : apartment.rooms} qto
           {apartment.rooms === 1 ? "" : "s"}
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-slate-700">
+          <Car className="h-3 w-3" aria-hidden />
+          {apartment.parkingSpots ?? 0} vaga
+          {(apartment.parkingSpots ?? 0) === 1 ? "" : "s"}
+        </span>
+        <span className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-medium text-slate-600">
+          {portal}
         </span>
         {apartment.portaria24h && (
           <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-1 text-sky-800">
