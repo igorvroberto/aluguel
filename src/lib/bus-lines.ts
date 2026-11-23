@@ -14,8 +14,8 @@ export interface BusLineDef {
   coordinates: [number, number][];
 }
 
-/** Faculdade Santa Marcelina / R. Dr. Emílio Ribas, 89 */
-export const FACULDADE: [number, number] = [-46.6654622, -23.5363756];
+/** R. Dr. Emílio Ribas, 89 — na rua (não no meio do quarteirão) */
+export const FACULDADE: [number, number] = [-46.66527, -23.53593];
 
 export const BUS_LINES: BusLineDef[] = [
   {
