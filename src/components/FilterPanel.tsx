@@ -464,8 +464,8 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       <div>
         <p className="mb-2 text-sm font-medium text-slate-700">Status</p>
         <p className="mb-2 text-[10px] leading-snug text-slate-500">
-          Manual ignora teto de pacote, quartos e vagas — só o status (e
-          estações, se selecionadas) filtra esses imóveis.
+          Pacote, quartos, vagas e portal valem só para Candidato. Os demais
+          status aparecem pelo Status (e estações, se selecionadas).
         </p>
         <div className="flex flex-wrap gap-1.5">
           {APARTMENT_STATUSES.map((status) => {
