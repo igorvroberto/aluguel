@@ -12,6 +12,7 @@ import {
 } from "../../data/linhasMetro";
 import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
 import { formatBRL } from "@/lib/format";
+import { PORTAL_OPTIONS } from "@/lib/portals";
 import {
   APARTMENT_STATUSES,
   type ApartmentStatus,
@@ -133,6 +134,15 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
       ...filters,
       parkingSpots: parkingSpots.sort() as Array<0 | 1 | 2>,
     });
+  };
+
+  const togglePortal = (portalId: string) => {
+    const current = filters.portals ?? [];
+    const exists = current.includes(portalId);
+    const portals = exists
+      ? current.filter((p) => p !== portalId)
+      : [...current, portalId];
+    onChange({ ...filters, portals });
   };
 
   const toggleStatus = (status: ApartmentStatus) => {
@@ -296,6 +306,34 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
                 type="button"
                 onClick={() => toggleParking(opt.value)}
                 className={`flex-1 rounded-md border px-2 py-1.5 text-sm font-medium transition ${
+                  active
+                    ? "border-teal-700 bg-teal-700 text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-medium text-slate-700">
+          Portal
+          <span className="ml-1 font-normal text-slate-400">
+            (vazio = todos)
+          </span>
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {PORTAL_OPTIONS.map((opt) => {
+            const active = (filters.portals ?? []).includes(opt.id);
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => togglePortal(opt.id)}
+                className={`rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
                   active
                     ? "border-teal-700 bg-teal-700 text-white"
                     : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"

@@ -36,6 +36,7 @@ export function RadarApp() {
     maxPackage: DEFAULT_MAX_PACKAGE,
     rooms: [2],
     parkingSpots: [1],
+    portals: [],
     sortBy: "pacote",
     stationIds: [],
     stationRadiusMeters: DEFAULT_STATION_RADIUS_METERS,

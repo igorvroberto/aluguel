@@ -1,7 +1,15 @@
 import * as cheerio from "cheerio";
 import * as turf from "@turf/turf";
 import { METRO_STATIONS, type MetroStation } from "../../data/linhasMetro";
+import { softListingKey } from "./glue-listings";
 import { extractFromHtml, parseBRLNumber } from "./listing-parser";
+import { PORTAL_LABELS, normalizePortalId, type PortalId } from "./portals";
+import {
+  closeSharedBrowser,
+  getSharedBrowser,
+  scrapeGlueSearchPage,
+  scrapeHtmlSearchPage,
+} from "./portal-playwright";
 import type { Apartment, ApartmentStatus } from "./types";
 
 const DEFAULT_STATUS: ApartmentStatus = "Candidato";
@@ -21,6 +29,7 @@ export interface RawListingCandidate {
   portaria24h: boolean;
   externalUrl: string;
   source: string;
+  portal?: string;
   lat?: number;
   lng?: number;
   notes?: string;
@@ -255,6 +264,7 @@ function listingFromObject(
 
   if (!address && aluguel <= 0) return null;
 
+  const portalId = normalizePortalId(source);
   return {
     title,
     address: address || "São Paulo - SP",
@@ -267,6 +277,7 @@ function listingFromObject(
     portaria24h: Boolean(obj.doorman || obj.portaria24h),
     externalUrl,
     source,
+    portal: portalId ? PORTAL_LABELS[portalId] : undefined,
     lat,
     lng,
     notes: pickString(obj.description)?.slice(0, 280),
@@ -409,8 +420,13 @@ function buildSearchUrls(
       source: "vivareal",
       url:
         `https://www.vivareal.com.br/aluguel/sp/sao-paulo/${neigh}/apartamento_residencial/` +
-        `#onde=Brasil,São Paulo,São Paulo,,,,BR%3ESao%20Paulo%3ENULL%3ESao%20Paulo,,,` +
-        `&preco-ate=${rentMax}&quartos=${roomMin}`,
+        `?quartos=${roomMin}&preco-ate=${rentMax}`,
+    },
+    {
+      source: "zapimoveis",
+      url:
+        `https://www.zapimoveis.com.br/aluguel/apartamentos/sp+sao-paulo++${neigh}/` +
+        `?quartos=${roomMin}&precoMaximo=${rentMax}`,
     },
     {
       source: "imovelweb",
@@ -427,11 +443,74 @@ function buildSearchUrls(
   ];
 }
 
+function portalListingsToCandidates(
+  source: string,
+  items: Array<{
+    titulo: string;
+    endereco: string;
+    aluguel: number;
+    condominio: number;
+    iptu: number;
+    quartos: number;
+    vagas?: number;
+    areaM2?: number;
+    portaria24h: boolean;
+    linkAnuncio: string;
+    portalLabel: string;
+    lat?: number;
+    lng?: number;
+    descricao?: string;
+  }>
+): RawListingCandidate[] {
+  return items.map((item) => ({
+    title: item.titulo,
+    address: item.endereco,
+    aluguel: item.aluguel,
+    condominio: item.condominio,
+    iptu: item.iptu,
+    rooms: item.quartos || 1,
+    areaM2: item.areaM2,
+    parkingSpots: item.vagas,
+    portaria24h: item.portaria24h,
+    externalUrl: item.linkAnuncio,
+    source,
+    portal: item.portalLabel,
+    lat: item.lat,
+    lng: item.lng,
+    notes: item.descricao,
+  }));
+}
+
 async function scrapePage(
   url: string,
   source: string,
   allowPlaywright: boolean
 ): Promise<{ listings: RawListingCandidate[]; warning?: string }> {
+  const portal = normalizePortalId(source) as PortalId | undefined;
+
+  // ZAP / Viva / CNM / Imovelweb: Playwright dedicado quando liberado
+  if (
+    allowPlaywright &&
+    portal &&
+    (portal === "zapimoveis" ||
+      portal === "vivareal" ||
+      portal === "chavesnamao" ||
+      portal === "imovelweb")
+  ) {
+    try {
+      await getSharedBrowser("headless");
+      const items =
+        portal === "zapimoveis" || portal === "vivareal"
+          ? await scrapeGlueSearchPage(url, portal, { mode: "headless" })
+          : await scrapeHtmlSearchPage(url, portal, { mode: "headless" });
+      if (items.length > 0) {
+        return { listings: portalListingsToCandidates(source, items) };
+      }
+    } catch {
+      // cai no fetch HTML abaixo
+    }
+  }
+
   let fetched = await fetchHtml(url);
   if ((!fetched.ok || fetched.blocked) && allowPlaywright) {
     const html = await scrapeWithPlaywrightFallback(url);
@@ -459,7 +538,6 @@ async function scrapePage(
     "/aluguel/",
   ]);
 
-  // Enrich sparse anchor hits with HTML extract of first few
   const merged = [...fromNext, ...fromLd];
   if (merged.length === 0) {
     for (const a of fromAnchors.slice(0, 8)) {
@@ -552,29 +630,43 @@ export async function scrapeStationsNative(
   const portals = new Set<string>();
   const raw: RawListingCandidate[] = [];
   const seenUrl = new Set<string>();
+  const seenSoft = new Set<string>();
   let scanned = 0;
   const allowPlaywright = process.env.ENABLE_PLAYWRIGHT_SCRAPE === "1";
 
-  for (const station of stations) {
-    const urls = buildSearchUrls(station, opts.rooms, opts.maxPackage).slice(
-      0,
-      maxPages + 2
-    );
-    for (const item of urls) {
-      scanned += 1;
-      portals.add(item.source);
-      const { listings, warning } = await scrapePage(
-        item.url,
-        item.source,
-        allowPlaywright
+  try {
+    for (const station of stations) {
+      const urls = buildSearchUrls(station, opts.rooms, opts.maxPackage).slice(
+        0,
+        maxPages + 2
       );
-      if (warning) warnings.push(warning);
-      for (const listing of listings) {
-        const key = listing.externalUrl.trim().toLowerCase();
-        if (!key || seenUrl.has(key)) continue;
-        seenUrl.add(key);
-        raw.push(listing);
+      for (const item of urls) {
+        scanned += 1;
+        portals.add(item.source);
+        const { listings, warning } = await scrapePage(
+          item.url,
+          item.source,
+          allowPlaywright
+        );
+        if (warning) warnings.push(warning);
+        for (const listing of listings) {
+          const key = listing.externalUrl.trim().toLowerCase();
+          if (!key || seenUrl.has(key)) continue;
+          const soft = softListingKey({
+            address: listing.address,
+            aluguel: listing.aluguel,
+            areaM2: listing.areaM2,
+          });
+          if (seenSoft.has(soft)) continue;
+          seenUrl.add(key);
+          seenSoft.add(soft);
+          raw.push(listing);
+        }
       }
+    }
+  } finally {
+    if (allowPlaywright) {
+      await closeSharedBrowser().catch(() => undefined);
     }
   }
 
@@ -616,6 +708,7 @@ export async function scrapeStationsNative(
       continue;
     }
 
+    const portalId = normalizePortalId(listing.source);
     apartments.push({
       id: `apt-scrape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       title: listing.title,
@@ -633,6 +726,7 @@ export async function scrapeStationsNative(
       notes: listing.notes,
       status: DEFAULT_STATUS,
       source: listing.source,
+      portal: listing.portal || (portalId ? PORTAL_LABELS[portalId] : undefined),
       scrapedAt: new Date().toISOString(),
     });
   }

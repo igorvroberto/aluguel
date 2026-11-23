@@ -20,7 +20,8 @@
     "nearestStationId": "l3-marechal-deodoro",
     "nearestStationName": "Marechal Deodoro",
     "nearestStationDistanceM": 228,
-    "distanceToSantaMarcelinaM": 946
+    "distanceToSantaMarcelinaM": 946,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdtk1k-802mt",
@@ -43,7 +44,8 @@
     "nearestStationId": "l3-marechal-deodoro",
     "nearestStationName": "Marechal Deodoro",
     "nearestStationDistanceM": 415,
-    "distanceToSantaMarcelinaM": 721
+    "distanceToSantaMarcelinaM": 721,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdtmn6-wbh3z",
@@ -66,7 +68,8 @@
     "nearestStationId": "l3-marechal-deodoro",
     "nearestStationName": "Marechal Deodoro",
     "nearestStationDistanceM": 143,
-    "distanceToSantaMarcelinaM": 1186
+    "distanceToSantaMarcelinaM": 1186,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdtq3d-ta5n3",
@@ -89,7 +92,8 @@
     "nearestStationId": "l3-santa-cecilia",
     "nearestStationName": "Santa Cecília",
     "nearestStationDistanceM": 432,
-    "distanceToSantaMarcelinaM": 1595
+    "distanceToSantaMarcelinaM": 1595,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdtt9o-0pk97",
@@ -112,7 +116,8 @@
     "nearestStationId": "l3-santa-cecilia",
     "nearestStationName": "Santa Cecília",
     "nearestStationDistanceM": 679,
-    "distanceToSantaMarcelinaM": 1495
+    "distanceToSantaMarcelinaM": 1495,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdtuel-bwqv7",
@@ -135,7 +140,8 @@
     "nearestStationId": "l3-marechal-deodoro",
     "nearestStationName": "Marechal Deodoro",
     "nearestStationDistanceM": 745,
-    "distanceToSantaMarcelinaM": 868
+    "distanceToSantaMarcelinaM": 868,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdu59h-ahr6z",
@@ -158,7 +164,8 @@
     "nearestStationId": "l3-republica",
     "nearestStationName": "República",
     "nearestStationDistanceM": 278,
-    "distanceToSantaMarcelinaM": 2804
+    "distanceToSantaMarcelinaM": 2804,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdu6hh-xkgvn",
@@ -181,7 +188,8 @@
     "nearestStationId": "l3-republica",
     "nearestStationName": "República",
     "nearestStationDistanceM": 188,
-    "distanceToSantaMarcelinaM": 2950
+    "distanceToSantaMarcelinaM": 2950,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdu7ko-vi7w6",
@@ -204,7 +212,8 @@
     "nearestStationId": "l3-republica",
     "nearestStationName": "República",
     "nearestStationDistanceM": 430,
-    "distanceToSantaMarcelinaM": 2356
+    "distanceToSantaMarcelinaM": 2356,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdu8mg-yi3je",
@@ -227,7 +236,8 @@
     "nearestStationId": "l3-republica",
     "nearestStationName": "República",
     "nearestStationDistanceM": 582,
-    "distanceToSantaMarcelinaM": 3206
+    "distanceToSantaMarcelinaM": 3206,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdu9oo-7jfiz",
@@ -250,7 +260,8 @@
     "nearestStationId": "l3-republica",
     "nearestStationName": "República",
     "nearestStationDistanceM": 392,
-    "distanceToSantaMarcelinaM": 2981
+    "distanceToSantaMarcelinaM": 2981,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdub57-humm3",
@@ -273,7 +284,8 @@
     "nearestStationId": "l3-republica",
     "nearestStationName": "República",
     "nearestStationDistanceM": 502,
-    "distanceToSantaMarcelinaM": 2988
+    "distanceToSantaMarcelinaM": 2988,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsduca2-n4ufz",
@@ -296,7 +308,8 @@
     "nearestStationId": "l3-anhangabau",
     "nearestStationName": "Anhangabaú",
     "nearestStationDistanceM": 185,
-    "distanceToSantaMarcelinaM": 3157
+    "distanceToSantaMarcelinaM": 3157,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdudhs-jt2cz",
@@ -319,7 +332,8 @@
     "nearestStationId": "l3-anhangabau",
     "nearestStationName": "Anhangabaú",
     "nearestStationDistanceM": 153,
-    "distanceToSantaMarcelinaM": 3162
+    "distanceToSantaMarcelinaM": 3162,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdueh4-ps6jh",
@@ -342,7 +356,8 @@
     "nearestStationId": "l6-joao-paulo-i",
     "nearestStationName": "João Paulo I",
     "nearestStationDistanceM": 377,
-    "distanceToSantaMarcelinaM": 4323
+    "distanceToSantaMarcelinaM": 4323,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdufhx-epm7f",
@@ -365,7 +380,8 @@
     "nearestStationId": "l6-joao-paulo-i",
     "nearestStationName": "João Paulo I",
     "nearestStationDistanceM": 229,
-    "distanceToSantaMarcelinaM": 4845
+    "distanceToSantaMarcelinaM": 4845,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdujr1-guru2",
@@ -388,7 +404,8 @@
     "nearestStationId": "l6-joao-paulo-i",
     "nearestStationName": "João Paulo I",
     "nearestStationDistanceM": 520,
-    "distanceToSantaMarcelinaM": 4133
+    "distanceToSantaMarcelinaM": 4133,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsduohd-6lllj",
@@ -411,7 +428,8 @@
     "nearestStationId": "l6-freguesia-do-o",
     "nearestStationName": "Freguesia do Ó",
     "nearestStationDistanceM": 791,
-    "distanceToSantaMarcelinaM": 3874
+    "distanceToSantaMarcelinaM": 3874,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdupiy-nf5bg",
@@ -434,7 +452,8 @@
     "nearestStationId": "l6-joao-paulo-i",
     "nearestStationName": "João Paulo I",
     "nearestStationDistanceM": 892,
-    "distanceToSantaMarcelinaM": 5534
+    "distanceToSantaMarcelinaM": 5534,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsduqm5-psagc",
@@ -457,7 +476,8 @@
     "nearestStationId": "l6-joao-paulo-i",
     "nearestStationName": "João Paulo I",
     "nearestStationDistanceM": 527,
-    "distanceToSantaMarcelinaM": 4135
+    "distanceToSantaMarcelinaM": 4135,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdutjk-rmetb",
@@ -480,7 +500,8 @@
     "nearestStationId": "l6-joao-paulo-i",
     "nearestStationName": "João Paulo I",
     "nearestStationDistanceM": 799,
-    "distanceToSantaMarcelinaM": 5209
+    "distanceToSantaMarcelinaM": 5209,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsduxqo-kmdiq",
@@ -503,7 +524,8 @@
     "nearestStationId": "l6-freguesia-do-o",
     "nearestStationName": "Freguesia do Ó",
     "nearestStationDistanceM": 246,
-    "distanceToSantaMarcelinaM": 3724
+    "distanceToSantaMarcelinaM": 3724,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdv2a8-lpyyl",
@@ -526,7 +548,8 @@
     "nearestStationId": "l6-freguesia-do-o",
     "nearestStationName": "Freguesia do Ó",
     "nearestStationDistanceM": 760,
-    "distanceToSantaMarcelinaM": 3573
+    "distanceToSantaMarcelinaM": 3573,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdv44k-1g4q0",
@@ -549,7 +572,8 @@
     "nearestStationId": "l6-agua-branca",
     "nearestStationName": "Água Branca",
     "nearestStationDistanceM": 273,
-    "distanceToSantaMarcelinaM": 2193
+    "distanceToSantaMarcelinaM": 2193,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdv56d-ua2s9",
@@ -572,7 +596,8 @@
     "nearestStationId": "l6-santa-marina",
     "nearestStationName": "Santa Marina",
     "nearestStationDistanceM": 921,
-    "distanceToSantaMarcelinaM": 3162
+    "distanceToSantaMarcelinaM": 3162,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdv8s5-oheqo",
@@ -595,7 +620,8 @@
     "nearestStationId": "l6-freguesia-do-o",
     "nearestStationName": "Freguesia do Ó",
     "nearestStationDistanceM": 438,
-    "distanceToSantaMarcelinaM": 3890
+    "distanceToSantaMarcelinaM": 3890,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdvpfd-hvpjq",
@@ -618,7 +644,8 @@
     "nearestStationId": "l3-se",
     "nearestStationName": "Sé",
     "nearestStationDistanceM": 475,
-    "distanceToSantaMarcelinaM": 4364
+    "distanceToSantaMarcelinaM": 4364,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdvrpi-dg6g8",
@@ -641,7 +668,8 @@
     "nearestStationId": "l3-pedro-ii",
     "nearestStationName": "Pedro II",
     "nearestStationDistanceM": 690,
-    "distanceToSantaMarcelinaM": 4582
+    "distanceToSantaMarcelinaM": 4582,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdvurh-2qz5i",
@@ -664,7 +692,8 @@
     "nearestStationId": "l3-pedro-ii",
     "nearestStationName": "Pedro II",
     "nearestStationDistanceM": 541,
-    "distanceToSantaMarcelinaM": 4559
+    "distanceToSantaMarcelinaM": 4559,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdvvxl-99k8z",
@@ -687,7 +716,8 @@
     "nearestStationId": "l3-se",
     "nearestStationName": "Sé",
     "nearestStationDistanceM": 561,
-    "distanceToSantaMarcelinaM": 4427
+    "distanceToSantaMarcelinaM": 4427,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdvy63-dwr97",
@@ -710,7 +740,8 @@
     "nearestStationId": "l3-pedro-ii",
     "nearestStationName": "Pedro II",
     "nearestStationDistanceM": 566,
-    "distanceToSantaMarcelinaM": 4637
+    "distanceToSantaMarcelinaM": 4637,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdw148-xcrsd",
@@ -733,7 +764,8 @@
     "nearestStationId": "l3-pedro-ii",
     "nearestStationName": "Pedro II",
     "nearestStationDistanceM": 245,
-    "distanceToSantaMarcelinaM": 4866
+    "distanceToSantaMarcelinaM": 4866,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdw29g-exwn9",
@@ -756,7 +788,8 @@
     "nearestStationId": "l3-bras",
     "nearestStationName": "Brás",
     "nearestStationDistanceM": 612,
-    "distanceToSantaMarcelinaM": 5580
+    "distanceToSantaMarcelinaM": 5580,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdw39r-3b8he",
@@ -779,7 +812,8 @@
     "nearestStationId": "l3-pedro-ii",
     "nearestStationName": "Pedro II",
     "nearestStationDistanceM": 503,
-    "distanceToSantaMarcelinaM": 5048
+    "distanceToSantaMarcelinaM": 5048,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdw4b9-6fg86",
@@ -802,7 +836,8 @@
     "nearestStationId": "l3-bras",
     "nearestStationName": "Brás",
     "nearestStationDistanceM": 509,
-    "distanceToSantaMarcelinaM": 5114
+    "distanceToSantaMarcelinaM": 5114,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdw6ln-043dt",
@@ -825,7 +860,8 @@
     "nearestStationId": "l3-pedro-ii",
     "nearestStationName": "Pedro II",
     "nearestStationDistanceM": 268,
-    "distanceToSantaMarcelinaM": 4759
+    "distanceToSantaMarcelinaM": 4759,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdw8so-fsc5m",
@@ -848,7 +884,8 @@
     "nearestStationId": "l3-bras",
     "nearestStationName": "Brás",
     "nearestStationDistanceM": 471,
-    "distanceToSantaMarcelinaM": 5538
+    "distanceToSantaMarcelinaM": 5538,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdwe5p-tfagp",
@@ -871,7 +908,8 @@
     "nearestStationId": "l3-bresser-mooca",
     "nearestStationName": "Bresser–Mooca",
     "nearestStationDistanceM": 451,
-    "distanceToSantaMarcelinaM": 5941
+    "distanceToSantaMarcelinaM": 5941,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdwg6e-ctmdy",
@@ -894,7 +932,8 @@
     "nearestStationId": "l3-bresser-mooca",
     "nearestStationName": "Bresser–Mooca",
     "nearestStationDistanceM": 593,
-    "distanceToSantaMarcelinaM": 6527
+    "distanceToSantaMarcelinaM": 6527,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdwq7o-8qlh7",
@@ -917,7 +956,8 @@
     "nearestStationId": "l3-bresser-mooca",
     "nearestStationName": "Bresser–Mooca",
     "nearestStationDistanceM": 258,
-    "distanceToSantaMarcelinaM": 6528
+    "distanceToSantaMarcelinaM": 6528,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdwr9f-9lrsg",
@@ -940,7 +980,8 @@
     "nearestStationId": "l3-belem",
     "nearestStationName": "Belém",
     "nearestStationDistanceM": 61,
-    "distanceToSantaMarcelinaM": 8037
+    "distanceToSantaMarcelinaM": 8037,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdx62t-ngy39",
@@ -963,7 +1004,8 @@
     "nearestStationId": "l3-carrao",
     "nearestStationName": "Carrão–Assaí Atacadista",
     "nearestStationDistanceM": 477,
-    "distanceToSantaMarcelinaM": 10034
+    "distanceToSantaMarcelinaM": 10034,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdx796-pl4k3",
@@ -986,7 +1028,8 @@
     "nearestStationId": "l3-tatuape",
     "nearestStationName": "Tatuapé",
     "nearestStationDistanceM": 332,
-    "distanceToSantaMarcelinaM": 8947
+    "distanceToSantaMarcelinaM": 8947,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdx8aw-kcpvc",
@@ -1009,7 +1052,8 @@
     "nearestStationId": "l3-carrao",
     "nearestStationName": "Carrão–Assaí Atacadista",
     "nearestStationDistanceM": 384,
-    "distanceToSantaMarcelinaM": 10606
+    "distanceToSantaMarcelinaM": 10606,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdxama-i0rc8",
@@ -1032,7 +1076,8 @@
     "nearestStationId": "l3-carrao",
     "nearestStationName": "Carrão–Assaí Atacadista",
     "nearestStationDistanceM": 574,
-    "distanceToSantaMarcelinaM": 11065
+    "distanceToSantaMarcelinaM": 11065,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdxbsg-j8l4w",
@@ -1055,7 +1100,8 @@
     "nearestStationId": "l3-tatuape",
     "nearestStationName": "Tatuapé",
     "nearestStationDistanceM": 606,
-    "distanceToSantaMarcelinaM": 9562
+    "distanceToSantaMarcelinaM": 9562,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdxcy5-xsknw",
@@ -1078,7 +1124,8 @@
     "nearestStationId": "l3-tatuape",
     "nearestStationName": "Tatuapé",
     "nearestStationDistanceM": 815,
-    "distanceToSantaMarcelinaM": 8942
+    "distanceToSantaMarcelinaM": 8942,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdxdy2-kg2px",
@@ -1101,7 +1148,8 @@
     "nearestStationId": "l3-tatuape",
     "nearestStationName": "Tatuapé",
     "nearestStationDistanceM": 481,
-    "distanceToSantaMarcelinaM": 9350
+    "distanceToSantaMarcelinaM": 9350,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdxi3i-owd7l",
@@ -1124,7 +1172,8 @@
     "nearestStationId": "l3-tatuape",
     "nearestStationName": "Tatuapé",
     "nearestStationDistanceM": 739,
-    "distanceToSantaMarcelinaM": 9573
+    "distanceToSantaMarcelinaM": 9573,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdxj86-72g8c",
@@ -1147,7 +1196,8 @@
     "nearestStationId": "l3-tatuape",
     "nearestStationName": "Tatuapé",
     "nearestStationDistanceM": 834,
-    "distanceToSantaMarcelinaM": 10023
+    "distanceToSantaMarcelinaM": 10023,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdxk8g-8c1ob",
@@ -1170,7 +1220,8 @@
     "nearestStationId": "l3-carrao",
     "nearestStationName": "Carrão–Assaí Atacadista",
     "nearestStationDistanceM": 587,
-    "distanceToSantaMarcelinaM": 10848
+    "distanceToSantaMarcelinaM": 10848,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdxude-tt08t",
@@ -1193,7 +1244,8 @@
     "nearestStationId": "l3-carrao",
     "nearestStationName": "Carrão–Assaí Atacadista",
     "nearestStationDistanceM": 814,
-    "distanceToSantaMarcelinaM": 11313
+    "distanceToSantaMarcelinaM": 11313,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdy275-a99j3",
@@ -1216,7 +1268,8 @@
     "nearestStationId": "l3-penha",
     "nearestStationName": "Penha–Lojas Besni",
     "nearestStationDistanceM": 877,
-    "distanceToSantaMarcelinaM": 12128
+    "distanceToSantaMarcelinaM": 12128,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdyag5-9mmae",
@@ -1239,7 +1292,8 @@
     "nearestStationId": "l3-penha",
     "nearestStationName": "Penha–Lojas Besni",
     "nearestStationDistanceM": 718,
-    "distanceToSantaMarcelinaM": 12291
+    "distanceToSantaMarcelinaM": 12291,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdybik-iujwv",
@@ -1262,7 +1316,8 @@
     "nearestStationId": "l3-vila-matilde",
     "nearestStationName": "Vila Matilde",
     "nearestStationDistanceM": 662,
-    "distanceToSantaMarcelinaM": 13309
+    "distanceToSantaMarcelinaM": 13309,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdyi1c-0bgda",
@@ -1285,7 +1340,8 @@
     "nearestStationId": "l3-vila-matilde",
     "nearestStationName": "Vila Matilde",
     "nearestStationDistanceM": 621,
-    "distanceToSantaMarcelinaM": 13661
+    "distanceToSantaMarcelinaM": 13661,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdyja6-298q2",
@@ -1308,7 +1364,8 @@
     "nearestStationId": "l3-vila-matilde",
     "nearestStationName": "Vila Matilde",
     "nearestStationDistanceM": 922,
-    "distanceToSantaMarcelinaM": 13450
+    "distanceToSantaMarcelinaM": 13450,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdylsd-2n8w0",
@@ -1331,7 +1388,8 @@
     "nearestStationId": "l3-vila-matilde",
     "nearestStationName": "Vila Matilde",
     "nearestStationDistanceM": 758,
-    "distanceToSantaMarcelinaM": 14447
+    "distanceToSantaMarcelinaM": 14447,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdymtm-r2mqz",
@@ -1354,7 +1412,8 @@
     "nearestStationId": "l3-penha",
     "nearestStationName": "Penha–Lojas Besni",
     "nearestStationDistanceM": 199,
-    "distanceToSantaMarcelinaM": 12728
+    "distanceToSantaMarcelinaM": 12728,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdynt1-5d9ao",
@@ -1377,7 +1436,8 @@
     "nearestStationId": "l3-penha",
     "nearestStationName": "Penha–Lojas Besni",
     "nearestStationDistanceM": 722,
-    "distanceToSantaMarcelinaM": 13094
+    "distanceToSantaMarcelinaM": 13094,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdypwl-m3df4",
@@ -1400,7 +1460,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 675,
-    "distanceToSantaMarcelinaM": 14698
+    "distanceToSantaMarcelinaM": 14698,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdyr1w-xcn52",
@@ -1423,7 +1484,8 @@
     "nearestStationId": "l3-penha",
     "nearestStationName": "Penha–Lojas Besni",
     "nearestStationDistanceM": 343,
-    "distanceToSantaMarcelinaM": 12848
+    "distanceToSantaMarcelinaM": 12848,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdys8k-83pro",
@@ -1446,7 +1508,8 @@
     "nearestStationId": "l3-vila-matilde",
     "nearestStationName": "Vila Matilde",
     "nearestStationDistanceM": 226,
-    "distanceToSantaMarcelinaM": 14089
+    "distanceToSantaMarcelinaM": 14089,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdyt83-ktll5",
@@ -1469,7 +1532,8 @@
     "nearestStationId": "l3-vila-matilde",
     "nearestStationName": "Vila Matilde",
     "nearestStationDistanceM": 730,
-    "distanceToSantaMarcelinaM": 14591
+    "distanceToSantaMarcelinaM": 14591,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdyvf1-7ucu1",
@@ -1492,7 +1556,8 @@
     "nearestStationId": "l3-patriarca",
     "nearestStationName": "Patriarca–Vila Ré",
     "nearestStationDistanceM": 404,
-    "distanceToSantaMarcelinaM": 16461
+    "distanceToSantaMarcelinaM": 16461,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdyywd-pngwv",
@@ -1515,7 +1580,8 @@
     "nearestStationId": "l3-vila-matilde",
     "nearestStationName": "Vila Matilde",
     "nearestStationDistanceM": 964,
-    "distanceToSantaMarcelinaM": 14630
+    "distanceToSantaMarcelinaM": 14630,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdz1s5-z1g6l",
@@ -1538,7 +1604,8 @@
     "nearestStationId": "l3-vila-matilde",
     "nearestStationName": "Vila Matilde",
     "nearestStationDistanceM": 733,
-    "distanceToSantaMarcelinaM": 14298
+    "distanceToSantaMarcelinaM": 14298,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdz41x-4s9nh",
@@ -1561,7 +1628,8 @@
     "nearestStationId": "l3-patriarca",
     "nearestStationName": "Patriarca–Vila Ré",
     "nearestStationDistanceM": 890,
-    "distanceToSantaMarcelinaM": 17180
+    "distanceToSantaMarcelinaM": 17180,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdz67h-bggwf",
@@ -1584,7 +1652,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 765,
-    "distanceToSantaMarcelinaM": 14615
+    "distanceToSantaMarcelinaM": 14615,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdz7dx-1lq49",
@@ -1607,7 +1676,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 422,
-    "distanceToSantaMarcelinaM": 15315
+    "distanceToSantaMarcelinaM": 15315,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdz8j8-z95fv",
@@ -1630,7 +1700,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 652,
-    "distanceToSantaMarcelinaM": 15966
+    "distanceToSantaMarcelinaM": 15966,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzajc-id29d",
@@ -1653,7 +1724,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 407,
-    "distanceToSantaMarcelinaM": 14922
+    "distanceToSantaMarcelinaM": 14922,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzboq-scxdn",
@@ -1676,7 +1748,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 108,
-    "distanceToSantaMarcelinaM": 15387
+    "distanceToSantaMarcelinaM": 15387,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzcv2-nbo6k",
@@ -1699,7 +1772,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 325,
-    "distanceToSantaMarcelinaM": 15080
+    "distanceToSantaMarcelinaM": 15080,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdze01-tvifn",
@@ -1722,7 +1796,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 589,
-    "distanceToSantaMarcelinaM": 15811
+    "distanceToSantaMarcelinaM": 15811,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzfqe-jsycc",
@@ -1745,7 +1820,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 238,
-    "distanceToSantaMarcelinaM": 15427
+    "distanceToSantaMarcelinaM": 15427,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzgvy-3oj9s",
@@ -1768,7 +1844,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 249,
-    "distanceToSantaMarcelinaM": 15071
+    "distanceToSantaMarcelinaM": 15071,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzhx0-h2gvk",
@@ -1791,7 +1868,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 665,
-    "distanceToSantaMarcelinaM": 15473
+    "distanceToSantaMarcelinaM": 15473,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzixl-yqig0",
@@ -1814,7 +1892,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 556,
-    "distanceToSantaMarcelinaM": 15637
+    "distanceToSantaMarcelinaM": 15637,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzkcn-londb",
@@ -1837,7 +1916,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 722,
-    "distanceToSantaMarcelinaM": 15616
+    "distanceToSantaMarcelinaM": 15616,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzlcp-sarx3",
@@ -1860,7 +1940,8 @@
     "nearestStationId": "l3-guilhermina",
     "nearestStationName": "Guilhermina–Esperança",
     "nearestStationDistanceM": 517,
-    "distanceToSantaMarcelinaM": 14877
+    "distanceToSantaMarcelinaM": 14877,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzmjk-eyppw",
@@ -1883,7 +1964,8 @@
     "nearestStationId": "l3-patriarca",
     "nearestStationName": "Patriarca–Vila Ré",
     "nearestStationDistanceM": 295,
-    "distanceToSantaMarcelinaM": 16575
+    "distanceToSantaMarcelinaM": 16575,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdznlp-1hwiq",
@@ -1906,7 +1988,8 @@
     "nearestStationId": "l3-patriarca",
     "nearestStationName": "Patriarca–Vila Ré",
     "nearestStationDistanceM": 297,
-    "distanceToSantaMarcelinaM": 16660
+    "distanceToSantaMarcelinaM": 16660,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzoon-qlpao",
@@ -1929,7 +2012,8 @@
     "nearestStationId": "l3-patriarca",
     "nearestStationName": "Patriarca–Vila Ré",
     "nearestStationDistanceM": 243,
-    "distanceToSantaMarcelinaM": 16885
+    "distanceToSantaMarcelinaM": 16885,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzpvo-zakop",
@@ -1952,7 +2036,8 @@
     "nearestStationId": "l3-patriarca",
     "nearestStationName": "Patriarca–Vila Ré",
     "nearestStationDistanceM": 585,
-    "distanceToSantaMarcelinaM": 17347
+    "distanceToSantaMarcelinaM": 17347,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzr16-msuq8",
@@ -1975,7 +2060,8 @@
     "nearestStationId": "l3-patriarca",
     "nearestStationName": "Patriarca–Vila Ré",
     "nearestStationDistanceM": 619,
-    "distanceToSantaMarcelinaM": 17287
+    "distanceToSantaMarcelinaM": 17287,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzusb-5eb3x",
@@ -1998,7 +2084,8 @@
     "nearestStationId": "l3-patriarca",
     "nearestStationName": "Patriarca–Vila Ré",
     "nearestStationDistanceM": 317,
-    "distanceToSantaMarcelinaM": 16695
+    "distanceToSantaMarcelinaM": 16695,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwsdzxv4-q80kj",
@@ -2021,7 +2108,8 @@
     "nearestStationId": "l3-patriarca",
     "nearestStationName": "Patriarca–Vila Ré",
     "nearestStationDistanceM": 450,
-    "distanceToSantaMarcelinaM": 16629
+    "distanceToSantaMarcelinaM": 16629,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwse03nb-jj9bz",
@@ -2044,7 +2132,8 @@
     "nearestStationId": "l3-artur-alvim",
     "nearestStationName": "Artur Alvim",
     "nearestStationDistanceM": 443,
-    "distanceToSantaMarcelinaM": 18962
+    "distanceToSantaMarcelinaM": 18962,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwse04n7-35iaq",
@@ -2067,7 +2156,8 @@
     "nearestStationId": "l3-artur-alvim",
     "nearestStationName": "Artur Alvim",
     "nearestStationDistanceM": 523,
-    "distanceToSantaMarcelinaM": 18095
+    "distanceToSantaMarcelinaM": 18095,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwse0hvl-chzxb",
@@ -2090,7 +2180,8 @@
     "nearestStationId": "l3-patriarca",
     "nearestStationName": "Patriarca–Vila Ré",
     "nearestStationDistanceM": 649,
-    "distanceToSantaMarcelinaM": 17212
+    "distanceToSantaMarcelinaM": 17212,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwse0jyv-8637y",
@@ -2113,7 +2204,8 @@
     "nearestStationId": "l3-itaquera",
     "nearestStationName": "Corinthians–Itaquera",
     "nearestStationDistanceM": 957,
-    "distanceToSantaMarcelinaM": 19289
+    "distanceToSantaMarcelinaM": 19289,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-scrape-mwse0m6x-vy7az",
@@ -2136,7 +2228,8 @@
     "nearestStationId": "l3-artur-alvim",
     "nearestStationName": "Artur Alvim",
     "nearestStationDistanceM": 425,
-    "distanceToSantaMarcelinaM": 18392
+    "distanceToSantaMarcelinaM": 18392,
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-itapicuru-320",
@@ -2153,7 +2246,8 @@
     "notes": "Ajustado da base antiga (apt-itapicuru-320) → anúncio real QuintoAndar",
     "status": "Candidato",
     "source": "seed-matched",
-    "scrapedAt": "2026-11-22T22:18:46.141Z"
+    "scrapedAt": "2026-11-22T22:18:46.141Z",
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-tagipuru-120",
@@ -2170,7 +2264,8 @@
     "notes": "Ajustado da base antiga (apt-tagipuru-120) → anúncio real QuintoAndar",
     "status": "Candidato",
     "source": "seed-matched",
-    "scrapedAt": "2026-11-22T22:18:47.172Z"
+    "scrapedAt": "2026-11-22T22:18:47.172Z",
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-general-jardim-600",
@@ -2187,7 +2282,8 @@
     "notes": "Ajustado da base antiga (apt-general-jardim-600) → anúncio real QuintoAndar",
     "status": "Candidato",
     "source": "seed-matched",
-    "scrapedAt": "2026-11-22T22:18:48.350Z"
+    "scrapedAt": "2026-11-22T22:18:48.350Z",
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-marques-itu-350",
@@ -2204,7 +2300,8 @@
     "notes": "Ajustado da base antiga (apt-marques-itu-350) → anúncio real QuintoAndar",
     "status": "Candidato",
     "source": "seed-matched",
-    "scrapedAt": "2026-11-22T22:18:48.350Z"
+    "scrapedAt": "2026-11-22T22:18:48.350Z",
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-jaguaribe-480",
@@ -2221,7 +2318,8 @@
     "notes": "Ajustado da base antiga (apt-jaguaribe-480) → anúncio real QuintoAndar",
     "status": "Candidato",
     "source": "seed-matched",
-    "scrapedAt": "2026-11-22T22:18:48.350Z"
+    "scrapedAt": "2026-11-22T22:18:48.350Z",
+    "portal": "QuintoAndar"
   },
   {
     "id": "apt-cardoso-1100",
@@ -2238,6 +2336,1351 @@
     "notes": "Ajustado da base antiga (apt-cardoso-1100) → anúncio real QuintoAndar",
     "status": "Candidato",
     "source": "seed-matched",
-    "scrapedAt": "2026-11-22T22:18:48.350Z"
+    "scrapedAt": "2026-11-22T22:18:48.350Z",
+    "portal": "QuintoAndar"
+  },
+  {
+    "id": "apt-scrape-mwskauzo-f9zhz",
+    "title": "Apartamento com 1 quarto para alugar na Rua João Ramalho, 1512, Perdizes, São Paulo",
+    "address": "Rua João Ramalho, 1512, São Paulo - SP",
+    "lat": -23.5317161,
+    "lng": -46.6792984,
+    "rooms": 2,
+    "aluguel": 3100,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-com-garagem-sp-sao-paulo-perdizes-30m2-RS3100/id-42310129/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=SESC-Pompéia (483m) · Faculdade Santa Marcelina Perdizes: 1505m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-sesc-pompeia",
+    "nearestStationName": "SESC-Pompéia",
+    "nearestStationDistanceM": 483,
+    "distanceToSantaMarcelinaM": 1505
+  },
+  {
+    "id": "apt-scrape-mwskaw34-s4jzv",
+    "title": "Apartamento com 1 quarto para alugar na Rua Bartira, 190, Perdizes, São Paulo",
+    "address": "Rua Bartira, 190, São Paulo - SP",
+    "lat": -23.5395746,
+    "lng": -46.6703046,
+    "rooms": 2,
+    "aluguel": 3500,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-perdizes-25m2-RS3500/id-38748437/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Perdizes (376m) · Faculdade Santa Marcelina Perdizes: 654m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-perdizes",
+    "nearestStationName": "Perdizes",
+    "nearestStationDistanceM": 376,
+    "distanceToSantaMarcelinaM": 654
+  },
+  {
+    "id": "apt-scrape-mwskax9i-hs1v5",
+    "title": "Apartamento com 1 quarto para alugar na Rua Cardoso de Almeida, 840, Perdizes, São Paulo por R$ 2.700",
+    "address": "Rua Cardoso de Almeida, 840, São Paulo - SP",
+    "lat": -23.5379169,
+    "lng": -46.6688026,
+    "rooms": 2,
+    "aluguel": 2700,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-com-garagem-sp-sao-paulo-perdizes-31m2-RS2700/id-39597786/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Perdizes (514m) · Faculdade Santa Marcelina Perdizes: 422m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-perdizes",
+    "nearestStationName": "Perdizes",
+    "nearestStationDistanceM": 514,
+    "distanceToSantaMarcelinaM": 422
+  },
+  {
+    "id": "apt-scrape-mwskayiu-dyh2g",
+    "title": "Apartamento com 1 quarto para alugar na Rua Ministro Godói, 956, Perdizes, São Paulo",
+    "address": "Rua Ministro Godói, 956, São Paulo - SP",
+    "lat": -23.5374121,
+    "lng": -46.6715854,
+    "rooms": 2,
+    "aluguel": 3000,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-perdizes-37m2-RS3000/id-46461745/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Perdizes (256m) · Faculdade Santa Marcelina Perdizes: 665m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-perdizes",
+    "nearestStationName": "Perdizes",
+    "nearestStationDistanceM": 256,
+    "distanceToSantaMarcelinaM": 665
+  },
+  {
+    "id": "apt-scrape-mwskazjo-ifjw2",
+    "title": "Apartamento com 1 quarto para alugar na Rua Itapicuru, 653, Perdizes, São Paulo",
+    "address": "Rua Itapicuru, 653, São Paulo - SP",
+    "lat": -23.5342024,
+    "lng": -46.6700504,
+    "rooms": 2,
+    "aluguel": 3950,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-perdizes-RS3950/id-46305288/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Perdizes (612m) · Faculdade Santa Marcelina Perdizes: 524m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-perdizes",
+    "nearestStationName": "Perdizes",
+    "nearestStationDistanceM": 612,
+    "distanceToSantaMarcelinaM": 524
+  },
+  {
+    "id": "apt-scrape-mwskb0pu-d1hes",
+    "title": "Apartamento com 2 quartos para alugar na Rua Padre Chico, 749, Pompéia, São Paulo",
+    "address": "Rua Padre Chico, 749, São Paulo - SP",
+    "lat": -23.5275636,
+    "lng": -46.6860387,
+    "rooms": 2,
+    "aluguel": 3100,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-2-quartos-sp-sao-paulo-pompeia-RS3100/id-47738513/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=SESC-Pompéia (534m) · Faculdade Santa Marcelina Perdizes: 2313m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-sesc-pompeia",
+    "nearestStationName": "SESC-Pompéia",
+    "nearestStationDistanceM": 534,
+    "distanceToSantaMarcelinaM": 2313
+  },
+  {
+    "id": "apt-scrape-mwskb1t1-bshge",
+    "title": "Apartamento com 2 quartos para alugar na Rua Doutor Augusto de Miranda, 597, Pompéia, São Paulo, 48 m2 por R$ 3.500",
+    "address": "Rua Doutor Augusto de Miranda, 597, São Paulo - SP",
+    "lat": -23.5288844,
+    "lng": -46.6880322,
+    "rooms": 2,
+    "aluguel": 3500,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-2-quartos-com-garagem-sp-sao-paulo-pompeia-RS3500/id-44331330/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=SESC-Pompéia (751m) · Faculdade Santa Marcelina Perdizes: 2449m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-sesc-pompeia",
+    "nearestStationName": "SESC-Pompéia",
+    "nearestStationDistanceM": 751,
+    "distanceToSantaMarcelinaM": 2449
+  },
+  {
+    "id": "apt-scrape-mwskb40w-90y6g",
+    "title": "Apartamento com 2 quartos para alugar na Rua Desembargador do Vale, --, Pompéia, São Paulo, 65 m2 por R$ 3.200",
+    "address": "Rua Desembargador do Vale, São Paulo - SP",
+    "lat": -23.5294378,
+    "lng": -46.6888095,
+    "rooms": 2,
+    "aluguel": 3200,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-2-quartos-sp-sao-paulo-pompeia-65m2-RS3200/id-47939248/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=SESC-Pompéia (842m) · Faculdade Santa Marcelina Perdizes: 2506m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-sesc-pompeia",
+    "nearestStationName": "SESC-Pompéia",
+    "nearestStationDistanceM": 842,
+    "distanceToSantaMarcelinaM": 2506
+  },
+  {
+    "id": "apt-scrape-mwskb57o-pdavb",
+    "title": "Apartamento com 1 quarto para alugar na Rua Joaquim Ferreira, 124, Pompéia, São Paulo",
+    "address": "Rua Joaquim Ferreira, 124, São Paulo - SP",
+    "lat": -23.5228325,
+    "lng": -46.6834013,
+    "rooms": 2,
+    "aluguel": 2600,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-com-garagem-sp-sao-paulo-pompeia-41m2-RS2600/id-46976366/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Água Branca (132m) · Faculdade Santa Marcelina Perdizes: 2353m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-agua-branca",
+    "nearestStationName": "Água Branca",
+    "nearestStationDistanceM": 132,
+    "distanceToSantaMarcelinaM": 2353
+  },
+  {
+    "id": "apt-scrape-mwskb8kq-zx5mu",
+    "title": "Apartamento mobiliado com 2 quartos e varanda para alugar.",
+    "address": "Avenida Santa Marina, Água Branca, São Paulo - SP",
+    "lat": -23.5229507,
+    "lng": -46.6861947,
+    "rooms": 2,
+    "aluguel": 2300,
+    "condominio": 695,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/894512293",
+    "areaM2": 37,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Água Branca · estação=Água Branca (192m) · Faculdade Santa Marcelina Perdizes: 2576m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-agua-branca",
+    "nearestStationName": "Água Branca",
+    "nearestStationDistanceM": 192,
+    "distanceToSantaMarcelinaM": 2576
+  },
+  {
+    "id": "apt-scrape-mwskb9fu-iwg6l",
+    "title": "Apartamento 2 qtos — Água Branca",
+    "address": "Avenida Santa Marina, Água Branca, São Paulo - SP",
+    "lat": -23.5229507,
+    "lng": -46.6861947,
+    "rooms": 2,
+    "aluguel": 1950,
+    "condominio": 575,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/894617194",
+    "areaM2": 40,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Água Branca · estação=Água Branca (192m) · Faculdade Santa Marcelina Perdizes: 2576m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-agua-branca",
+    "nearestStationName": "Água Branca",
+    "nearestStationDistanceM": 192,
+    "distanceToSantaMarcelinaM": 2576
+  },
+  {
+    "id": "apt-scrape-mwskbaax-vmreh",
+    "title": "Apartamento 2 qtos — Água Branca",
+    "address": "Avenida Santa Marina, Água Branca, São Paulo - SP",
+    "lat": -23.5229507,
+    "lng": -46.6861947,
+    "rooms": 2,
+    "aluguel": 2304,
+    "condominio": 446,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/894830304",
+    "areaM2": 37,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Água Branca · estação=Água Branca (192m) · Faculdade Santa Marcelina Perdizes: 2576m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-agua-branca",
+    "nearestStationName": "Água Branca",
+    "nearestStationDistanceM": 192,
+    "distanceToSantaMarcelinaM": 2576
+  },
+  {
+    "id": "apt-scrape-mwskbepj-nzrfj",
+    "title": "Apartamento 2 qtos — Água Branca",
+    "address": "Avenida Santa Marina, Água Branca, São Paulo - SP",
+    "lat": -23.5229507,
+    "lng": -46.6861947,
+    "rooms": 2,
+    "aluguel": 2490,
+    "condominio": 650,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895856786",
+    "areaM2": 37,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Água Branca · estação=Água Branca (192m) · Faculdade Santa Marcelina Perdizes: 2576m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-agua-branca",
+    "nearestStationName": "Água Branca",
+    "nearestStationDistanceM": 192,
+    "distanceToSantaMarcelinaM": 2576
+  },
+  {
+    "id": "apt-scrape-mwskbfkm-en9oy",
+    "title": "Apartamento 2 qtos — Água Branca",
+    "address": "Avenida Santa Marina, Água Branca, São Paulo - SP",
+    "lat": -23.5229507,
+    "lng": -46.6861947,
+    "rooms": 2,
+    "aluguel": 2500,
+    "condominio": 650,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895856789",
+    "areaM2": 37,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Água Branca · estação=Água Branca (192m) · Faculdade Santa Marcelina Perdizes: 2576m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-agua-branca",
+    "nearestStationName": "Água Branca",
+    "nearestStationDistanceM": 192,
+    "distanceToSantaMarcelinaM": 2576
+  },
+  {
+    "id": "apt-scrape-mwskbrs2-dkobf",
+    "title": "Apartamento 2 qtos — Barra Funda",
+    "address": "Rua do Bosque, Barra Funda, São Paulo - SP",
+    "lat": -23.5237436,
+    "lng": -46.6617182,
+    "rooms": 2,
+    "aluguel": 1676,
+    "condominio": 376,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/893824236",
+    "areaM2": 35,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Barra Funda · estação=Palmeiras–Barra Funda (611m) · Faculdade Santa Marcelina Perdizes: 1403m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-barra-funda",
+    "nearestStationName": "Palmeiras–Barra Funda",
+    "nearestStationDistanceM": 611,
+    "distanceToSantaMarcelinaM": 1403
+  },
+  {
+    "id": "apt-scrape-mwskbuud-1x9qn",
+    "title": "Apartamento 2 qtos — Barra Funda",
+    "address": "Rua do Bosque, Barra Funda, São Paulo - SP",
+    "lat": -23.5237436,
+    "lng": -46.6617182,
+    "rooms": 2,
+    "aluguel": 2520,
+    "condominio": 400,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/894951964",
+    "areaM2": 37,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Barra Funda · estação=Palmeiras–Barra Funda (611m) · Faculdade Santa Marcelina Perdizes: 1403m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-barra-funda",
+    "nearestStationName": "Palmeiras–Barra Funda",
+    "nearestStationDistanceM": 611,
+    "distanceToSantaMarcelinaM": 1403
+  },
+  {
+    "id": "apt-scrape-mwskbywq-2uymz",
+    "title": "Apartamento de dois quartos com piscina no condomínio para alugar na Barra Funda.",
+    "address": "Rua do Bosque, Barra Funda, São Paulo - SP",
+    "lat": -23.5237436,
+    "lng": -46.6617182,
+    "rooms": 2,
+    "aluguel": 3315,
+    "condominio": 871,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895436691",
+    "areaM2": 53,
+    "parkingSpots": 1,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Barra Funda · estação=Palmeiras–Barra Funda (611m) · Faculdade Santa Marcelina Perdizes: 1403m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-barra-funda",
+    "nearestStationName": "Palmeiras–Barra Funda",
+    "nearestStationDistanceM": 611,
+    "distanceToSantaMarcelinaM": 1403
+  },
+  {
+    "id": "apt-scrape-mwskc03j-cfk3g",
+    "title": "Apartamento mobiliado de 2 quartos na Barra Funda para alugar, com piscina no condomínio.",
+    "address": "Rua Brigadeiro Galvão, Barra Funda, São Paulo - SP",
+    "lat": -23.5326427,
+    "lng": -46.6552884,
+    "rooms": 2,
+    "aluguel": 3500,
+    "condominio": 595,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895669423",
+    "areaM2": 37,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Barra Funda · estação=Marechal Deodoro (143m) · Faculdade Santa Marcelina Perdizes: 1081m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-marechal-deodoro",
+    "nearestStationName": "Marechal Deodoro",
+    "nearestStationDistanceM": 143,
+    "distanceToSantaMarcelinaM": 1081
+  },
+  {
+    "id": "apt-scrape-mwskc1tu-zrgpv",
+    "title": "Apartamento para alugar na Barra Funda, com 2 quartos e varanda.",
+    "address": "Rua do Bosque, Barra Funda, São Paulo - SP",
+    "lat": -23.5237436,
+    "lng": -46.6617182,
+    "rooms": 2,
+    "aluguel": 2799,
+    "condominio": 725,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895864575",
+    "areaM2": 42,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Barra Funda · estação=Palmeiras–Barra Funda (611m) · Faculdade Santa Marcelina Perdizes: 1403m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-barra-funda",
+    "nearestStationName": "Palmeiras–Barra Funda",
+    "nearestStationDistanceM": 611,
+    "distanceToSantaMarcelinaM": 1403
+  },
+  {
+    "id": "apt-scrape-mwskc3zw-fzt08",
+    "title": "Apartamento de 2 quartos para alugar na Barra Funda, com piscina e academia no condomínio.",
+    "address": "Rua Federação Paulista de Futebol, Barra Funda, São Paulo - SP",
+    "lat": -23.5226066,
+    "lng": -46.667539,
+    "rooms": 2,
+    "aluguel": 2620,
+    "condominio": 500,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895868061",
+    "areaM2": 35,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Barra Funda · estação=Palmeiras–Barra Funda (322m) · Faculdade Santa Marcelina Perdizes: 1499m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-barra-funda",
+    "nearestStationName": "Palmeiras–Barra Funda",
+    "nearestStationDistanceM": 322,
+    "distanceToSantaMarcelinaM": 1499
+  },
+  {
+    "id": "apt-scrape-mwskc56a-ly60m",
+    "title": "Apartamento mobiliado de 2 quartos para aluguel na Barra Funda, com academia no condomínio.",
+    "address": "Rua da Várzea, Barra Funda, São Paulo - SP",
+    "lat": -23.5256504,
+    "lng": -46.6621901,
+    "rooms": 2,
+    "aluguel": 3700,
+    "condominio": 370,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895868565",
+    "areaM2": 32,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Barra Funda · estação=Palmeiras–Barra Funda (531m) · Faculdade Santa Marcelina Perdizes: 1185m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-barra-funda",
+    "nearestStationName": "Palmeiras–Barra Funda",
+    "nearestStationDistanceM": 531,
+    "distanceToSantaMarcelinaM": 1185
+  },
+  {
+    "id": "apt-scrape-mwskc61e-ll37d",
+    "title": "Apartamento de 2 quartos para alugar.",
+    "address": "Rua do Bosque, Barra Funda, São Paulo - SP",
+    "lat": -23.5237436,
+    "lng": -46.6617182,
+    "rooms": 2,
+    "aluguel": 3100,
+    "condominio": 500,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895872404",
+    "areaM2": 32,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Barra Funda · estação=Palmeiras–Barra Funda (611m) · Faculdade Santa Marcelina Perdizes: 1403m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-barra-funda",
+    "nearestStationName": "Palmeiras–Barra Funda",
+    "nearestStationDistanceM": 611,
+    "distanceToSantaMarcelinaM": 1403
+  },
+  {
+    "id": "apt-scrape-mwskc787-vusoo",
+    "title": "Apartamento com 1 quarto para alugar na Rua Rubens Porta Nova, 1, Barra Funda, São Paulo",
+    "address": "Rua Rubens Porta Nova, 1, São Paulo - SP",
+    "lat": -23.520059,
+    "lng": -46.6650165,
+    "rooms": 2,
+    "aluguel": 2050,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-barra-funda-27m2-RS2050/id-48207798/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Palmeiras–Barra Funda (652m) · Faculdade Santa Marcelina Perdizes: 1765m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-barra-funda",
+    "nearestStationName": "Palmeiras–Barra Funda",
+    "nearestStationDistanceM": 652,
+    "distanceToSantaMarcelinaM": 1765
+  },
+  {
+    "id": "apt-scrape-mwskc8e0-vwbbf",
+    "title": "Apartamento com 1 quarto para alugar na Rua Adalberto Kemeny, Barra Funda, São Paulo",
+    "address": "Rua Adalberto Kemeny, São Paulo - SP",
+    "lat": -23.5197208,
+    "lng": -46.6751609,
+    "rooms": 2,
+    "aluguel": 3000,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-com-garagem-sp-sao-paulo-barra-funda-45m2-RS3000/id-29759766/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Água Branca (991m) · Faculdade Santa Marcelina Perdizes: 2065m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-agua-branca",
+    "nearestStationName": "Água Branca",
+    "nearestStationDistanceM": 991,
+    "distanceToSantaMarcelinaM": 2065
+  },
+  {
+    "id": "apt-scrape-mwskc9iv-6lnf0",
+    "title": "Apartamento com 1 quarto para alugar na Rua Airosa Galvão, Barra Funda, São Paulo",
+    "address": "Rua Airosa Galvão, São Paulo - SP",
+    "lat": -23.5292179,
+    "lng": -46.6745314,
+    "rooms": 2,
+    "aluguel": 3000,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-barra-funda-29m2-RS3000/id-49024511/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=SESC-Pompéia (664m) · Faculdade Santa Marcelina Perdizes: 1204m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l6-sesc-pompeia",
+    "nearestStationName": "SESC-Pompéia",
+    "nearestStationDistanceM": 664,
+    "distanceToSantaMarcelinaM": 1204
+  },
+  {
+    "id": "apt-scrape-mwskcapu-q827g",
+    "title": "Apartamento com 2 quartos para alugar na Rua Doutor Alfredo de Castro, Barra Funda, São Paulo",
+    "address": "Rua Doutor Alfredo de Castro, São Paulo - SP",
+    "lat": -23.5284227,
+    "lng": -46.6641313,
+    "rooms": 2,
+    "aluguel": 4000,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-2-quartos-com-garagem-sp-sao-paulo-barra-funda-57m2-RS4000/id-48459459/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Palmeiras–Barra Funda (465m) · Faculdade Santa Marcelina Perdizes: 843m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-barra-funda",
+    "nearestStationName": "Palmeiras–Barra Funda",
+    "nearestStationDistanceM": 465,
+    "distanceToSantaMarcelinaM": 843
+  },
+  {
+    "id": "apt-scrape-mwskcdsv-208ip",
+    "title": "Apartamento para alugar na Alameda Barros, Santa Cecília, São Paulo",
+    "address": "Alameda Barros, São Paulo - SP",
+    "lat": -23.5355346,
+    "lng": -46.6585872,
+    "rooms": 2,
+    "aluguel": 2500,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-sp-sao-paulo-santa-cecilia-RS2500/id-35187369/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Marechal Deodoro (335m) · Faculdade Santa Marcelina Perdizes: 683m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-marechal-deodoro",
+    "nearestStationName": "Marechal Deodoro",
+    "nearestStationDistanceM": 335,
+    "distanceToSantaMarcelinaM": 683
+  },
+  {
+    "id": "apt-scrape-mwskcet5-g2f3u",
+    "title": "Apartamento com 1 quarto para alugar na Rua Martim Francisco, 107, Santa Cecília, São Paulo por R$ 2.100",
+    "address": "Rua Martim Francisco, 107, São Paulo - SP",
+    "lat": -23.5383868,
+    "lng": -46.6515299,
+    "rooms": 2,
+    "aluguel": 2100,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-santa-cecilia-40m2-RS2100/id-45882868/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Santa Cecília (218m) · Faculdade Santa Marcelina Perdizes: 1427m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-santa-cecilia",
+    "nearestStationName": "Santa Cecília",
+    "nearestStationDistanceM": 218,
+    "distanceToSantaMarcelinaM": 1427
+  },
+  {
+    "id": "apt-scrape-mwskch2n-dygph",
+    "title": "Apartamento 2 qtos — Higienópolis",
+    "address": "Rua Dona Veridiana, Higienópolis, São Paulo - SP",
+    "lat": -23.5417015,
+    "lng": -46.650936,
+    "rooms": 2,
+    "aluguel": 3200,
+    "condominio": 521,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/892816837",
+    "areaM2": 70,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Higienópolis · estação=Santa Cecília (420m) · Faculdade Santa Marcelina Perdizes: 1596m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-santa-cecilia",
+    "nearestStationName": "Santa Cecília",
+    "nearestStationDistanceM": 420,
+    "distanceToSantaMarcelinaM": 1596
+  },
+  {
+    "id": "apt-scrape-mwskci71-9l8qi",
+    "title": "Apartamento 2 qtos — Higienópolis",
+    "address": "Rua Maria Antônia, Higienópolis, São Paulo - SP",
+    "lat": -23.5467556,
+    "lng": -46.650436,
+    "rooms": 2,
+    "aluguel": 3000,
+    "condominio": 1152,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/893265793",
+    "areaM2": 70,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Higienópolis · estação=República (850m) · Faculdade Santa Marcelina Perdizes: 1933m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-republica",
+    "nearestStationName": "República",
+    "nearestStationDistanceM": 850,
+    "distanceToSantaMarcelinaM": 1933
+  },
+  {
+    "id": "apt-scrape-mwskcjcy-jcq4y",
+    "title": "Apartamento com 2 quartos para alugar na Rua Conselheiro Brotero, 898, Higienópolis, São Paulo",
+    "address": "Rua Conselheiro Brotero, 898, São Paulo - SP",
+    "lat": -23.5341253,
+    "lng": -46.6601049,
+    "rooms": 2,
+    "aluguel": 3800,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-2-quartos-com-garagem-sp-sao-paulo-higienopolis-70m2-RS3800/id-47587014/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Marechal Deodoro (430m) · Faculdade Santa Marcelina Perdizes: 564m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-marechal-deodoro",
+    "nearestStationName": "Marechal Deodoro",
+    "nearestStationDistanceM": 430,
+    "distanceToSantaMarcelinaM": 564
+  },
+  {
+    "id": "apt-scrape-mwskckcs-a8qwi",
+    "title": "Apartamento com 1 quarto para alugar na Avenida Higienópolis, Higienópolis, São Paulo",
+    "address": "Avenida Higienópolis, São Paulo - SP",
+    "lat": -23.5448678,
+    "lng": -46.653408,
+    "rooms": 2,
+    "aluguel": 4000,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-com-garagem-sp-sao-paulo-higienopolis-60m2-RS4000/id-45871198/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Santa Cecília (847m) · Faculdade Santa Marcelina Perdizes: 1565m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-santa-cecilia",
+    "nearestStationName": "Santa Cecília",
+    "nearestStationDistanceM": 847,
+    "distanceToSantaMarcelinaM": 1565
+  },
+  {
+    "id": "apt-scrape-mwskcmqd-riddg",
+    "title": "Alugar apartamento na República com 2 quartos.",
+    "address": "Rua Rego Freitas, República, São Paulo - SP",
+    "lat": -23.5461902,
+    "lng": -46.6466524,
+    "rooms": 2,
+    "aluguel": 1950,
+    "condominio": 1983,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/894904824",
+    "areaM2": 100,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=República · estação=República (477m) · Faculdade Santa Marcelina Perdizes: 2214m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-republica",
+    "nearestStationName": "República",
+    "nearestStationDistanceM": 477,
+    "distanceToSantaMarcelinaM": 2214
+  },
+  {
+    "id": "apt-scrape-mwskco1a-48seg",
+    "title": "Alugar apartamento mobiliado na República, 2 quartos, churrasqueira no condomínio.",
+    "address": "Avenida Rio Branco, República, São Paulo - SP",
+    "lat": -23.5424029,
+    "lng": -46.6380782,
+    "rooms": 2,
+    "aluguel": 2700,
+    "condominio": 500,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895326316",
+    "areaM2": 33,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=República · estação=República (500m) · Faculdade Santa Marcelina Perdizes: 2864m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-republica",
+    "nearestStationName": "República",
+    "nearestStationDistanceM": 500,
+    "distanceToSantaMarcelinaM": 2864
+  },
+  {
+    "id": "apt-scrape-mwskcoxs-306ka",
+    "title": "Apartamento para aluguel na República com 2 quartos e piscina no condomínio.",
+    "address": "Avenida Rio Branco, República, São Paulo - SP",
+    "lat": -23.5424029,
+    "lng": -46.6380782,
+    "rooms": 2,
+    "aluguel": 2390,
+    "condominio": 582,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895643654",
+    "areaM2": 34,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=República · estação=República (500m) · Faculdade Santa Marcelina Perdizes: 2864m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-republica",
+    "nearestStationName": "República",
+    "nearestStationDistanceM": 500,
+    "distanceToSantaMarcelinaM": 2864
+  },
+  {
+    "id": "apt-scrape-mwskcpsv-h7ch7",
+    "title": "Apartamento 2 qtos — República",
+    "address": "Avenida Rio Branco, República, São Paulo - SP",
+    "lat": -23.5424029,
+    "lng": -46.6380782,
+    "rooms": 2,
+    "aluguel": 3990,
+    "condominio": 392,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895703066",
+    "areaM2": 36,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=República · estação=República (500m) · Faculdade Santa Marcelina Perdizes: 2864m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-republica",
+    "nearestStationName": "República",
+    "nearestStationDistanceM": 500,
+    "distanceToSantaMarcelinaM": 2864
+  },
+  {
+    "id": "apt-scrape-mwskcr34-1srjj",
+    "title": "Apartamento com 1 quarto para alugar na Avenida Vieira de Carvalho, 141, República, São Paulo",
+    "address": "Avenida Vieira de Carvalho, 141, São Paulo - SP",
+    "lat": -23.541747,
+    "lng": -46.6440338,
+    "rooms": 2,
+    "aluguel": 2000,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-republica-RS2000/id-48221401/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=República (275m) · Faculdade Santa Marcelina Perdizes: 2259m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-republica",
+    "nearestStationName": "República",
+    "nearestStationDistanceM": 275,
+    "distanceToSantaMarcelinaM": 2259
+  },
+  {
+    "id": "apt-scrape-mwskcs4s-psdjs",
+    "title": "Apartamento com 1 quarto para alugar na Rua Rego Freitas, 62, República, São Paulo, 27 m2 por R$ 3.500",
+    "address": "Rua Rego Freitas, 62, São Paulo - SP",
+    "lat": -23.5423788,
+    "lng": -46.6466133,
+    "rooms": 2,
+    "aluguel": 3500,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-republica-27m2-RS3500/id-25911779/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=República (433m) · Faculdade Santa Marcelina Perdizes: 2033m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-republica",
+    "nearestStationName": "República",
+    "nearestStationDistanceM": 433,
+    "distanceToSantaMarcelinaM": 2033
+  },
+  {
+    "id": "apt-scrape-mwskct9i-m9lf5",
+    "title": "Apartamento com 1 quarto para alugar na Rua Bento Freitas, 181, República, São Paulo",
+    "address": "Rua Bento Freitas, 181, São Paulo - SP",
+    "lat": -23.5435833,
+    "lng": -46.6453171,
+    "rooms": 2,
+    "aluguel": 2201,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-republica-25m2-RS2201/id-48796104/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=República (269m) · Faculdade Santa Marcelina Perdizes: 2205m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-republica",
+    "nearestStationName": "República",
+    "nearestStationDistanceM": 269,
+    "distanceToSantaMarcelinaM": 2205
+  },
+  {
+    "id": "apt-scrape-mwskcueq-iphml",
+    "title": "Apartamento para alugar na Rua Rego Freitas, República, São Paulo",
+    "address": "Rua Rego Freitas, São Paulo - SP",
+    "lat": -23.5461902,
+    "lng": -46.6466524,
+    "rooms": 2,
+    "aluguel": 2555,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-sp-sao-paulo-republica-RS2555/id-27801504/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=República (477m) · Faculdade Santa Marcelina Perdizes: 2214m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-republica",
+    "nearestStationName": "República",
+    "nearestStationDistanceM": 477,
+    "distanceToSantaMarcelinaM": 2214
+  },
+  {
+    "id": "apt-scrape-mwskd1e6-tyl9d",
+    "title": "Apartamento de 2 quartos com varanda para alugar na Mooca.",
+    "address": "Rua Taquari, Mooca, São Paulo - SP",
+    "lat": -23.5462255,
+    "lng": -46.592396,
+    "rooms": 2,
+    "aluguel": 1990,
+    "condominio": 890,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895803924",
+    "areaM2": 38,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Mooca · estação=Belém (433m) · Faculdade Santa Marcelina Perdizes: 7517m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-belem",
+    "nearestStationName": "Belém",
+    "nearestStationDistanceM": 433,
+    "distanceToSantaMarcelinaM": 7517
+  },
+  {
+    "id": "apt-scrape-mwskd4n5-3gdq2",
+    "title": "Apartamento com 1 quarto para alugar na Rua Elói Cerqueira, 287, Belém, São Paulo",
+    "address": "Rua Elói Cerqueira, 287, São Paulo - SP",
+    "lat": -23.5425298,
+    "lng": -46.5920424,
+    "rooms": 2,
+    "aluguel": 2200,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-belem-27m2-RS2200/id-44256418/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Belém (263m) · Faculdade Santa Marcelina Perdizes: 7501m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-belem",
+    "nearestStationName": "Belém",
+    "nearestStationDistanceM": 263,
+    "distanceToSantaMarcelinaM": 7501
+  },
+  {
+    "id": "apt-scrape-mwskd5r7-8vez3",
+    "title": "Apartamento com 1 quarto para alugar na Rua Siqueira Bueno, Belém, São Paulo",
+    "address": "Rua Siqueira Bueno, São Paulo - SP",
+    "lat": -23.5507847,
+    "lng": -46.5875688,
+    "rooms": 2,
+    "aluguel": 1500,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-belem-25m2-RS1500/id-49004702/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Belém (858m) · Faculdade Santa Marcelina Perdizes: 8091m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-belem",
+    "nearestStationName": "Belém",
+    "nearestStationDistanceM": 858,
+    "distanceToSantaMarcelinaM": 8091
+  },
+  {
+    "id": "apt-scrape-mwskd6rt-mwstx",
+    "title": "Apartamento com 1 quarto para alugar na Rua Júlio de Castilhos, Belém, São Paulo",
+    "address": "Rua Júlio de Castilhos, São Paulo - SP",
+    "lat": -23.5423283,
+    "lng": -46.596059,
+    "rooms": 2,
+    "aluguel": 1410,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-belem-29m2-RS1410/id-31917888/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Belém (667m) · Faculdade Santa Marcelina Perdizes: 7091m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-belem",
+    "nearestStationName": "Belém",
+    "nearestStationDistanceM": 667,
+    "distanceToSantaMarcelinaM": 7091
+  },
+  {
+    "id": "apt-scrape-mwskd922-u6810",
+    "title": "Apartamento com 1 quarto para alugar na Rua Martim Afonso, Belém, São Paulo",
+    "address": "Rua Martim Afonso, São Paulo - SP",
+    "lat": -23.5384337,
+    "lng": -46.5958295,
+    "rooms": 2,
+    "aluguel": 2210,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-com-garagem-sp-sao-paulo-belem-44m2-RS2210/id-46598395/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Belém (834m) · Faculdade Santa Marcelina Perdizes: 7084m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-belem",
+    "nearestStationName": "Belém",
+    "nearestStationDistanceM": 834,
+    "distanceToSantaMarcelinaM": 7084
+  },
+  {
+    "id": "apt-scrape-mwskd9x7-jduqv",
+    "title": "Apartamento com 1 quarto para alugar na Rua Siqueira Bueno, Belém, São Paulo",
+    "address": "Rua Siqueira Bueno, São Paulo - SP",
+    "lat": -23.5507847,
+    "lng": -46.5875688,
+    "rooms": 2,
+    "aluguel": 1450,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-belem-25m2-RS1450/id-48714305/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Belém (858m) · Faculdade Santa Marcelina Perdizes: 8091m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-belem",
+    "nearestStationName": "Belém",
+    "nearestStationDistanceM": 858,
+    "distanceToSantaMarcelinaM": 8091
+  },
+  {
+    "id": "apt-scrape-mwskdasb-3s7gc",
+    "title": "Apartamento com 1 quarto para alugar na Rua Siqueira Bueno, Belém, São Paulo",
+    "address": "Rua Siqueira Bueno, São Paulo - SP",
+    "lat": -23.5507847,
+    "lng": -46.5875688,
+    "rooms": 2,
+    "aluguel": 1900,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-belem-25m2-RS1900/id-49078542/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Belém (858m) · Faculdade Santa Marcelina Perdizes: 8091m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-belem",
+    "nearestStationName": "Belém",
+    "nearestStationDistanceM": 858,
+    "distanceToSantaMarcelinaM": 8091
+  },
+  {
+    "id": "apt-scrape-mwskdbnn-kpfot",
+    "title": "Apartamento com 1 quarto para alugar na Rua Júlio de Castilhos, Belém, São Paulo",
+    "address": "Rua Júlio de Castilhos, São Paulo - SP",
+    "lat": -23.5423283,
+    "lng": -46.596059,
+    "rooms": 2,
+    "aluguel": 1700,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-belem-35m2-RS1700/id-45419563/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Belém (667m) · Faculdade Santa Marcelina Perdizes: 7091m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-belem",
+    "nearestStationName": "Belém",
+    "nearestStationDistanceM": 667,
+    "distanceToSantaMarcelinaM": 7091
+  },
+  {
+    "id": "apt-scrape-mwskdcir-kt7uz",
+    "title": "Apartamento com 1 quarto para alugar na Rua Siqueira Bueno, Belém, São Paulo",
+    "address": "Rua Siqueira Bueno, São Paulo - SP",
+    "lat": -23.5507847,
+    "lng": -46.5875688,
+    "rooms": 2,
+    "aluguel": 1800,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-belem-25m2-RS1800/id-49078595/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Belém (858m) · Faculdade Santa Marcelina Perdizes: 8091m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-belem",
+    "nearestStationName": "Belém",
+    "nearestStationDistanceM": 858,
+    "distanceToSantaMarcelinaM": 8091
+  },
+  {
+    "id": "apt-scrape-mwskddlw-385s0",
+    "title": "Apartamento com 1 quarto para alugar na Rua Herval, Belém, São Paulo",
+    "address": "Rua Herval, São Paulo - SP",
+    "lat": -23.5427333,
+    "lng": -46.59466,
+    "rooms": 2,
+    "aluguel": 1800,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-belem-21m2-RS1800/id-37885436/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Belém (520m) · Faculdade Santa Marcelina Perdizes: 7238m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-belem",
+    "nearestStationName": "Belém",
+    "nearestStationDistanceM": 520,
+    "distanceToSantaMarcelinaM": 7238
+  },
+  {
+    "id": "apt-scrape-mwskdeln-fui1p",
+    "title": "Apartamento com 1 quarto para alugar na Rua Elói Cerqueira, Belém, São Paulo",
+    "address": "Rua Elói Cerqueira, São Paulo - SP",
+    "lat": -23.541067,
+    "lng": -46.5927537,
+    "rooms": 2,
+    "aluguel": 1870,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-belem-34m2-RS1870/id-39397371/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Belém (406m) · Faculdade Santa Marcelina Perdizes: 7415m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-belem",
+    "nearestStationName": "Belém",
+    "nearestStationDistanceM": 406,
+    "distanceToSantaMarcelinaM": 7415
+  },
+  {
+    "id": "apt-scrape-mwskdhiv-85ipx",
+    "title": "Apartamento com 1 quarto para alugar na Rua Júlio de Castilhos, Belém, São Paulo",
+    "address": "Rua Júlio de Castilhos, São Paulo - SP",
+    "lat": -23.5423283,
+    "lng": -46.596059,
+    "rooms": 2,
+    "aluguel": 1560,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-belem-35m2-RS1560/id-47197562/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Belém (667m) · Faculdade Santa Marcelina Perdizes: 7091m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-belem",
+    "nearestStationName": "Belém",
+    "nearestStationDistanceM": 667,
+    "distanceToSantaMarcelinaM": 7091
+  },
+  {
+    "id": "apt-scrape-mwskdjqr-tbuxp",
+    "title": "Apartamento 2 qtos — Tatuapé",
+    "address": "Rua Ivaí, Tatuapé, São Paulo - SP",
+    "lat": -23.5332756,
+    "lng": -46.5792157,
+    "rooms": 2,
+    "aluguel": 2400,
+    "condominio": 112,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895638676",
+    "areaM2": 41,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Tatuapé · estação=Tatuapé (815m) · Faculdade Santa Marcelina Perdizes: 8778m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-tatuape",
+    "nearestStationName": "Tatuapé",
+    "nearestStationDistanceM": 815,
+    "distanceToSantaMarcelinaM": 8778
+  },
+  {
+    "id": "apt-scrape-mwskdkrt-61zn6",
+    "title": "Apartamento para alugar no Tatuapé com 2 quartos, piscina e academia no condomínio.",
+    "address": "Avenida Celso Garcia, Tatuapé, São Paulo - SP",
+    "lat": -23.5322972,
+    "lng": -46.5615237,
+    "rooms": 2,
+    "aluguel": 1800,
+    "condominio": 393,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895660778",
+    "areaM2": 35,
+    "parkingSpots": 0,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Tatuapé · estação=Carrão–Assaí Atacadista (666m) · Faculdade Santa Marcelina Perdizes: 10584m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-carrao",
+    "nearestStationName": "Carrão–Assaí Atacadista",
+    "nearestStationDistanceM": 666,
+    "distanceToSantaMarcelinaM": 10584
+  },
+  {
+    "id": "apt-scrape-mwskdouw-tjrcz",
+    "title": "Apartamento de dois quartos para alugar no Tatuapé, com piscina no condomínio.",
+    "address": "Avenida Celso Garcia, Tatuapé, São Paulo - SP",
+    "lat": -23.5322972,
+    "lng": -46.5615237,
+    "rooms": 2,
+    "aluguel": 3000,
+    "condominio": 895,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.quintoandar.com.br/imovel/895852988",
+    "areaM2": 51,
+    "parkingSpots": 1,
+    "notes": "origem=scraping · portal=quintoandar · bairro=Tatuapé · estação=Carrão–Assaí Atacadista (666m) · Faculdade Santa Marcelina Perdizes: 10584m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "QuintoAndar",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-carrao",
+    "nearestStationName": "Carrão–Assaí Atacadista",
+    "nearestStationDistanceM": 666,
+    "distanceToSantaMarcelinaM": 10584
+  },
+  {
+    "id": "apt-scrape-mwskdq2m-lwdzv",
+    "title": "Apartamento com 2 quartos para alugar na Avenida Celso Garcia, 5640, Tatuapé, São Paulo",
+    "address": "Avenida Celso Garcia, 5640, São Paulo - SP",
+    "lat": -23.5313538,
+    "lng": -46.558423,
+    "rooms": 2,
+    "aluguel": 4200,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-2-quartos-com-garagem-sp-sao-paulo-tatuape-RS4200/id-35725368/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Carrão–Assaí Atacadista (921m) · Faculdade Santa Marcelina Perdizes: 10905m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-carrao",
+    "nearestStationName": "Carrão–Assaí Atacadista",
+    "nearestStationDistanceM": 921,
+    "distanceToSantaMarcelinaM": 10905
+  },
+  {
+    "id": "apt-scrape-mwskdr6k-j8vp5",
+    "title": "Apartamento com 1 quarto para alugar na Rua Melo Peixoto, 1503, Tatuapé, São Paulo por R$ 1.249",
+    "address": "Rua Melo Peixoto, 1503, São Paulo - SP",
+    "lat": -23.539087,
+    "lng": -46.5726264,
+    "rooms": 2,
+    "aluguel": 1249,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-tatuape-17m2-RS1249/id-24258053/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Tatuapé (424m) · Faculdade Santa Marcelina Perdizes: 9451m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-tatuape",
+    "nearestStationName": "Tatuapé",
+    "nearestStationDistanceM": 424,
+    "distanceToSantaMarcelinaM": 9451
+  },
+  {
+    "id": "apt-scrape-mwskdsdu-tbt8g",
+    "title": "Apartamento com 1 quarto para alugar na Rua Cândido Vale, 31, Tatuapé, São Paulo",
+    "address": "Rua Cândido Vale, 31, São Paulo - SP",
+    "lat": -23.5366272,
+    "lng": -46.568605,
+    "rooms": 2,
+    "aluguel": 1900,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-tatuape-40m2-RS1900/id-43793545/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Carrão–Assaí Atacadista (477m) · Faculdade Santa Marcelina Perdizes: 9855m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-carrao",
+    "nearestStationName": "Carrão–Assaí Atacadista",
+    "nearestStationDistanceM": 477,
+    "distanceToSantaMarcelinaM": 9855
+  },
+  {
+    "id": "apt-scrape-mwskdvs5-9n26b",
+    "title": "Apartamento com 1 quarto para alugar na Rua Airi, 227, Tatuapé, São Paulo",
+    "address": "Rua Airi, 227, São Paulo - SP",
+    "lat": -23.5406034,
+    "lng": -46.568558,
+    "rooms": 2,
+    "aluguel": 3600,
+    "condominio": 0,
+    "iptu": 0,
+    "portaria24h": false,
+    "externalUrl": "https://www.chavesnamao.com.br/imovel/apartamento-para-alugar-1-quarto-sp-sao-paulo-tatuape-40m2-RS3600/id-32849141/",
+    "notes": "origem=scraping · portal=chavesnamao · estação=Carrão–Assaí Atacadista (551m) · Faculdade Santa Marcelina Perdizes: 9873m",
+    "status": "Candidato",
+    "source": "scraping",
+    "portal": "Chaves na Mão",
+    "scrapedAt": "2026-11-23T01:03:01.544Z",
+    "nearestStationId": "l3-carrao",
+    "nearestStationName": "Carrão–Assaí Atacadista",
+    "nearestStationDistanceM": 551,
+    "distanceToSantaMarcelinaM": 9873
   }
 ]
