@@ -24,14 +24,9 @@ export function getVisibleApartments(
       if (!filters.statuses.includes(status)) return false;
     }
 
-    // Inseridos à mão: não esconder por pacote/quartos/vagas/portal
-    // (os manuais em produção estão quase todos acima do teto padrão de R$4.000).
-    const isManual =
-      status === "Manual" ||
-      (apt.source || "").toLowerCase() === "manual" ||
-      (apt.portal || "").toLowerCase() === "manual";
-
-    if (!isManual) {
+    // Só Candidato sofre pacote / quartos / vagas / portal.
+    // Manual, Favorito, Visita Agendada, Descartado: só status (+ estações).
+    if (status === "Candidato") {
       const pkg = packageValue(apt);
       if (filters.minPackage != null && pkg < filters.minPackage) return false;
       if (filters.maxPackage != null && pkg > filters.maxPackage) return false;
