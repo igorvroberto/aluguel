@@ -30,6 +30,7 @@ import {
   getSharedBrowser,
   scrapeChavesPaginated,
   scrapeQuintoAndarPaginated,
+  scrapeImovelwebFirefox,
   scrapeVivaRealFirefox,
   scrapeZapFirefox,
 } from "../src/lib/portal-playwright";
@@ -249,6 +250,9 @@ async function scrapeSlice(
   }
   if (portal === "zapimoveis") {
     return scrapeZapFirefox(url);
+  }
+  if (portal === "imovelweb") {
+    return scrapeImovelwebFirefox(url);
   }
   return [];
 }

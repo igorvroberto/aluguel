@@ -6,6 +6,7 @@ import {
   PORTAL_LABELS,
   SCRAPE_ACTIVE_PORTALS,
   SEARCH_PRICE_BANDS,
+  isImovelwebScrapeEnabled,
   normalizePortalId,
   type PortalId,
 } from "./portals";
@@ -13,6 +14,7 @@ import {
   closeSharedBrowser,
   getSharedBrowser,
   scrapeChavesPaginated,
+  scrapeImovelwebFirefox,
   scrapeQuintoAndarPaginated,
   scrapeVivaRealFirefox,
   scrapeZapFirefox,
@@ -474,6 +476,14 @@ function buildSearchUrls(
           `${roomMin}-quartos/?transacao=aluguel&tipos=apartamento_residencial&quartos=${roomMin}&precoMaximo=${max}`,
       });
     }
+    if (isImovelwebScrapeEnabled()) {
+      out.push({
+        source: "imovelweb",
+        url:
+          `https://www.imovelweb.com.br/apartamentos-aluguel-${neigh}-sao-paulo.html` +
+          `?precio-maximo=${max}&precio-minimo=${band.min}&ambientes=${roomMin}`,
+      });
+    }
   }
   return out;
 }
@@ -523,23 +533,32 @@ async function scrapePage(
 ): Promise<{ listings: RawListingCandidate[]; warning?: string }> {
   const portal = normalizePortalId(source) as PortalId | undefined;
 
-  // Viva / ZAP: Firefox (Chromium cai no Cloudflare / ERROR_PAGE)
+  // Viva / ZAP / Imovelweb: Firefox (+ proxy p/ Imovelweb)
   if (
     allowPlaywright &&
-    (portal === "vivareal" || portal === "zapimoveis")
+    (portal === "vivareal" ||
+      portal === "zapimoveis" ||
+      portal === "imovelweb")
   ) {
-    const label = portal === "zapimoveis" ? "ZAP" : "Viva Real";
+    const label =
+      portal === "zapimoveis"
+        ? "ZAP"
+        : portal === "imovelweb"
+          ? "Imovelweb"
+          : "Viva Real";
     try {
       const items =
         portal === "zapimoveis"
           ? await scrapeZapFirefox(url)
-          : await scrapeVivaRealFirefox(url);
+          : portal === "imovelweb"
+            ? await scrapeImovelwebFirefox(url)
+            : await scrapeVivaRealFirefox(url);
       if (items.length > 0) {
         return { listings: portalListingsToCandidates(source, items) };
       }
       return {
         listings: [],
-        warning: `${label}: Firefox não retornou cards (CF/URL?).`,
+        warning: `${label}: Firefox não retornou cards (CF/proxy/URL?).`,
       };
     } catch (err) {
       return {

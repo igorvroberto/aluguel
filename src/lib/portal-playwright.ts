@@ -653,6 +653,51 @@ export async function scrapeZapFirefox(
   return scrapeOlxFamilyFirefox(url, "zapimoveis", opts);
 }
 
+/**
+ * Imovelweb via Firefox. Em IP de datacenter o Turnstile trava em
+ * “Um momento…” — precisa de SCRAPE_PROXY_URL (proxy residencial).
+ */
+export async function scrapeImovelwebFirefox(
+  url: string,
+  opts?: { browser?: Browser; scrollSteps?: number }
+): Promise<PortalListing[]> {
+  if (!scrapeProxyServer()) {
+    return [];
+  }
+  const browser = opts?.browser || (await getSharedFirefoxBrowser());
+  const page = await browser.newPage({
+    locale: "pt-BR",
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+    viewport: { width: 1440, height: 900 },
+  });
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 90000 });
+    // Turnstile às vezes resolve sozinho atrás de IP residencial.
+    for (let i = 0; i < 12; i++) {
+      await page.waitForTimeout(2500);
+      const title = await page.title().catch(() => "");
+      if (!/um momento|just a moment|verifica/i.test(title)) break;
+    }
+    const title = await page.title().catch(() => "");
+    if (/um momento|just a moment|attention required|blocked/i.test(title)) {
+      return [];
+    }
+    const steps = opts?.scrollSteps ?? 6;
+    for (let i = 0; i < steps; i++) {
+      await page.mouse.wheel(0, 1600);
+      await page.waitForTimeout(550);
+    }
+    await page.waitForTimeout(1500);
+    const html = await page.content();
+    return extractFromHtmlPortals(html, "imovelweb", url);
+  } catch {
+    return [];
+  } finally {
+    await page.close().catch(() => undefined);
+  }
+}
+
 export function buildPortalSearchUrls(
   neigh: string,
   opts: { rooms: number; priceBand: SearchPriceBand }
@@ -686,8 +731,17 @@ export function buildPortalSearchUrls(
         `https://www.zapimoveis.com.br/aluguel/apartamentos/sp+sao-paulo+zona-oeste+${neigh}/` +
         `${rooms}-quartos/?transacao=aluguel&tipos=apartamento_residencial&quartos=${rooms}&precoMaximo=${max}`,
     },
+    {
+      portal: "imovelweb",
+      url:
+        `https://www.imovelweb.com.br/apartamentos-aluguel-${neigh}-sao-paulo.html` +
+        `?precio-maximo=${max}&precio-minimo=${min}&ambientes=${rooms}`,
+    },
   ];
-  const active = new Set<PortalId>(SCRAPE_ACTIVE_PORTALS);
+  const active = new Set<PortalId>([
+    ...SCRAPE_ACTIVE_PORTALS,
+    ...(scrapeProxyServer() ? (["imovelweb"] as const) : []),
+  ]);
   return all.filter((item) => active.has(item.portal));
 }
 

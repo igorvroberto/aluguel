@@ -21,7 +21,8 @@ export const PORTAL_LABELS: Record<PortalId, string> = {
 /**
  * Portais que o scrape tenta de verdade.
  * - Viva / ZAP: Firefox + URL correta (ZAP precisa de `zona-oeste` no path).
- * - Imovelweb: Turnstile interativo ainda bloqueia neste ambiente — fora.
+ * - Imovelweb: só com SCRAPE_PROXY_URL (Turnstile); ativado dinamicamente
+ *   em buildPortalSearchUrls / station-scrape quando o proxy está definido.
  */
 export const SCRAPE_ACTIVE_PORTALS: readonly PortalId[] = [
   "quintoandar",
@@ -29,6 +30,11 @@ export const SCRAPE_ACTIVE_PORTALS: readonly PortalId[] = [
   "vivareal",
   "zapimoveis",
 ] as const;
+
+/** True quando há proxy residencial para tentar Imovelweb. */
+export function isImovelwebScrapeEnabled(): boolean {
+  return Boolean((process.env.SCRAPE_PROXY_URL || "").trim());
+}
 
 /** Opções do filtro de portal na UI (só portais ativos no scrape). */
 export const PORTAL_FILTER_OPTIONS = SCRAPE_ACTIVE_PORTALS.map((id) => ({

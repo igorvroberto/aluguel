@@ -1,50 +1,58 @@
 /**
- * Teste Imovelweb (Firefox). Sem SCRAPE_PROXY_URL residencial,
- * o Turnstile costuma ficar em "Um momento…".
+ * Teste Imovelweb (Firefox + SCRAPE_PROXY_URL).
  *
- * Uso: SCRAPE_PROXY_URL=http://user:pass@host:port npx tsx scripts/test-imovelweb-scrape.ts
+ * Na VPS (com proxy da casa já ok):
+ *   cd /opt/radar-imoveis
+ *   set -a && source .env && set +a
+ *   npx playwright install firefox
+ *   npx tsx scripts/test-imovelweb-scrape.ts
  */
-import { firefox } from "playwright";
+import {
+  closeSharedBrowser,
+  scrapeImovelwebFirefox,
+} from "../src/lib/portal-playwright";
 
 const URL =
   "https://www.imovelweb.com.br/apartamentos-aluguel-perdizes-sao-paulo.html";
 
 async function main() {
   const proxy = (process.env.SCRAPE_PROXY_URL || "").trim();
+  if (!proxy) {
+    console.error(
+      "Falta SCRAPE_PROXY_URL no ambiente (.env). Ex.: socks5://100.x.x.x:1080"
+    );
+    process.exit(1);
+  }
   console.log(
     JSON.stringify({
       url: URL,
-      proxy: proxy ? proxy.replace(/:[^:@]+@/, ":***@") : null,
+      proxy: proxy.replace(/:[^:@/]+@/, ":***@"),
     })
   );
-  const browser = await firefox.launch({
-    headless: true,
-    ...(proxy ? { proxy: { server: proxy } } : {}),
-  });
-  const page = await browser.newPage({ locale: "pt-BR" });
-  await page.goto(URL, { waitUntil: "domcontentloaded", timeout: 60000 });
-  await page.waitForTimeout(20000);
-  const title = await page.title();
-  const hrefs = await page.$$eval("a[href]", (as) =>
-    as
-      .map((a) => (a as HTMLAnchorElement).href)
-      .filter((h) => /propriedades|apartamento/i.test(h))
-  );
+
+  const items = await scrapeImovelwebFirefox(URL, { scrollSteps: 5 });
   console.log(
-    JSON.stringify({
-      title,
-      blocked: /moment|verifica|attention/i.test(title),
-      hrefs: hrefs.length,
-      sample: hrefs.slice(0, 5),
-    })
+    JSON.stringify(
+      {
+        count: items.length,
+        sample: items.slice(0, 5).map((i) => ({
+          titulo: i.titulo,
+          aluguel: i.aluguel,
+          quartos: i.quartos,
+          bairro: i.bairro,
+          link: i.linkAnuncio,
+        })),
+      },
+      null,
+      2
+    )
   );
-  await browser.close();
-  if (/moment|verifica|attention/i.test(title) || hrefs.length === 0) {
-    process.exit(2);
-  }
+  await closeSharedBrowser();
+  if (items.length === 0) process.exit(2);
 }
 
-main().catch((e) => {
+main().catch(async (e) => {
   console.error(e);
+  await closeSharedBrowser();
   process.exit(1);
 });
