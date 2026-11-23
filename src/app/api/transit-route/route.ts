@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildFallbackTransitRoute,
+  enrichRouteWithWalkElevation,
+  enrichRoutesWithWalkElevation,
   fetchGoogleTransitRoutes,
   type TripDirection,
 } from "@/lib/transit";
@@ -44,12 +46,13 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const routes = await fetchGoogleTransitRoutes(
+      const rawRoutes = await fetchGoogleTransitRoutes(
         apiKey,
         lat,
         lng,
         direction
       );
+      const routes = await enrichRoutesWithWalkElevation(apiKey, rawRoutes);
       return NextResponse.json({
         ok: true,
         routes,
@@ -61,13 +64,14 @@ export async function POST(req: NextRequest) {
       });
     } catch (err) {
       console.warn("Google TRANSIT falhou, fallback local:", err);
-      const route = await buildFallbackTransitRoute(
+      const raw = await buildFallbackTransitRoute(
         lat,
         lng,
         direction,
         mapboxToken,
         apiKey
       );
+      const route = await enrichRouteWithWalkElevation(apiKey, raw);
       return NextResponse.json({
         ok: true,
         routes: [route],
