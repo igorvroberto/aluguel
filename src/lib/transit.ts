@@ -570,9 +570,42 @@ function buildOptionLabel(
         s.mode === "BUS" ? "Ônibus" : s.mode === "SUBWAY" ? "Metrô" : "Transporte";
       return s.lineName ? `${kind} ${s.lineName}` : kind;
     });
-  const unique = Array.from(new Set(transitBits));
-  const modes = unique.length ? unique.join(" + ") : "Transporte";
-  return `${modes} · ${totalDurationMinutes} min`;
+  // Mantém a ordem dos trechos (não Set) — ônibus A→B ≠ B→A
+  const modes = transitBits.length ? transitBits.join(" → ") : "A pé";
+  const walkMin = steps
+    .filter((s) => s.mode === "WALK")
+    .reduce((sum, s) => sum + s.durationMinutes, 0);
+  const walkBit = walkMin > 0 ? ` · ${walkMin} min a pé` : "";
+  return `${modes} · ${totalDurationMinutes} min${walkBit}`;
+}
+
+/** Assinatura para deduplicar alternativas quase iguais do Google. */
+function routeFingerprint(route: TransitRouteResult): string {
+  const transitKey = route.steps
+    .filter((s) => s.mode !== "WALK")
+    .map((s) => `${s.mode}:${s.lineName || ""}`)
+    .join("|");
+  return [
+    transitKey,
+    route.totalDurationMinutes,
+    route.walkDurationMinutes,
+    Math.round(route.walkDistanceMeters / 50) * 50,
+  ].join("::");
+}
+
+/** Mantém a ordem do Google e remove opções duplicadas. */
+export function uniqueTransitRoutes(
+  routes: TransitRouteResult[]
+): TransitRouteResult[] {
+  const seen = new Set<string>();
+  const out: TransitRouteResult[] = [];
+  for (const route of routes) {
+    const key = routeFingerprint(route);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(route);
+  }
+  return out;
 }
 
 function parseGoogleRouteRaw(raw: GoogleRouteRaw): TransitRouteResult | null {
@@ -632,9 +665,8 @@ function parseGoogleRouteRaw(raw: GoogleRouteRaw): TransitRouteResult | null {
     .reduce((sum, s) => sum + s.durationMinutes, 0);
 
   const summary = steps.map((s) => s.instruction).join(" → ");
-  const optionLabel =
-    raw.description?.trim() ||
-    buildOptionLabel(steps, totalDurationMinutes);
+  // Label pelos trechos reais — `description` do Google costuma repetir entre opções.
+  const optionLabel = buildOptionLabel(steps, totalDurationMinutes);
 
   return {
     source: "google",
@@ -705,9 +737,11 @@ export async function fetchGoogleTransitRoutes(
     );
   }
 
-  const parsed = data.routes
-    .map((raw) => parseGoogleRouteRaw(raw))
-    .filter((r): r is TransitRouteResult => r != null);
+  const parsed = uniqueTransitRoutes(
+    data.routes
+      .map((raw) => parseGoogleRouteRaw(raw))
+      .filter((r): r is TransitRouteResult => r != null)
+  );
 
   if (!parsed.length) {
     throw new Error("Google Routes não retornou passos TRANSIT utilizáveis");

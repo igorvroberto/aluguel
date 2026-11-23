@@ -98,9 +98,9 @@ function TransitLegBlock({
                 <span className="font-medium">
                   {opt.optionLabel || `Opção ${idx + 1}`}
                 </span>
-                {opt.source === "google" ? (
-                  <span className="mt-0.5 block text-[11px] text-slate-500">
-                    Google Routes
+                {opt.source === "fallback" ? (
+                  <span className="mt-0.5 block text-[11px] text-amber-700">
+                    Estimativa local
                   </span>
                 ) : null}
               </button>
