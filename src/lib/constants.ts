@@ -82,5 +82,3 @@ export const BUS_CORRIDORS = [
     ] as [number, number][],
   },
 ] as const;
-
-export const MAPBOX_STYLE = "mapbox://styles/mapbox/outdoors-v12";

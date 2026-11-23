@@ -2,7 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
-  transpilePackages: ["mapbox-gl"],
   experimental: {
     serverComponentsExternalPackages: ["playwright"],
   },

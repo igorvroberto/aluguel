@@ -6,7 +6,7 @@ Aplicação web em **Next.js 14** (App Router, TypeScript, Tailwind CSS) para an
 
 ## Funcionalidades
 
-- Layout split-screen: lista/filtros + mapa Mapbox + painel de transporte público
+- Layout split-screen: lista/filtros + mapa Google Maps + painel de transporte público
 - Pacote mensal (`aluguel + condomínio + IPTU`), quartos e portaria 24h
 - **Transporte Público** via Google Routes TRANSIT (alternativas ônibus/metrô) — traçado no mapa conforme a opção
 - Mapa com Linha 3-Vermelha e Linha 6-Laranja; filtro por estação (sem linhas/corredores de ônibus no mapa)
@@ -23,14 +23,15 @@ Aplicação web em **Next.js 14** (App Router, TypeScript, Tailwind CSS) para an
 npm install
 cp .env.local.example .env.local
 # Edite .env.local:
-#   NEXT_PUBLIC_MAPBOX_TOKEN=...
-#   GOOGLE_MAPS_API_KEY=...   # obrigatório para Transporte Público (mesmo do Maps)
+#   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...  # Maps JavaScript API (mapa)
+#   GOOGLE_MAPS_API_KEY=...              # Routes TRANSIT (pode ser a mesma chave)
+#   NEXT_PUBLIC_MAPBOX_TOKEN=...         # opcional: geocode scrape/cadastro
 npm run dev
 ```
 
 Abra [http://localhost:3000](http://localhost:3000).
 
-Sem o token Mapbox, a interface continua funcional e a área do mapa exibe um aviso claro. **Transporte público** exige `GOOGLE_MAPS_API_KEY`: usa Google Routes TRANSIT com alternativas (ônibus/metrô), como no Maps. Sem a key a API responde 503. Fallback local só se o Routes falhar com a key presente.
+Sem `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`, a interface continua funcional e a área do mapa exibe um aviso. Habilite **Maps JavaScript API** na chave. **Transporte público** exige `GOOGLE_MAPS_API_KEY` (Routes TRANSIT). Sem a key a API responde 503.
 
 ## Scripts
 
@@ -74,7 +75,7 @@ sudo mkdir -p /opt/radar-imoveis
 sudo git clone https://github.com/igorvroberto/aluguel.git /opt/radar-imoveis
 cd /opt/radar-imoveis
 sudo cp .env.example .env
-sudo nano .env   # NEXT_PUBLIC_MAPBOX_TOKEN (+ GOOGLE_MAPS_API_KEY opcional)
+sudo nano .env   # NEXT_PUBLIC_GOOGLE_MAPS_API_KEY + GOOGLE_MAPS_API_KEY
 sudo bash tools/deploy.sh
 ```
 

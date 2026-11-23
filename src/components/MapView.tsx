@@ -1,25 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import mapboxgl from "mapbox-gl";
-import { LINHA_VERMELHA_COLOR } from "../../data/linhasMetro";
-import { DESTINATION, MAPBOX_STYLE } from "@/lib/constants";
 import {
-  buildLinhaLaranjaLineGeoJSON,
-  buildLinhaLaranjaStationsGeoJSON,
-  buildLinhaVermelhaLineGeoJSON,
-  buildLinhaVermelhaStationsGeoJSON,
-  buildStationRadiusGeoJSON,
-} from "@/lib/geo";
+  LINHA_LARANJA_ATIVAS,
+  LINHA_LARANJA_COLOR,
+  LINHA_VERMELHA,
+  LINHA_VERMELHA_COLOR,
+} from "../../data/linhasMetro";
+import { DESTINATION } from "@/lib/constants";
+import { buildStationRadiusGeoJSON } from "@/lib/geo";
+import { loadGoogleMaps, svgCircleIcon } from "@/lib/google-maps";
 import {
   transitModeMapColor,
   type TransitRouteResult,
 } from "@/lib/transit";
 import type { Apartment } from "@/lib/types";
-import "mapbox-gl/dist/mapbox-gl.css";
 
 interface MapViewProps {
-  token?: string;
+  apiKey?: string;
   apartments: Apartment[];
   selectedId: string | null;
   googleTransitRoute?: TransitRouteResult | null;
@@ -28,37 +26,23 @@ interface MapViewProps {
   onSelectApartment: (id: string) => void;
 }
 
-const ROUTE_SOURCE = "route-segments";
-const L3_LINE_SOURCE = "linha-vermelha-line";
-const L3_STATIONS_SOURCE = "linha-vermelha-stations";
-const L6_LINE_SOURCE = "linha-laranja-line";
-const L6_STATIONS_SOURCE = "linha-laranja-stations";
-const METRO_RADIUS_SOURCE = "metro-station-radii";
+function linePath(
+  stations: { lat: number; lng: number }[]
+): google.maps.LatLngLiteral[] {
+  return stations.map((s) => ({ lat: s.lat, lng: s.lng }));
+}
 
-function buildGoogleTransitFeatures(
-  route: TransitRouteResult
-): GeoJSON.FeatureCollection {
-  const features: GeoJSON.Feature[] = [];
-  for (const step of route.steps) {
-    const coords = step.coordinates;
-    if (!coords || coords.length < 2) continue;
-    features.push({
-      type: "Feature",
-      properties: {
-        mode: step.mode,
-        color: transitModeMapColor(step.mode),
-      },
-      geometry: {
-        type: "LineString",
-        coordinates: coords,
-      },
-    });
-  }
-  return { type: "FeatureCollection", features };
+function polygonFromGeoJSON(
+  feature: GeoJSON.Feature
+): google.maps.LatLngLiteral[] | null {
+  if (feature.geometry.type !== "Polygon") return null;
+  const ring = feature.geometry.coordinates[0];
+  if (!ring?.length) return null;
+  return ring.map(([lng, lat]) => ({ lat, lng }));
 }
 
 export function MapView({
-  token,
+  apiKey,
   apartments,
   selectedId,
   googleTransitRoute = null,
@@ -67,317 +51,301 @@ export function MapView({
   onSelectApartment,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
-  const destMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const aptMarkersRef = useRef<Map<string, google.maps.Marker>>(new Map());
+  const destMarkerRef = useRef<google.maps.Marker | null>(null);
+  const routePolylinesRef = useRef<google.maps.Polyline[]>([]);
+  const radiusPolygonsRef = useRef<google.maps.Polygon[]>([]);
+  const staticOverlaysRef = useRef<
+    Array<google.maps.Polyline | google.maps.Marker>
+  >([]);
+  const onSelectRef = useRef(onSelectApartment);
+  onSelectRef.current = onSelectApartment;
   const [mapReady, setMapReady] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token || !containerRef.current || mapRef.current) return;
+    if (!apiKey || !containerRef.current || mapRef.current) return;
+    let cancelled = false;
 
-    mapboxgl.accessToken = token;
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: MAPBOX_STYLE,
-      center: [DESTINATION.lng, DESTINATION.lat],
-      zoom: 13,
-      pitch: 0,
-      bearing: 0,
-      antialias: true,
-    });
+    loadGoogleMaps(apiKey)
+      .then(() => {
+        if (cancelled || !containerRef.current) return;
 
-    map.addControl(new mapboxgl.NavigationControl(), "top-right");
-    mapRef.current = map;
+        const map = new google.maps.Map(containerRef.current, {
+          center: { lat: DESTINATION.lat, lng: DESTINATION.lng },
+          zoom: 13,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+          zoomControl: true,
+          gestureHandling: "greedy",
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }],
+            },
+          ],
+        });
+        mapRef.current = map;
 
-    const setupLayers = () => {
-      if (!map.getSource(ROUTE_SOURCE)) {
-        map.addSource(ROUTE_SOURCE, {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: [] },
-        });
-        map.addLayer({
-          id: "route-line",
-          type: "line",
-          source: ROUTE_SOURCE,
-          layout: {
-            "line-join": "round",
-            "line-cap": "round",
-          },
-          paint: {
-            "line-color": ["get", "color"],
-            "line-width": 5,
-            "line-opacity": 0.9,
-          },
-        });
-      }
+        const overlays: Array<google.maps.Polyline | google.maps.Marker> = [];
 
-      if (!map.getSource(L3_LINE_SOURCE)) {
-        map.addSource(L3_LINE_SOURCE, {
-          type: "geojson",
-          data: buildLinhaVermelhaLineGeoJSON(),
+        const l3 = new google.maps.Polyline({
+          path: linePath(LINHA_VERMELHA),
+          strokeColor: LINHA_VERMELHA_COLOR,
+          strokeOpacity: 0.92,
+          strokeWeight: 4,
+          map,
+          zIndex: 1,
         });
-        map.addLayer({
-          id: "l3-line",
-          type: "line",
-          source: L3_LINE_SOURCE,
-          layout: {
-            "line-join": "round",
-            "line-cap": "round",
-            visibility: "visible",
-          },
-          paint: {
-            "line-color": LINHA_VERMELHA_COLOR,
-            "line-width": 3.5,
-            "line-opacity": 0.92,
-          },
-        });
-      }
+        overlays.push(l3);
 
-      if (!map.getSource(L3_STATIONS_SOURCE)) {
-        map.addSource(L3_STATIONS_SOURCE, {
-          type: "geojson",
-          data: buildLinhaVermelhaStationsGeoJSON(),
-        });
-        map.addLayer({
-          id: "l3-stations",
-          type: "circle",
-          source: L3_STATIONS_SOURCE,
-          layout: { visibility: "visible" },
-          paint: {
-            "circle-radius": 6.5,
-            "circle-color": LINHA_VERMELHA_COLOR,
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#ffffff",
-          },
-        });
-        map.addLayer({
-          id: "l3-station-labels",
-          type: "symbol",
-          source: L3_STATIONS_SOURCE,
-          layout: {
-            visibility: "visible",
-            "text-field": ["get", "name"],
-            "text-size": 10,
-            "text-offset": [0, 1.15],
-            "text-anchor": "top",
-            "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
-            "text-optional": true,
-          },
-          paint: {
-            "text-color": "#7f1d1d",
-            "text-halo-color": "#ffffff",
-            "text-halo-width": 1.4,
-          },
-        });
-      }
+        for (const s of LINHA_VERMELHA) {
+          overlays.push(
+            new google.maps.Marker({
+              position: { lat: s.lat, lng: s.lng },
+              map,
+              title: s.name,
+              icon: svgCircleIcon({
+                fill: LINHA_VERMELHA_COLOR,
+                size: 14,
+                strokeWidth: 2,
+              }),
+              zIndex: 2,
+            })
+          );
+        }
 
-      if (!map.getSource(L6_LINE_SOURCE)) {
-        map.addSource(L6_LINE_SOURCE, {
-          type: "geojson",
-          data: buildLinhaLaranjaLineGeoJSON(),
+        const l6 = new google.maps.Polyline({
+          path: linePath(LINHA_LARANJA_ATIVAS),
+          strokeColor: LINHA_LARANJA_COLOR,
+          strokeOpacity: 0.92,
+          strokeWeight: 4,
+          map,
+          zIndex: 1,
         });
-        map.addLayer({
-          id: "l6-line",
-          type: "line",
-          source: L6_LINE_SOURCE,
-          layout: {
-            "line-join": "round",
-            "line-cap": "round",
-            visibility: "visible",
-          },
-          paint: {
-            "line-color": "#FF6B00",
-            "line-width": 3.5,
-            "line-opacity": 0.92,
-          },
-        });
-      }
+        overlays.push(l6);
 
-      if (!map.getSource(L6_STATIONS_SOURCE)) {
-        map.addSource(L6_STATIONS_SOURCE, {
-          type: "geojson",
-          data: buildLinhaLaranjaStationsGeoJSON(),
-        });
-        map.addLayer({
-          id: "l6-stations",
-          type: "circle",
-          source: L6_STATIONS_SOURCE,
-          layout: { visibility: "visible" },
-          paint: {
-            "circle-radius": 6.5,
-            "circle-color": "#FF6B00",
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#ffffff",
-          },
-        });
-        map.addLayer({
-          id: "l6-station-labels",
-          type: "symbol",
-          source: L6_STATIONS_SOURCE,
-          layout: {
-            visibility: "visible",
-            "text-field": ["get", "name"],
-            "text-size": 10,
-            "text-offset": [0, 1.15],
-            "text-anchor": "top",
-            "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
-            "text-optional": true,
-          },
-          paint: {
-            "text-color": "#9a3412",
-            "text-halo-color": "#ffffff",
-            "text-halo-width": 1.4,
-          },
-        });
-      }
+        for (const s of LINHA_LARANJA_ATIVAS) {
+          overlays.push(
+            new google.maps.Marker({
+              position: { lat: s.lat, lng: s.lng },
+              map,
+              title: s.name,
+              icon: svgCircleIcon({
+                fill: LINHA_LARANJA_COLOR,
+                size: 14,
+                strokeWidth: 2,
+              }),
+              zIndex: 2,
+            })
+          );
+        }
 
-      if (!map.getSource(METRO_RADIUS_SOURCE)) {
-        map.addSource(METRO_RADIUS_SOURCE, {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: [] },
-        });
-        map.addLayer({
-          id: "metro-radius-fill",
-          type: "fill",
-          source: METRO_RADIUS_SOURCE,
-          paint: {
-            "fill-color": ["get", "color"],
-            "fill-opacity": 0.12,
-          },
-        });
-        map.addLayer({
-          id: "metro-radius-outline",
-          type: "line",
-          source: METRO_RADIUS_SOURCE,
-          paint: {
-            "line-color": ["get", "color"],
-            "line-width": 1.5,
-            "line-opacity": 0.55,
-          },
-        });
-      }
+        staticOverlaysRef.current = overlays;
 
-      setMapReady(true);
-    };
+        destMarkerRef.current = new google.maps.Marker({
+          position: { lat: DESTINATION.lat, lng: DESTINATION.lng },
+          map,
+          title: DESTINATION.name,
+          icon: svgCircleIcon({
+            fill: "#f0b429",
+            stroke: "#0f172a",
+            size: 28,
+            strokeWidth: 3,
+          }),
+          zIndex: 10,
+        });
+        const destInfo = new google.maps.InfoWindow({
+          content: `<strong>Destino</strong><br/>${DESTINATION.fullAddress}`,
+        });
+        destMarkerRef.current.addListener("click", () => {
+          destInfo.open({ map, anchor: destMarkerRef.current! });
+        });
 
-    map.on("style.load", setupLayers);
-
-    const destEl = document.createElement("div");
-    destEl.className = "perdizes-dest-marker";
-    destEl.innerHTML = `<div class="dest-pin" title="${DESTINATION.name}"></div>`;
-    destMarkerRef.current = new mapboxgl.Marker({ element: destEl })
-      .setLngLat([DESTINATION.lng, DESTINATION.lat])
-      .setPopup(
-        new mapboxgl.Popup({ offset: 18 }).setHTML(
-          `<strong>Destino</strong><br/>${DESTINATION.fullAddress}`
-        )
-      )
-      .addTo(map);
+        setMapReady(true);
+      })
+      .catch((err) => {
+        console.error(err);
+        if (!cancelled) {
+          setLoadError(
+            err instanceof Error ? err.message : "Falha ao carregar Google Maps"
+          );
+        }
+      });
 
     return () => {
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
-      destMarkerRef.current?.remove();
+      cancelled = true;
+      aptMarkersRef.current.forEach((m) => m.setMap(null));
+      aptMarkersRef.current.clear();
+      destMarkerRef.current?.setMap(null);
       destMarkerRef.current = null;
-      map.remove();
+      routePolylinesRef.current.forEach((p) => p.setMap(null));
+      routePolylinesRef.current = [];
+      radiusPolygonsRef.current.forEach((p) => p.setMap(null));
+      radiusPolygonsRef.current = [];
+      staticOverlaysRef.current.forEach((o) => o.setMap(null));
+      staticOverlaysRef.current = [];
       mapRef.current = null;
       setMapReady(false);
     };
-  }, [token]);
+  }, [apiKey]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !token) return;
+    if (!map || !mapReady) return;
 
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
-
-    apartments.forEach((apt) => {
-      const el = document.createElement("button");
-      el.type = "button";
-      el.className = `perdizes-apt-marker${
-        apt.id === selectedId ? " is-selected" : ""
-      }`;
-      el.title = apt.title;
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        onSelectApartment(apt.id);
+    const seen = new Set<string>();
+    for (const apt of apartments) {
+      seen.add(apt.id);
+      const selected = apt.id === selectedId;
+      const icon = svgCircleIcon({
+        fill: selected ? "#dc2626" : "#145c5e",
+        stroke: selected ? "#0f172a" : "#ffffff",
+        size: selected ? 26 : 16,
+        strokeWidth: selected ? 3 : 2,
       });
 
-      const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat([apt.lng, apt.lat])
-        .addTo(map);
-      markersRef.current.push(marker);
+      let marker = aptMarkersRef.current.get(apt.id);
+      if (!marker) {
+        marker = new google.maps.Marker({
+          position: { lat: apt.lat, lng: apt.lng },
+          map,
+          title: apt.title,
+          icon,
+          zIndex: selected ? 20 : 5,
+        });
+        marker.addListener("click", () => {
+          onSelectRef.current(apt.id);
+        });
+        aptMarkersRef.current.set(apt.id, marker);
+      } else {
+        marker.setPosition({ lat: apt.lat, lng: apt.lng });
+        marker.setIcon(icon);
+        marker.setTitle(apt.title);
+        marker.setZIndex(selected ? 20 : 5);
+        if (marker.getMap() !== map) marker.setMap(map);
+      }
+    }
+
+    Array.from(aptMarkersRef.current.entries()).forEach(([id, marker]) => {
+      if (!seen.has(id)) {
+        marker.setMap(null);
+        aptMarkersRef.current.delete(id);
+      }
     });
-  }, [apartments, selectedId, token, onSelectApartment, mapReady]);
+  }, [apartments, selectedId, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.getSource(ROUTE_SOURCE)) return;
+    if (!map || !mapReady) return;
 
-    const source = map.getSource(ROUTE_SOURCE) as mapboxgl.GeoJSONSource;
+    routePolylinesRef.current.forEach((p) => p.setMap(null));
+    routePolylinesRef.current = [];
+
     const hasGeom =
       googleTransitRoute &&
       googleTransitRoute.steps.some(
         (s) => s.coordinates && s.coordinates.length >= 2
       );
 
-    if (!hasGeom || !googleTransitRoute) {
-      source.setData({ type: "FeatureCollection", features: [] });
-      return;
-    }
+    if (!hasGeom || !googleTransitRoute) return;
 
-    const fc = buildGoogleTransitFeatures(googleTransitRoute);
-    source.setData(fc);
-    const bounds = new mapboxgl.LngLatBounds();
+    const bounds = new google.maps.LatLngBounds();
     let hasPoint = false;
-    for (const f of fc.features) {
-      const coords = (f.geometry as GeoJSON.LineString).coordinates;
-      for (const c of coords) {
-        bounds.extend(c as [number, number]);
+
+    for (const step of googleTransitRoute.steps) {
+      const coords = step.coordinates;
+      if (!coords || coords.length < 2) continue;
+      const path = coords.map(([lng, lat]) => ({ lat, lng }));
+      for (const p of path) {
+        bounds.extend(p);
         hasPoint = true;
       }
-    }
-    if (hasPoint) {
-      map.fitBounds(bounds, {
-        padding: 64,
-        duration: 800,
-        maxZoom: 16,
+      const poly = new google.maps.Polyline({
+        path,
+        strokeColor: transitModeMapColor(step.mode),
+        strokeOpacity: 0.9,
+        strokeWeight: 5,
+        map,
+        zIndex: 8,
       });
+      routePolylinesRef.current.push(poly);
+    }
+
+    if (hasPoint) {
+      map.fitBounds(bounds, 64);
     }
   }, [googleTransitRoute, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.getSource(METRO_RADIUS_SOURCE)) return;
-    const source = map.getSource(METRO_RADIUS_SOURCE) as mapboxgl.GeoJSONSource;
-    source.setData(buildStationRadiusGeoJSON(stationIds, stationRadiusMeters));
+    if (!map || !mapReady) return;
+
+    radiusPolygonsRef.current.forEach((p) => p.setMap(null));
+    radiusPolygonsRef.current = [];
+
+    const fc = buildStationRadiusGeoJSON(stationIds, stationRadiusMeters);
+    for (const feature of fc.features) {
+      const path = polygonFromGeoJSON(feature);
+      if (!path) continue;
+      const color =
+        (feature.properties?.color as string | undefined) || "#145c5e";
+      const poly = new google.maps.Polygon({
+        paths: path,
+        strokeColor: color,
+        strokeOpacity: 0.55,
+        strokeWeight: 1.5,
+        fillColor: color,
+        fillOpacity: 0.12,
+        map,
+        zIndex: 0,
+        clickable: false,
+      });
+      radiusPolygonsRef.current.push(poly);
+    }
   }, [stationIds, stationRadiusMeters, mapReady]);
 
-  if (!token) {
+  if (!apiKey) {
     return (
       <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_top,_#d8ebe8_0%,_#e8eef2_45%,_#dce3ea_100%)]">
         <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(90deg,rgba(15,61,62,0.06)_1px,transparent_1px),linear-gradient(rgba(15,61,62,0.06)_1px,transparent_1px)] [background-size:40px_40px]" />
         <div className="relative z-10 mx-6 max-w-md rounded-xl border border-amber-300/80 bg-white/95 p-6 text-center shadow-lg">
           <p className="font-display text-lg font-semibold text-slate-900">
-            Token Mapbox não configurado
+            Chave Google Maps não configurada
           </p>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
             Defina{" "}
             <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
-              NEXT_PUBLIC_MAPBOX_TOKEN
+              NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
             </code>{" "}
-            em{" "}
+            (Maps JavaScript API) em{" "}
             <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
               .env
             </code>{" "}
-            (VPS) ou{" "}
+            ou{" "}
             <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
               .env.local
             </code>{" "}
-            (local) e faça rebuild.
+            e faça rebuild. Pode ser a mesma chave de{" "}
+            <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
+              GOOGLE_MAPS_API_KEY
+            </code>{" "}
+            se a API de Maps JavaScript estiver habilitada.
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="relative flex h-full w-full items-center justify-center bg-slate-100 p-6 text-center">
+        <p className="max-w-md text-sm text-slate-600">
+          Não foi possível carregar o Google Maps: {loadError}
+        </p>
       </div>
     );
   }

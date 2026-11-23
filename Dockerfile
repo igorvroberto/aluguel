@@ -15,6 +15,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # NEXT_PUBLIC_* é embutido no build do cliente
+ARG NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
+ENV NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+# Geocode / walk legs (opcional; scrape e rotas a pé)
 ARG NEXT_PUBLIC_MAPBOX_TOKEN=
 ENV NEXT_PUBLIC_MAPBOX_TOKEN=$NEXT_PUBLIC_MAPBOX_TOKEN
 ENV NEXT_TELEMETRY_DISABLED=1
