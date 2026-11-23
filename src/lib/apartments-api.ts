@@ -149,3 +149,37 @@ export async function scrapeStations(
   }
   return data;
 }
+
+export interface ScrapeTermometroResult {
+  ok: boolean;
+  apartments: Apartment[];
+  added: number;
+  skipped: number;
+  scanned: number;
+  requests?: number;
+  portals: string[];
+  warnings: string[];
+  persisted?: boolean;
+  persistError?: string;
+  message?: string;
+  error?: string;
+}
+
+/** Importa anúncios via API pública do Termômetro (sem Playwright/Cloudflare). */
+export async function scrapeTermometro(body?: {
+  raio?: number;
+  custoMax?: number;
+  quartosMin?: number;
+  vagasMin?: number;
+}): Promise<ScrapeTermometroResult> {
+  const res = await fetch("/api/scrape-termometro", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+  const data = (await res.json()) as ScrapeTermometroResult;
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
+  return data;
+}

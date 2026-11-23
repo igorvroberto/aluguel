@@ -1,18 +1,22 @@
 "use client";
 
-import { HardDriveDownload, MapPinned, Plus } from "lucide-react";
+import { CloudDownload, HardDriveDownload, MapPinned, Plus } from "lucide-react";
 import { DESTINATION } from "@/lib/constants";
 
 interface HeaderProps {
   visibleCount: number;
   onAdd?: () => void;
   onDownloadServerJson?: () => void;
+  onImportTermometro?: () => void;
+  termometroBusy?: boolean;
 }
 
 export function Header({
   visibleCount,
   onAdd,
   onDownloadServerJson,
+  onImportTermometro,
+  termometroBusy,
 }: HeaderProps) {
   return (
     <header className="flex h-[60px] shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-gradient-to-r from-[#0f3d3e] via-[#145c5e] to-[#1a6b5c] px-4 text-white shadow-sm">
@@ -47,6 +51,21 @@ export function Header({
             <Plus className="h-4 w-4" aria-hidden />
             <span className="hidden sm:inline">Adicionar Imóvel</span>
             <span className="sm:hidden">Adicionar</span>
+          </button>
+        )}
+
+        {onImportTermometro && (
+          <button
+            type="button"
+            onClick={onImportTermometro}
+            disabled={termometroBusy}
+            title="Importar anúncios via API pública do Termômetro"
+            className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-2 text-xs font-semibold text-white ring-1 ring-white/15 transition hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
+          >
+            <CloudDownload className="h-3.5 w-3.5" aria-hidden />
+            <span className="hidden sm:inline">
+              {termometroBusy ? "Termômetro…" : "Termômetro"}
+            </span>
           </button>
         )}
 

@@ -13,6 +13,7 @@ import {
   downloadApartmentsJsonFile,
   fetchApartments,
   patchApartment,
+  scrapeTermometro,
 } from "@/lib/apartments-api";
 import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
 import { getVisibleApartments } from "@/lib/filters";
@@ -35,6 +36,7 @@ export function RadarApp() {
   /** Seleção veio do pin: card só acima do mapa, sem puxar a lista. */
   const [mapPinned, setMapPinned] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [termometroBusy, setTermometroBusy] = useState(false);
   const [mapsApiKey, setMapsApiKey] = useState<string | undefined>(
     () => process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   );
@@ -219,6 +221,41 @@ export function RadarApp() {
     });
   };
 
+  const handleImportTermometro = async () => {
+    if (termometroBusy) return;
+    setTermometroBusy(true);
+    setPersistHint("Importando Termômetro…");
+    try {
+      const result = await scrapeTermometro({
+        raio: 2000,
+        custoMax: filters.maxPackage ?? DEFAULT_MAX_PACKAGE,
+        quartosMin: Math.min(...(filters.rooms.length ? filters.rooms : [2])),
+        vagasMin: Math.min(
+          ...(filters.parkingSpots.length ? filters.parkingSpots : [1])
+        ),
+      });
+      setApartments(result.apartments);
+      notePersist(result);
+      const warn =
+        result.warnings?.length > 0
+          ? ` · ${result.warnings.slice(0, 2).join(" · ")}`
+          : "";
+      setPersistHint(
+        (result.message ||
+          `+${result.added} Termômetro (${result.scanned} lidos)`) + warn
+      );
+    } catch (err) {
+      console.error(err);
+      setPersistHint(
+        err instanceof Error
+          ? err.message
+          : "Falha ao importar do Termômetro."
+      );
+    } finally {
+      setTermometroBusy(false);
+    }
+  };
+
   const handleAddManual = async (input: NewApartmentInput) => {
     try {
       const result = await createApartments({
@@ -386,6 +423,10 @@ export function RadarApp() {
       <Header
         visibleCount={visible.length}
         onAdd={() => setAddOpen(true)}
+        onImportTermometro={() => {
+          void handleImportTermometro();
+        }}
+        termometroBusy={termometroBusy}
         onDownloadServerJson={handleDownloadServerJson}
       />
 
