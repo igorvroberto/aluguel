@@ -33,18 +33,31 @@ export const SCRAPE_ACTIVE_PORTALS: readonly PortalId[] = [
   "chavesnamao",
 ] as const;
 
-/** Bairros-alvo (L3/L6 + entorno) para busca nos portais. */
+/** Bairros-alvo (polos L3/L6 ativas + entorno). */
 export const SEARCH_NEIGHBORHOODS = [
   "perdizes",
   "pompeia",
   "agua-branca",
+  "santa-marina",
+  "freguesia-do-o",
   "barra-funda",
+  "marechal-deodoro",
   "santa-cecilia",
-  "higienopolis",
+  "higienopolis", // Higienópolis / Vila Buarque
   "republica",
   "belem",
   "tatuape",
 ] as const;
+
+/** Faixas de preço mensal (aluguel) para fatiar buscas e furar teto da listagem. */
+export const SEARCH_PRICE_BANDS = [
+  { min: 1500, max: 2700, label: "1500-2700" },
+  { min: 2701, max: 3400, label: "2701-3400" },
+  { min: 3401, max: 4100, label: "3401-4100" },
+  { min: 4101, max: null as number | null, label: "4101+" },
+] as const;
+
+export type SearchPriceBand = (typeof SEARCH_PRICE_BANDS)[number];
 
 export function normalizePortalId(raw: string | undefined | null): PortalId | undefined {
   if (!raw) return undefined;

@@ -1,19 +1,19 @@
 import * as cheerio from "cheerio";
 import * as turf from "@turf/turf";
 import { METRO_STATIONS, type MetroStation } from "../../data/linhasMetro";
-import { softListingKey } from "./glue-listings";
 import { extractFromHtml, parseBRLNumber } from "./listing-parser";
 import {
   PORTAL_LABELS,
   SCRAPE_ACTIVE_PORTALS,
+  SEARCH_PRICE_BANDS,
   normalizePortalId,
   type PortalId,
 } from "./portals";
 import {
   closeSharedBrowser,
   getSharedBrowser,
-  scrapeGlueSearchPage,
-  scrapeHtmlSearchPage,
+  scrapeChavesPaginated,
+  scrapeQuintoAndarPaginated,
 } from "./portal-playwright";
 import type { Apartment, ApartmentStatus } from "./types";
 
@@ -411,43 +411,32 @@ function buildSearchUrls(
   const neigh = slugify(station.name.split("–")[0].split("-")[0].trim());
   const roomMin = Math.min(...rooms);
   const roomMax = Math.max(...rooms);
-  const rentMax = Math.max(1500, maxPackage);
-
-  const all: Array<{ url: string; source: string }> = [
-    {
-      source: "quintoandar",
-      url:
-        `https://www.quintoandar.com.br/alugar/imovel/${neigh}-sao-paulo-sp-brasil/apartamento` +
-        `/de-0-a-${rentMax}/de-${roomMin}-a-${roomMax}-quartos` +
-        `?proximity=${station.lat},${station.lng}`,
-    },
-    {
-      source: "vivareal",
-      url:
-        `https://www.vivareal.com.br/aluguel/sp/sao-paulo/${neigh}/apartamento_residencial/` +
-        `?quartos=${roomMin}&preco-ate=${rentMax}`,
-    },
-    {
-      source: "zapimoveis",
-      url:
-        `https://www.zapimoveis.com.br/aluguel/apartamentos/sp+sao-paulo++${neigh}/` +
-        `?quartos=${roomMin}&precoMaximo=${rentMax}`,
-    },
-    {
-      source: "imovelweb",
-      url:
-        `https://www.imovelweb.com.br/apartamentos-aluguel-${neigh}-sao-paulo.html` +
-        `?precio-maximo=${rentMax}&ambientes=${roomMin}`,
-    },
-    {
-      source: "chavesnamao",
-      url:
-        `https://www.chavesnamao.com.br/apartamentos-para-alugar/sp-sao-paulo/${neigh}/` +
-        `?valorMax=${rentMax}&quartos=${roomMin}`,
-    },
-  ];
   const active = new Set<string>(SCRAPE_ACTIVE_PORTALS);
-  return all.filter((item) => active.has(item.source));
+  const out: Array<{ url: string; source: string }> = [];
+
+  for (const band of SEARCH_PRICE_BANDS) {
+    if (band.min > maxPackage) continue;
+    const max = Math.min(band.max ?? maxPackage, maxPackage);
+    if (max < band.min) continue;
+    if (active.has("quintoandar")) {
+      out.push({
+        source: "quintoandar",
+        url:
+          `https://www.quintoandar.com.br/alugar/imovel/${neigh}-sao-paulo-sp-brasil/apartamento` +
+          `/de-${band.min}-a-${max}/de-${roomMin}-a-${roomMax}-quartos` +
+          `?proximity=${station.lat},${station.lng}`,
+      });
+    }
+    if (active.has("chavesnamao")) {
+      out.push({
+        source: "chavesnamao",
+        url:
+          `https://www.chavesnamao.com.br/apartamentos-para-alugar/sp-sao-paulo/${neigh}/` +
+          `?valorMin=${band.min}&valorMax=${max}&quartos=${roomMin}`,
+      });
+    }
+  }
+  return out;
 }
 
 function portalListingsToCandidates(
@@ -495,21 +484,24 @@ async function scrapePage(
 ): Promise<{ listings: RawListingCandidate[]; warning?: string }> {
   const portal = normalizePortalId(source) as PortalId | undefined;
 
-  // ZAP / Viva / CNM / Imovelweb: Playwright dedicado quando liberado
+  // QuintoAndar / Chaves: paginação real quando Playwright liberado
   if (
     allowPlaywright &&
     portal &&
-    (portal === "zapimoveis" ||
-      portal === "vivareal" ||
-      portal === "chavesnamao" ||
-      portal === "imovelweb")
+    (portal === "quintoandar" || portal === "chavesnamao")
   ) {
     try {
       await getSharedBrowser("headless");
       const items =
-        portal === "zapimoveis" || portal === "vivareal"
-          ? await scrapeGlueSearchPage(url, portal, { mode: "headless" })
-          : await scrapeHtmlSearchPage(url, portal, { mode: "headless" });
+        portal === "quintoandar"
+          ? await scrapeQuintoAndarPaginated(url, {
+              mode: "headless",
+              maxClicks: 12,
+            })
+          : await scrapeChavesPaginated(url, {
+              mode: "headless",
+              maxClicks: 8,
+            });
       if (items.length > 0) {
         return { listings: portalListingsToCandidates(source, items) };
       }
@@ -637,15 +629,15 @@ export async function scrapeStationsNative(
   const portals = new Set<string>();
   const raw: RawListingCandidate[] = [];
   const seenUrl = new Set<string>();
-  const seenSoft = new Set<string>();
   let scanned = 0;
   const allowPlaywright = process.env.ENABLE_PLAYWRIGHT_SCRAPE === "1";
 
   try {
     for (const station of stations) {
+      // Fatias bairro×preço — limita pelo maxPages para não estourar timeout da API
       const urls = buildSearchUrls(station, opts.rooms, opts.maxPackage).slice(
         0,
-        maxPages + 2
+        Math.max(4, maxPages * 2)
       );
       for (const item of urls) {
         scanned += 1;
@@ -659,14 +651,7 @@ export async function scrapeStationsNative(
         for (const listing of listings) {
           const key = listing.externalUrl.trim().toLowerCase();
           if (!key || seenUrl.has(key)) continue;
-          const soft = softListingKey({
-            address: listing.address,
-            aluguel: listing.aluguel,
-            areaM2: listing.areaM2,
-          });
-          if (seenSoft.has(soft)) continue;
           seenUrl.add(key);
-          seenSoft.add(soft);
           raw.push(listing);
         }
       }
