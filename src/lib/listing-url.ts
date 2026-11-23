@@ -49,8 +49,9 @@ export function buildQuintoAndarSearchUrl(apartment: Pick<
 export function buildZapSearchUrl(apartment: Pick<Apartment, "address" | "rooms">): string {
   const street = apartment.address.split(",")[0]?.trim() || "Perdizes";
   const rooms = Math.min(Math.max(apartment.rooms || 1, 1), 3);
+  // Precisa da zona no path — `sp+sao-paulo++perdizes` vira ERROR_PAGE.
   return (
-    `https://www.zapimoveis.com.br/aluguel/apartamentos/sp+sao-paulo++perdizes/` +
+    `https://www.zapimoveis.com.br/aluguel/apartamentos/sp+sao-paulo+zona-oeste+perdizes/` +
     `${rooms}-quartos/?q=${encodeURIComponent(street)}`
   );
 }

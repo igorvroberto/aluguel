@@ -31,6 +31,7 @@ import {
   scrapeChavesPaginated,
   scrapeQuintoAndarPaginated,
   scrapeVivaRealFirefox,
+  scrapeZapFirefox,
 } from "../src/lib/portal-playwright";
 
 loadEnv({ path: path.join(process.cwd(), ".env.local") });
@@ -245,6 +246,9 @@ async function scrapeSlice(
   }
   if (portal === "vivareal") {
     return scrapeVivaRealFirefox(url);
+  }
+  if (portal === "zapimoveis") {
+    return scrapeZapFirefox(url);
   }
   return [];
 }

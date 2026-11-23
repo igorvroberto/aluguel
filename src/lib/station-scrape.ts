@@ -15,6 +15,7 @@ import {
   scrapeChavesPaginated,
   scrapeQuintoAndarPaginated,
   scrapeVivaRealFirefox,
+  scrapeZapFirefox,
 } from "./portal-playwright";
 import type { Apartment, ApartmentStatus } from "./types";
 
@@ -463,6 +464,16 @@ function buildSearchUrls(
           `#quartos=${roomMin}&preco-ate=${max}&preco-desde=${band.min}`,
       });
     }
+    if (active.has("zapimoveis")) {
+      const zona = vivaZonaForNeighborhood(neigh);
+      // Path ZAP: sp+sao-paulo+zona-oeste+perdizes (sem `++`).
+      out.push({
+        source: "zapimoveis",
+        url:
+          `https://www.zapimoveis.com.br/aluguel/apartamentos/sp+sao-paulo+${zona}+${neigh}/` +
+          `${roomMin}-quartos/?transacao=aluguel&tipos=apartamento_residencial&quartos=${roomMin}&precoMaximo=${max}`,
+      });
+    }
   }
   return out;
 }
@@ -512,24 +523,31 @@ async function scrapePage(
 ): Promise<{ listings: RawListingCandidate[]; warning?: string }> {
   const portal = normalizePortalId(source) as PortalId | undefined;
 
-  // Viva Real: Firefox (Chromium é bloqueado pelo Cloudflare)
-  if (allowPlaywright && portal === "vivareal") {
+  // Viva / ZAP: Firefox (Chromium cai no Cloudflare / ERROR_PAGE)
+  if (
+    allowPlaywright &&
+    (portal === "vivareal" || portal === "zapimoveis")
+  ) {
+    const label = portal === "zapimoveis" ? "ZAP" : "Viva Real";
     try {
-      const items = await scrapeVivaRealFirefox(url);
+      const items =
+        portal === "zapimoveis"
+          ? await scrapeZapFirefox(url)
+          : await scrapeVivaRealFirefox(url);
       if (items.length > 0) {
         return { listings: portalListingsToCandidates(source, items) };
       }
       return {
         listings: [],
-        warning: "Viva Real: Firefox não retornou cards (CF?).",
+        warning: `${label}: Firefox não retornou cards (CF/URL?).`,
       };
     } catch (err) {
       return {
         listings: [],
         warning:
           err instanceof Error
-            ? `Viva Real: ${err.message}`
-            : "Viva Real: falha no Firefox.",
+            ? `${label}: ${err.message}`
+            : `${label}: falha no Firefox.`,
       };
     }
   }

@@ -44,10 +44,20 @@ export async function getSharedBrowser(
   return sharedBrowser;
 }
 
-/** Firefox: melhor taxa contra Cloudflare do Viva Real neste ambiente. */
+/** Proxy opcional (residencial) — necessário p/ Imovelweb / Turnstile duro. */
+function scrapeProxyServer(): string | undefined {
+  const raw = (process.env.SCRAPE_PROXY_URL || "").trim();
+  return raw || undefined;
+}
+
+/** Firefox: melhor taxa contra Cloudflare do Viva/ZAP neste ambiente. */
 export async function getSharedFirefoxBrowser(): Promise<Browser> {
   if (!sharedFirefox) {
-    sharedFirefox = firefox.launch({ headless: true });
+    const server = scrapeProxyServer();
+    sharedFirefox = firefox.launch({
+      headless: true,
+      ...(server ? { proxy: { server } } : {}),
+    });
   }
   return sharedFirefox;
 }
@@ -422,6 +432,38 @@ export async function scrapeHtmlSearchPage(
   }
 }
 
+function pricesFromCardText(cardText: string): {
+  condominio: number;
+  iptu: number;
+} {
+  const prices = Array.from(cardText.matchAll(/R\$\s*([\d.]+)/g)).map((m) =>
+    parseBRLNumber(m[1])
+  );
+  const nums = prices.filter((n): n is number => n != null && n > 0);
+  // Heurística: 1º = aluguel (já no slug), 2º condomínio, 3º IPTU
+  return {
+    condominio: nums.length >= 2 ? nums[1] || 0 : 0,
+    iptu: nums.length >= 3 ? nums[2] || 0 : 0,
+  };
+}
+
+function bairroFromOlxSlug(slug: string): string {
+  // …-com-piscina-perdizes-zona-oeste-… → "Perdizes"
+  const beforeZona = slug.match(
+    /-([a-z0-9-]+)-zona-(?:oeste|leste|norte|sul|centro)/i
+  );
+  if (beforeZona) {
+    const parts = beforeZona[1].split("-").filter(Boolean);
+    const last = parts[parts.length - 1] || "";
+    if (last) return last.charAt(0).toUpperCase() + last.slice(1);
+  }
+  const m = slug.match(
+    /(?:quartos?|quarto)-([a-z0-9-]+?)-(?:sao-paulo|com-|\d+m2)/i
+  );
+  const raw = (m?.[1] || "").split("-").filter(Boolean).pop() || "";
+  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : "";
+}
+
 /**
  * Extrai anúncios do HTML do Viva Real a partir dos links /imovel/…-aluguel-RS…-id-….
  * Funciona mesmo sem Glue /v2/listings (bloqueado pelo CF no Chromium).
@@ -438,6 +480,7 @@ export function extractVivaListingsFromHtml(
     const href = String($(el).attr("href") || "");
     const link = absUrl(href, pageUrl).split("?")[0];
     if (!/\/imovel\/.+-id-\d+/i.test(link)) return;
+    if (/ERROR_PAGE|showcase/i.test(href)) return;
     const k = link.toLowerCase();
     if (seen.has(k)) return;
 
@@ -449,39 +492,22 @@ export function extractVivaListingsFromHtml(
     const aluguel = rentMatch ? Number(rentMatch[1]) : 0;
     if (!aluguel || !idMatch) return;
 
-    const bairroMatch = slug.match(
-      /quartos?-([a-z0-9-]+?)-(?:zona-|sao-paulo|com-garagem|\d+m2)/i
-    );
-    const bairro = (bairroMatch?.[1] || "")
-      .split("-")
-      .filter(Boolean)
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
-
+    const bairro = bairroFromOlxSlug(slug) || "Perdizes";
     const card = $(el).closest(
       "article, li, [data-type], .property-card, .listing-card, div"
     );
-    const cardText = card.text().replace(/\s+/g, " ").trim();
-    const prices = Array.from(cardText.matchAll(/R\$\s*([\d.]+)/g)).map((m) =>
-      parseBRLNumber(m[1])
+    const { condominio, iptu } = pricesFromCardText(
+      card.text().replace(/\s+/g, " ").trim()
     );
-    const nums = prices.filter((n): n is number => n != null && n > 0);
-    // Heurística: 1º = aluguel (já temos), 2º condomínio, 3º IPTU mensal
-    let condominio = 0;
-    let iptu = 0;
-    if (nums.length >= 2) condominio = nums[1] || 0;
-    if (nums.length >= 3) iptu = nums[2] || 0;
 
     seen.add(k);
     out.push({
       id: idMatch[1],
       titulo:
         card.find("h2, h3, [class*='title']").first().text().trim() ||
-        `Apartamento ${roomsMatch?.[1] || "?"} qtos — ${bairro || "SP"}`,
-      endereco: bairro
-        ? `${bairro}, São Paulo - SP`
-        : "Perdizes, São Paulo - SP",
-      bairro: bairro || "Perdizes",
+        `Apartamento ${roomsMatch?.[1] || "?"} qtos — ${bairro}`,
+      endereco: `${bairro}, São Paulo - SP`,
+      bairro,
       aluguel,
       condominio,
       iptu,
@@ -501,20 +527,85 @@ export function extractVivaListingsFromHtml(
 }
 
 /**
- * Viva Real via Firefox (Chromium recebe Attention Required / sem cards).
+ * ZAP Imóveis: links /imovel/aluguel-apartamento-N-quartos-…-Xm2-id-….
+ * URL de busca precisa incluir a zona (`sp+sao-paulo+zona-oeste+perdizes`),
+ * senão o site devolve ERROR_PAGE / “página não disponível”.
  */
-export async function scrapeVivaRealFirefox(
+export function extractZapListingsFromHtml(
+  html: string,
+  pageUrl: string
+): PortalListing[] {
+  const $ = cheerio.load(html);
+  const out: PortalListing[] = [];
+  const seen = new Set<string>();
+
+  $('a[href*="/imovel/"][href*="-id-"]').each((_, el) => {
+    const href = String($(el).attr("href") || "");
+    if (/ERROR_PAGE|showcase/i.test(href)) return;
+    const link = absUrl(href, pageUrl).split("?")[0];
+    if (!/\/imovel\/aluguel-.+-id-\d+/i.test(link)) return;
+    const k = link.toLowerCase();
+    if (seen.has(k)) return;
+
+    const slug = link.split("/imovel/")[1] || "";
+    const roomsMatch = slug.match(/(\d+)-quartos?/i);
+    const areaMatch = slug.match(/(\d+)m2/i);
+    const idMatch = slug.match(/id-(\d+)/i);
+    if (!idMatch) return;
+
+    const card = $(el).closest(
+      "article, li, [data-type], .property-card, .listing-card, div"
+    );
+    const cardText = card.text().replace(/\s+/g, " ").trim();
+    const { condominio, iptu } = pricesFromCardText(cardText);
+    const rentFromCard = Array.from(cardText.matchAll(/R\$\s*([\d.]+)/g))
+      .map((m) => parseBRLNumber(m[1]))
+      .find((n) => n != null && n >= 800);
+    const aluguel = rentFromCard ?? 0;
+    if (!aluguel) return;
+
+    const bairro = bairroFromOlxSlug(slug) || "Perdizes";
+    seen.add(k);
+    out.push({
+      id: idMatch[1],
+      titulo:
+        card.find("h2, h3, [class*='title']").first().text().trim() ||
+        `Apartamento ${roomsMatch?.[1] || "?"} qtos — ${bairro}`,
+      endereco: `${bairro}, São Paulo - SP`,
+      bairro,
+      aluguel,
+      condominio,
+      iptu,
+      quartos: roomsMatch ? Number(roomsMatch[1]) : 0,
+      vagas: /vaga|garagem/i.test(slug + cardText) ? 1 : undefined,
+      areaM2: areaMatch ? Number(areaMatch[1]) : undefined,
+      portaria24h: false,
+      linkAnuncio: link.startsWith("http")
+        ? link
+        : `https://www.zapimoveis.com.br${link}`,
+      portal: "zapimoveis",
+      portalLabel: PORTAL_LABELS.zapimoveis,
+    });
+  });
+
+  return out;
+}
+
+async function scrapeOlxFamilyFirefox(
   url: string,
+  portal: "vivareal" | "zapimoveis",
   opts?: { browser?: Browser; scrollSteps?: number }
 ): Promise<PortalListing[]> {
   const browser = opts?.browser || (await getSharedFirefoxBrowser());
   const page = await browser.newPage({
     locale: "pt-BR",
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
     viewport: { width: 1440, height: 900 },
   });
   try {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await page.waitForTimeout(6000);
+    await page.waitForTimeout(8000);
     const steps = opts?.scrollSteps ?? 6;
     for (let i = 0; i < steps; i++) {
       await page.mouse.wheel(0, 1600);
@@ -522,16 +613,44 @@ export async function scrapeVivaRealFirefox(
     }
     await page.waitForTimeout(1500);
     const title = await page.title().catch(() => "");
-    if (/attention required|just a moment|um momento/i.test(title)) {
+    const html = await page.content();
+    if (
+      /attention required|just a moment|um momento|you have been blocked/i.test(
+        `${title} ${html.slice(0, 2500)}`
+      )
+    ) {
       return [];
     }
-    const html = await page.content();
-    return extractVivaListingsFromHtml(html, url);
+    if (/não está mais disponível|ERROR_PAGE/i.test(html.slice(0, 8000))) {
+      return [];
+    }
+    return portal === "zapimoveis"
+      ? extractZapListingsFromHtml(html, url)
+      : extractVivaListingsFromHtml(html, url);
   } catch {
     return [];
   } finally {
     await page.close().catch(() => undefined);
   }
+}
+
+/** Viva Real via Firefox (Chromium recebe Attention Required / sem cards). */
+export async function scrapeVivaRealFirefox(
+  url: string,
+  opts?: { browser?: Browser; scrollSteps?: number }
+): Promise<PortalListing[]> {
+  return scrapeOlxFamilyFirefox(url, "vivareal", opts);
+}
+
+/**
+ * ZAP Imóveis via Firefox + URL com zona
+ * (`sp+sao-paulo+zona-oeste+perdizes`, sem `++`).
+ */
+export async function scrapeZapFirefox(
+  url: string,
+  opts?: { browser?: Browser; scrollSteps?: number }
+): Promise<PortalListing[]> {
+  return scrapeOlxFamilyFirefox(url, "zapimoveis", opts);
 }
 
 export function buildPortalSearchUrls(
@@ -559,6 +678,13 @@ export function buildPortalSearchUrls(
       url:
         `https://www.vivareal.com.br/aluguel/sp/sao-paulo/zona-oeste/${neigh}/apartamento_residencial/` +
         `?precoMaximo=${max}&precoMinimo=${min}&quartos=${rooms}`,
+    },
+    {
+      portal: "zapimoveis",
+      // Formato antigo `sp+sao-paulo++perdizes` devolve ERROR_PAGE.
+      url:
+        `https://www.zapimoveis.com.br/aluguel/apartamentos/sp+sao-paulo+zona-oeste+${neigh}/` +
+        `${rooms}-quartos/?transacao=aluguel&tipos=apartamento_residencial&quartos=${rooms}&precoMaximo=${max}`,
     },
   ];
   const active = new Set<PortalId>(SCRAPE_ACTIVE_PORTALS);
