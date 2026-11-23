@@ -27,6 +27,8 @@ export function RadarApp() {
   const [hydrated, setHydrated] = useState(false);
   const [persistHint, setPersistHint] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** Seleção veio do pin: card só acima do mapa, sem puxar a lista. */
+  const [mapPinned, setMapPinned] = useState(false);
   const [mapsApiKey, setMapsApiKey] = useState<string | undefined>(
     () => process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   );
@@ -116,34 +118,39 @@ export function RadarApp() {
     });
   }, []);
 
-  // Card do pin fica acima do mapa; não força scroll da lista.
+  // Só sincroniza scroll da lista quando a seleção veio da própria lista.
   useEffect(() => {
-    if (!selectedId || !listRef.current) return;
+    if (!selectedId || mapPinned || !listRef.current) return;
     const el = listRef.current.querySelector<HTMLElement>(
       `[data-apartment-id="${selectedId}"]`
     );
     el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [selectedId]);
+  }, [selectedId, mapPinned]);
 
   const handleSelect = useCallback((id: string) => {
     setSelectedId(id);
+    setMapPinned(false);
     setGoogleTransitRoute(null);
   }, []);
 
   const handleSelectFromMap = useCallback(
     (id: string) => {
-      handleSelect(id);
+      setSelectedId(id);
+      setMapPinned(true);
+      setGoogleTransitRoute(null);
       scrollMapIntoView();
     },
-    [handleSelect, scrollMapIntoView]
+    [scrollMapIntoView]
   );
 
   const handleTraceRoute = useCallback(
     (id: string) => {
-      handleSelect(id);
+      setSelectedId(id);
+      setMapPinned(true);
+      setGoogleTransitRoute(null);
       scrollMapIntoView();
     },
-    [handleSelect, scrollMapIntoView]
+    [scrollMapIntoView]
   );
 
   const handleUpdateStatus = async (id: string, status: ApartmentStatus) => {
@@ -197,7 +204,7 @@ export function RadarApp() {
           <div key={apt.id} data-apartment-id={apt.id}>
             <ApartmentCard
               apartment={apt}
-              selected={selectedId === apt.id}
+              selected={!mapPinned && selectedId === apt.id}
               onSelect={() => handleSelect(apt.id)}
               onTraceRoute={() => handleTraceRoute(apt.id)}
               onUpdateStatus={handleUpdateStatus}
@@ -212,16 +219,29 @@ export function RadarApp() {
   const mapBlock = (
     <section className="flex min-w-0 flex-1 flex-col">
       <div ref={mapSectionRef} className="scroll-mt-2">
-        {/* Card do pin acima do mapa (mobile e desktop). */}
-        {selectedApartment ? (
+        {/* Card do pin acima do mapa — modo mapa desliga o destaque na lista. */}
+        {selectedApartment && mapPinned ? (
           <div className="border-b border-slate-200 bg-white">
-            <div className="border-b border-teal-100 bg-teal-50/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-teal-900">
-              Imóvel selecionado no mapa
+            <div className="flex items-center justify-between gap-2 border-b border-teal-100 bg-teal-50/80 px-3 py-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-teal-900">
+                Imóvel selecionado no mapa
+              </p>
+              <button
+                type="button"
+                className="text-[10px] font-medium text-teal-800 underline-offset-2 hover:underline"
+                onClick={() => {
+                  setMapPinned(false);
+                  setSelectedId(null);
+                  setGoogleTransitRoute(null);
+                }}
+              >
+                Fechar
+              </button>
             </div>
             <ApartmentCard
               apartment={selectedApartment}
               selected
-              onSelect={() => handleSelect(selectedApartment.id)}
+              onSelect={() => handleSelectFromMap(selectedApartment.id)}
               onTraceRoute={() => handleTraceRoute(selectedApartment.id)}
               onUpdateStatus={handleUpdateStatus}
               onUpdateComments={handleUpdateComments}
