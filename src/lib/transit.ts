@@ -100,37 +100,55 @@ function formatWalkTo(place: string, minutes: number): string {
   return `Caminhe ${minutes} min até ${place}`;
 }
 
+/**
+ * Soma todo o a pé do trajeto Google (todas as ruas/trechos Caminhe)
+ * num único segmento — elevação não separa por rua. Metrô/ônibus ficam de fora.
+ */
 function extractWalkPaths(steps: TransitStep[]): {
   walkSegments: WalkPathSegment[];
   walkCoordinates: [number, number][];
   walkDistanceMeters: number;
 } {
-  const walkSegments: WalkPathSegment[] = [];
   const walkCoordinates: [number, number][] = [];
   let walkDistanceMeters = 0;
+  let walkDurationMinutes = 0;
+  let walkStepCount = 0;
 
   for (const step of steps) {
     if (step.mode !== "WALK") continue;
     const coords = step.coordinates;
     if (!coords || coords.length < 2) continue;
+    walkStepCount += 1;
     const distanceMeters =
       step.distanceMeters ??
       Math.round(
-        haversineMeters(coords[0][1], coords[0][0], coords[coords.length - 1][1], coords[coords.length - 1][0]) *
-          WALK_DETOUR
+        haversineMeters(
+          coords[0][1],
+          coords[0][0],
+          coords[coords.length - 1][1],
+          coords[coords.length - 1][0]
+        ) * WALK_DETOUR
       );
     walkDistanceMeters += distanceMeters;
-    walkSegments.push({
-      label: step.instruction,
-      coordinates: coords,
-      distanceMeters,
-      durationMinutes: step.durationMinutes,
-    });
+    walkDurationMinutes += step.durationMinutes;
     for (const c of coords) {
       const prev = walkCoordinates[walkCoordinates.length - 1];
       if (prev && prev[0] === c[0] && prev[1] === c[1]) continue;
       walkCoordinates.push(c);
     }
+  }
+
+  const walkSegments: WalkPathSegment[] = [];
+  if (walkCoordinates.length >= 2 && walkDistanceMeters > 0) {
+    walkSegments.push({
+      label:
+        walkStepCount <= 1
+          ? "Caminhada a pé"
+          : `Caminhada total a pé (${walkStepCount} trechos do Maps somados)`,
+      coordinates: walkCoordinates,
+      distanceMeters: walkDistanceMeters,
+      durationMinutes: Math.max(1, walkDurationMinutes),
+    });
   }
 
   return { walkSegments, walkCoordinates, walkDistanceMeters };

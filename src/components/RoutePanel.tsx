@@ -97,7 +97,7 @@ function TransitLegBlock({
       ) : (
         <p className="text-[11px] text-slate-500">
           Caminhada no trajeto: {route.walkDurationMinutes} min · elevação no
-          botão Elevação (um gráfico por trecho Caminhe)
+          botão Elevação (soma de todo o a pé)
         </p>
       )}
 
@@ -208,8 +208,7 @@ function WalkSegmentCharts({
           {directionLabel}
         </p>
         <p className="text-[10px] text-slate-400">
-          {legs.length} trecho{legs.length === 1 ? "" : "s"} Caminhe · um
-          gráfico por caminhada
+          Soma de todo o a pé (sem separar por rua) · metrô/ônibus fora
         </p>
       </div>
 
@@ -232,9 +231,9 @@ function WalkSegmentCharts({
               onFocusLeg(leg);
               onHoverDistance(d);
             }}
-            title={`${directionLabel} · Caminhe ${idx + 1}/${legs.length}`}
+            title={`${directionLabel} · a pé (total)`}
             chartHeight={180}
-            emptyMessage="Perfil indisponível para este trecho."
+            emptyMessage="Perfil indisponível para esta caminhada."
           />
           <p className="px-4 pb-2 text-[11px] text-slate-500">
             {segment.label}
@@ -476,8 +475,8 @@ export function RoutePanel({
           )}
 
           <p className="border-b border-slate-100 px-4 py-2 text-[11px] text-slate-500">
-            Cada gráfico é <strong>só um trecho Caminhe</strong> da opção
-            Google selecionada. Metrô/ônibus ficam de fora.
+            Um gráfico por sentido com a <strong>soma de todo o a pé</strong> da
+            opção Google (ruas juntas). Metrô/ônibus ficam de fora.
           </p>
 
           <WalkSegmentCharts
