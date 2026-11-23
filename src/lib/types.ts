@@ -2,16 +2,21 @@ export type SortOption = "pacote" | "distancia";
 
 export type ApartmentStatus =
   | "Candidato"
+  | "Manual"
   | "Favorito"
   | "Visita Agendada"
   | "Descartado";
 
 export const APARTMENT_STATUSES: ApartmentStatus[] = [
   "Candidato",
+  "Manual",
   "Favorito",
   "Visita Agendada",
   "Descartado",
 ];
+
+/** Status selecionados por padrão no filtro. */
+export const DEFAULT_FILTER_STATUSES: ApartmentStatus[] = ["Candidato"];
 
 export interface Apartment {
   id: string;

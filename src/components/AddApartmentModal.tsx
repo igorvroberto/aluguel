@@ -300,6 +300,9 @@ export function AddApartmentModal({
             portaria24h: false,
             externalUrl: looksUrl ? block.trim().split("\n")[0] : "",
             notes: data.data.description?.slice(0, 280),
+            status: "Manual",
+            source: "manual",
+            portal: "manual",
           });
         } catch {
           failed += 1;
@@ -370,6 +373,9 @@ export function AddApartmentModal({
         listingUrl.trim() ||
         `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
       notes: form.notes.trim() || undefined,
+      status: "Manual",
+      source: "manual",
+      portal: "manual",
     });
     onClose();
   };

@@ -82,6 +82,7 @@ export function normalizePortalId(raw: string | undefined | null): PortalId | un
 export function portalLabel(raw: string | undefined | null): string {
   const id = normalizePortalId(raw);
   if (id) return PORTAL_LABELS[id];
+  if (raw && /^manual$/i.test(raw.trim())) return "Manual";
   if (raw && raw.trim()) return raw.trim();
   return "Desconhecido";
 }

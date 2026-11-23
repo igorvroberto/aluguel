@@ -25,6 +25,7 @@ interface ApartmentCardProps {
 
 const STATUS_STYLES: Record<ApartmentStatus, string> = {
   Candidato: "border-slate-300 bg-slate-50 text-slate-700",
+  Manual: "border-teal-300 bg-teal-50 text-teal-900",
   Favorito: "border-amber-300 bg-amber-50 text-amber-900",
   "Visita Agendada": "border-sky-300 bg-sky-50 text-sky-900",
   Descartado: "border-rose-200 bg-rose-50 text-rose-800",

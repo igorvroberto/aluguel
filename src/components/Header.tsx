@@ -1,14 +1,19 @@
 "use client";
 
-import { HardDriveDownload, MapPinned } from "lucide-react";
+import { HardDriveDownload, MapPinned, Plus } from "lucide-react";
 import { DESTINATION } from "@/lib/constants";
 
 interface HeaderProps {
   visibleCount: number;
+  onAdd?: () => void;
   onDownloadServerJson?: () => void;
 }
 
-export function Header({ visibleCount, onDownloadServerJson }: HeaderProps) {
+export function Header({
+  visibleCount,
+  onAdd,
+  onDownloadServerJson,
+}: HeaderProps) {
   return (
     <header className="flex h-[60px] shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-gradient-to-r from-[#0f3d3e] via-[#145c5e] to-[#1a6b5c] px-4 text-white shadow-sm">
       <div className="flex min-w-0 items-center gap-3">
@@ -32,6 +37,18 @@ export function Header({ visibleCount, onDownloadServerJson }: HeaderProps) {
             {visibleCount === 1 ? "imóvel" : "imóveis"}
           </span>
         </div>
+
+        {onAdd && (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="inline-flex items-center gap-1.5 rounded-md bg-[#f0b429] px-2.5 py-2 text-xs font-semibold text-slate-900 transition hover:bg-[#f5c451] sm:px-3 sm:text-sm"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">Adicionar Imóvel</span>
+            <span className="sm:hidden">Adicionar</span>
+          </button>
+        )}
 
         {onDownloadServerJson && (
           <button

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AddApartmentModal } from "@/components/AddApartmentModal";
 import { ApartmentCard } from "@/components/ApartmentCard";
 import { FilterPanel } from "@/components/FilterPanel";
 import { Header } from "@/components/Header";
@@ -8,6 +9,7 @@ import { MapView } from "@/components/MapView";
 import { RoutePanel } from "@/components/RoutePanel";
 import { DEFAULT_STATION_RADIUS_METERS } from "../../data/linhasMetro";
 import {
+  createApartments,
   downloadApartmentsJsonFile,
   fetchApartments,
   patchApartment,
@@ -16,11 +18,14 @@ import { DEFAULT_MAX_PACKAGE } from "@/lib/constants";
 import { getVisibleApartments } from "@/lib/filters";
 import type { TransitRouteResult } from "@/lib/transit";
 import {
-  APARTMENT_STATUSES,
+  DEFAULT_FILTER_STATUSES,
   type Apartment,
   type ApartmentStatus,
   type FiltersState,
+  type NewApartmentInput,
 } from "@/lib/types";
+
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 export function RadarApp() {
   const [apartments, setApartments] = useState<Apartment[]>([]);
@@ -29,6 +34,7 @@ export function RadarApp() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   /** Seleção veio do pin: card só acima do mapa, sem puxar a lista. */
   const [mapPinned, setMapPinned] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [mapsApiKey, setMapsApiKey] = useState<string | undefined>(
     () => process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   );
@@ -43,7 +49,7 @@ export function RadarApp() {
     sortBy: "pacote",
     stationIds: [],
     stationRadiusMeters: DEFAULT_STATION_RADIUS_METERS,
-    statuses: [...APARTMENT_STATUSES],
+    statuses: [...DEFAULT_FILTER_STATUSES],
   });
   const listRef = useRef<HTMLDivElement>(null);
   const mapSectionRef = useRef<HTMLDivElement>(null);
@@ -184,6 +190,74 @@ export function RadarApp() {
     });
   };
 
+  const handleAddManual = async (input: NewApartmentInput) => {
+    try {
+      const result = await createApartments({
+        ...input,
+        status: "Manual",
+        source: "manual",
+        portal: input.portal || "manual",
+      });
+      setApartments(result.apartments);
+      notePersist(result.meta);
+      const added = result.apartments.find(
+        (a) =>
+          a.status === "Manual" &&
+          a.address.trim().toLowerCase() === input.address.trim().toLowerCase()
+      );
+      // Mostra manuais no filtro e foca o card acima do mapa.
+      setFilters((prev) =>
+        prev.statuses.includes("Manual")
+          ? prev
+          : { ...prev, statuses: [...prev.statuses, "Manual"] }
+      );
+      if (added) {
+        setSelectedId(added.id);
+        setMapPinned(true);
+        requestAnimationFrame(() => {
+          mapSectionRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setPersistHint(
+        err instanceof Error
+          ? err.message
+          : "Falha ao salvar imóvel manual."
+      );
+    }
+  };
+
+  const handleAddManualBatch = async (inputs: NewApartmentInput[]) => {
+    try {
+      const result = await createApartments(
+        inputs.map((input) => ({
+          ...input,
+          status: "Manual" as const,
+          source: "manual",
+          portal: input.portal || "manual",
+        }))
+      );
+      setApartments(result.apartments);
+      notePersist(result.meta);
+      setFilters((prev) =>
+        prev.statuses.includes("Manual")
+          ? prev
+          : { ...prev, statuses: [...prev.statuses, "Manual"] }
+      );
+    } catch (err) {
+      console.error(err);
+      setPersistHint(
+        err instanceof Error
+          ? err.message
+          : "Falha ao salvar lote de imóveis manuais."
+      );
+    }
+  };
+
   const selectedApartment =
     apartments.find((a) => a.id === selectedId) ?? null;
 
@@ -273,6 +347,7 @@ export function RadarApp() {
     <div className="flex min-h-screen flex-col bg-[#eef3f4]">
       <Header
         visibleCount={visible.length}
+        onAdd={() => setAddOpen(true)}
         onDownloadServerJson={handleDownloadServerJson}
       />
 
@@ -291,6 +366,18 @@ export function RadarApp() {
           {mapBlock}
         </div>
       </div>
+
+      <AddApartmentModal
+        open={addOpen}
+        mapboxToken={MAPBOX_TOKEN}
+        onClose={() => setAddOpen(false)}
+        onSave={(input) => {
+          void handleAddManual(input);
+        }}
+        onSaveBatch={(inputs) => {
+          void handleAddManualBatch(inputs);
+        }}
+      />
     </div>
   );
 }
