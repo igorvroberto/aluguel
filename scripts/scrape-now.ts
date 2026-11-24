@@ -18,9 +18,9 @@ import type { PortalListing } from "../src/lib/glue-listings";
 import {
   SEARCH_NEIGHBORHOODS,
   SEARCH_PRICE_BANDS,
-  SCRAPE_ACTIVE_PORTALS,
   PORTAL_LABELS,
   PORTAL_IDS,
+  resolveScrapePortals,
   type PortalId,
   type SearchPriceBand,
 } from "../src/lib/portals";
@@ -269,20 +269,28 @@ async function main() {
   log(
     `faixas: ${SEARCH_PRICE_BANDS.map((b) => b.label).join(" · ")}`
   );
+  const activePortals = resolveScrapePortals();
   log(
-    `portais ativos: ${SCRAPE_ACTIVE_PORTALS.map((id) => PORTAL_LABELS[id]).join(", ")}`
+    `portais ativos: ${activePortals.map((id) => PORTAL_LABELS[id]).join(", ")}`
   );
-  const skipped = PORTAL_IDS.filter((id) => !SCRAPE_ACTIVE_PORTALS.includes(id));
+  const skipped = PORTAL_IDS.filter((id) => !activePortals.includes(id));
   if (skipped.length) {
     log(`portais pulados: ${skipped.map((id) => PORTAL_LABELS[id]).join(", ")}`);
   }
 
   const mapboxToken = (process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "").trim();
-  await getSharedBrowser("headed");
+  // Chromium só p/ QuintoAndar / Chaves; Viva/ZAP/Imovelweb usam Firefox.
+  const needsChromium =
+    activePortals.includes("quintoandar") ||
+    activePortals.includes("chavesnamao");
+  if (needsChromium) {
+    await getSharedBrowser("headed");
+  }
 
   const raw: PortalListing[] = [];
   const seenLinks = new Set<string>();
   let slices = 0;
+  let firstUrlsLogged = false;
 
   for (const neigh of SEARCH_NEIGHBORHOODS) {
     for (const band of SEARCH_PRICE_BANDS) {
@@ -290,6 +298,14 @@ async function main() {
         rooms: TARGET_ROOMS,
         priceBand: band,
       });
+      if (!firstUrlsLogged) {
+        log(
+          `portais nas URLs: ${Array.from(
+            new Set(urls.map((u) => PORTAL_LABELS[u.portal]))
+          ).join(", ") || "(nenhum)"}`
+        );
+        firstUrlsLogged = true;
+      }
       for (const { portal, url } of urls) {
         slices += 1;
         log(

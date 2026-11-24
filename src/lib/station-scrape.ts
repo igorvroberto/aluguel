@@ -4,7 +4,7 @@ import { METRO_STATIONS, type MetroStation } from "../../data/linhasMetro";
 import { extractFromHtml, parseBRLNumber } from "./listing-parser";
 import {
   PORTAL_LABELS,
-  SCRAPE_ACTIVE_PORTALS,
+  resolveScrapePortals,
   SEARCH_PRICE_BANDS,
   isImovelwebScrapeEnabled,
   normalizePortalId,
@@ -432,7 +432,7 @@ function buildSearchUrls(
   const neigh = slugify(station.name.split("–")[0].split("-")[0].trim());
   const roomMin = Math.min(...rooms);
   const roomMax = Math.max(...rooms);
-  const active = new Set<string>(SCRAPE_ACTIVE_PORTALS);
+  const active = new Set<string>(resolveScrapePortals());
   const out: Array<{ url: string; source: string }> = [];
 
   for (const band of SEARCH_PRICE_BANDS) {
