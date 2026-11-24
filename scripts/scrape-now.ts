@@ -300,7 +300,9 @@ async function main() {
       });
       if (!firstUrlsLogged) {
         log(
-          `portais nas URLs: ${[...new Set(urls.map((u) => PORTAL_LABELS[u.portal]))].join(", ") || "(nenhum)"}`
+          `portais nas URLs: ${Array.from(
+            new Set(urls.map((u) => PORTAL_LABELS[u.portal]))
+          ).join(", ") || "(nenhum)"}`
         );
         firstUrlsLogged = true;
       }

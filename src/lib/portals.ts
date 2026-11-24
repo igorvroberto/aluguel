@@ -61,8 +61,11 @@ export function isImovelwebScrapeEnabled(): boolean {
   return Boolean((process.env.SCRAPE_PROXY_URL || "").trim());
 }
 
-/** Opções do filtro de portal na UI (só portais ativos no scrape). */
-export const PORTAL_FILTER_OPTIONS = SCRAPE_ACTIVE_PORTALS.map((id) => ({
+/**
+ * Opções do filtro de portal na UI (todos os portais com dados no radar).
+ * Imovelweb fica aqui mesmo fora de SCRAPE_ACTIVE_PORTALS (scrape só com proxy).
+ */
+export const PORTAL_FILTER_OPTIONS = PORTAL_IDS.map((id) => ({
   id,
   label: PORTAL_LABELS[id],
 }));
